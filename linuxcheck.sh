@@ -18,6 +18,13 @@ Author:sun97
 Mail:jiuwei977@foxmail.com
 Date:2024.6.16
 
+更新日志:
+	2024.06.16:
+		1、优化最近24h变化文件只看文件不看目录,同时排除目录/proc,/dev,/sys,/run
+		2、修改了找不到高危端口的文件bug
+		3、增加了检测系统环境变量的功能[.bashrc|.bash_profile|.zshrc|.viminfo等]
+		4、增加了journalctl日志输出
+
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
 	2.将系统日志、应用日志打包并保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file/log 目录下
@@ -87,6 +94,8 @@ Date:2024.6.16
 		8.4 authorized_keys文件
 		8.5 known_hosts文件
 		8.6 tmp目录检查
+		8.7 环境变量检查
+		8.8 /root下隐藏文件检查
 	9.用户登录情况
 		9.1 正在登陆的用户
 		9.2 用户信息[passwd文件]
@@ -162,6 +171,7 @@ Date:2024.6.16
 			11.1.5 历史可疑命令
 			11.1.6 本地下载文件
 			11.1.7 yum下载记录
+			11.1.8 关闭历史命令记录
 		11.2 数据库历史命令
 	12.可疑文件检查
 		12.1 检查脚本文件
@@ -199,6 +209,7 @@ Date:2024.6.16
 			14.8.1 所有用户最后一次登录分析
 		14.9 wtmp 日志分析
 			14.9.1 所有用户登录分析
+		14.10 journalctl 日志输出
 	15.内核检查
 		15.1 内核信息
 		15.2 异常内核
@@ -293,23 +304,15 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[1.3]操作系统发行版本[/etc/redhat-release]:" | $saveCheckResult
-systemver=$(cat /etc/redhat-release)
+echo "[1.3]作系统信息[/etc/*-release]:" | $saveCheckResult
+systemver=$(cat /etc/*-release)
 if [ -n "$systemver" ];then
-	(echo "[+]系统发行版本:" && echo "$systemver") | $saveCheckResult
-else
-	echo "[!]未发现发行版本信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[1.4]操作系统信息[/etc/os-release]:" | $saveCheckResult
-systemosrele=$(cat /etc/os-release)
-if [ -n "$systemosrele" ];then
-	(echo "[+]系统版本信息:" && echo "$systemosrele") | $saveCheckResult
+	(echo "[+]系统版本信息:" && echo "$systemver") | $saveCheckResult
 else
 	echo "[!]未发现系统版本信息" | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
+
 
 
 echo "==========2.网络连接情况==========" | $saveCheckResult
@@ -488,8 +491,8 @@ count=0
 if [ -n "$tcpport" ];then
 	for port in $tcpport
 	do
-		# 从 check_file 退出进入到 checkrules 目录下
-		for i in `cat ../../../checkrules/dangerstcpports.txt`
+		# 进入到 checkrules 目录下
+		for i in `cat ./checkrules/dangerstcpports.txt`
 		do
 			tcpport=`echo $i | awk -F "[:]" '{print $1}'`
 			desc=`echo $i | awk -F "[:]" '{print $2}'`
@@ -541,7 +544,7 @@ count=0
 if [ -n "$udpport" ];then
 	for port in $udpport
 	do
-		for i in `cat ../../../checkrules/dangersudpports.txt`
+		for i in `cat ./checkrules/dangersudpports.txt`
 		do
 			udpport=`echo $i | awk -F "[:]" '{print $1}'`
 			desc=`echo $i | awk -F "[:]" '{print $2}'`
@@ -668,7 +671,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "==========8.关键文件检查==========" | $saveCheckResult
-echo "[8.1]正在检查hosts文件[/etc/hosts]:" | $saveCheckResult
+echo "[8.1]正在检查hosts文件[/etc/hosts](未检查.bash_history|.zsh_history文件):" | $saveCheckResult
 hosts=$(more /etc/hosts)
 if [ -n "$hosts" ];then
 	(echo "[+]hosts文件如下:" && echo "$hosts") | $saveCheckResult
@@ -721,6 +724,32 @@ printf "\n" | $saveCheckResult
 echo "[8.6]正在检查tmp目录[/tmp]:" | $saveCheckResult
 echo "[说明]tmp目录是用于存放临时文件的目录,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件" | $saveCheckResult
 (ls -alt /tmp) | $saveCheckResult
+printf "\n" | $saveCheckResult
+
+
+echo "[8.7]正在检查环境变量文件[.bashrc|.bash_profile|.zshrc|.viminfo等]:" | $saveCheckResult
+echo "[说明]环境变量文件是用于存放用户环境变量的文件,可用于后门维持留马等(需要人工检查有无权限维持痕迹)" | $saveCheckResult
+# 定义环境变量文件的位置列表
+envfile="/root/.bashrc /root/.bash_profile /root/.zshrc /root/.viminfo /etc/profile /etc/bashrc /etc/environment"
+for file in $envfile;do
+	if [ -e $file ];then
+		echo "[+]环境变量文件:$file" | $saveCheckResult
+		more $file | $saveCheckResult
+		printf "\n" | $saveCheckResult
+		# 文件内容中是否包含关键字 curl http https wget 等关键字
+		if [ -n "$(more $file | grep -E "curl|wget|http|https|python")" ];then
+			echo "[!]发现环境变量文件[$file]中包含curl|wget|http|https|python等关键字!" | $saveDangerResult | $saveCheckResult
+		fi 
+	else
+		echo "[+]环境变量文件:$file" | $saveCheckResult
+	fi
+done
+printf "\n" | $saveCheckResult
+
+
+echo "[8.8]正在检查/root的隐藏文件[cat -alt /root]" | $saveCheckResult
+echo "[说明]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"  | $saveCheckResult
+(ls -alt /root) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
@@ -1427,8 +1456,8 @@ printf "\n" | $saveCheckResult
 
 
 echo "[11.1.5]正在检查历史可疑黑客命令:" | $saveCheckResult
-echo "[说明]匹配规则可自行维护,列表如下:whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|python*|yum|apt-get" | $saveCheckResult
-danger_histroy=$(history | grep -E "(whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|python*|yum|apt-get)" | grep -v grep)
+echo "[说明]匹配规则可自行维护,列表如下:id|whoami|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|python*|yum|apt-get" | $saveCheckResult
+danger_histroy=$(history | grep -E "(id|whoami|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|python*|yum|apt-get)" | grep -v grep)
 if [ -n "$danger_histroy" ];then
 	(echo "[!]发现可疑历史命令" && echo "$danger_histroy") |  $saveDangerResult | $saveCheckResult
 else
@@ -1457,6 +1486,17 @@ fi
 printf "\n" | $saveCheckResult
 
 
+echo "[11.1.8]正在检查历史命令中是否有关闭命令历史记录功能[set +o history]:" | $saveCheckResult
+echo "[说明]set +o history 是关闭命令历史记录功能,可以通过history命令查看,set -o history是重新打开历史命令记录" | $saveCheckResult
+clearhistory=$(history | grep "set +o history" | grep -v grep)
+if [ -n "$clearhistory" ];then
+	(echo "[!]通过历史日志发现关闭命令历史记录功能命令如下:" && echo "$clearhistory") | $saveDangerResult | $saveCheckResult
+else
+	echo "[+]通过历史日志未发现关闭命令历史记录功能命令" | $saveCheckResult
+fi
+
+
+
 echo "[11.2]正在检查数据库操作历史命令[/root/.mysql_history]:" | $saveCheckResult
 mysql_history=$(more /root/.mysql_history)
 if [ -n "$mysql_history" ];then
@@ -1468,7 +1508,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "==========12.可疑文件检查==========" | $saveCheckResult
-echo "[12.1]正在检查脚本文件:" | $saveCheckResult
+echo "[12.1]正在检查脚本文件[py|sh|per|pl|exe]:" | $saveCheckResult
 echo "[注意]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
 scripts=$(find / *.* | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
 if [ -n "scripts" ];then
@@ -1484,23 +1524,24 @@ echo "webshell这一块因为技术难度相对较高,并且已有专业的工�
 echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
 
 
-echo "[12.3]正在检查最近24小时内变动的敏感文件:" | $saveCheckResult
-#查看最近24小时内有改变的文件
-(find / -mtime 0 | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$") |  $saveDangerResult | $saveCheckResult
+echo "[12.3]正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:" | $saveCheckResult
+echo "[说明]find / -mtime -1 -type f " | $saveCheckResult
+(find / -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$") |  $saveDangerResult | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 echo "[12.4]正在检查最近24小时内变动的所有文件:" | $saveCheckResult
-#查看最近24小时内有改变的文件
-(find / -mtime 0 ) |  $saveDangerResult | $saveCheckResult
+#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
+echo "[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
+(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) $saveDangerResult | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
-echo "[12.5]正在检查全盘是否存在黑客工具[新增]:" | $saveCheckResult
+echo "[12.5]正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
 # hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
 # 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
 # hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 echo "[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)" | $saveCheckResult
-for hacker_tool in `cat ../../../checkrules/hackertoolslist.txt`
+for hacker_tool in `cat ./checkrules/hackertoolslist.txt`
 do
 	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
 	if [ -n "$findhackertool" ];then
@@ -1517,7 +1558,7 @@ echo "==========13.系统文件完整性校验==========" | $saveCheckResult
 # 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
 # 用来验证文件是否被篡改
 echo "[13.1]正在采集系统关键文件MD5:" | $saveCheckResult
-echo "[说明]md5查询威胁情报或者用来防止二进制文件篡改" | $saveCheckResult
+echo "[说明]md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)" | $saveCheckResult
 echo "[注]MD5值文件导出位置:${check_file}/sysfile_md5.txt" | $saveCheckResult
 file="${check_file}/sysfile_md5.txt"
 if [ -e "$file" ]; then 
@@ -1832,17 +1873,21 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[14.5.4]正在检查使用yum安装的可疑工具:" | $saveCheckResult
-hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print $1}' | sort | uniq | grep -E "(^nc|sqlmap|nmap|xray|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|*scan|nuclei|*brute*|gtfo|Titan)")
-if [ -n "$hacker_tools" ];then
-	(echo "[!]发现使用yum下载过以下可疑软件:" && echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
-fi
+echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
+# 从文件中取出一个工具名然后匹配
+hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+for hacker_tools in $hacker_tools_list;do
+	hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
+	if [ -n "$hacker_tools" ];then
+		(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
+	fi
+done
 printf "\n" | $saveCheckResult
 
 
-echo "[14.6]正在分析dmesg日志:" | $saveCheckResult
+echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
 echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
 dmesg=$(dmesg)
 if [ $? -eq 0 ];then
@@ -1853,7 +1898,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[14.7]正在分析btmp日志:" | $saveCheckResult
+echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
 echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
 lastb=$(lastb)
 if [ -n "$lastb" ];then
@@ -1864,7 +1909,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[14.8]正在分析lastlog日志:" | $saveCheckResult
+echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
 echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
 lastlog=$(lastlog)
 if [ -n "$lastlog" ];then
@@ -1886,6 +1931,19 @@ fi
 printf "\n" | $saveCheckResult
 
 
+echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
+# 检查最近24小时内的journalctl日志
+echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
+journalctl=$(journalctl --since "24 hours ago")
+if [ -n "$journalctl" ];then
+	echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
+	echo "$journalctl" >> $log_file/journalctl.txt
+else
+	echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
 echo "==========15.内核分析==========" | $saveCheckResult
 echo "[15.1]正在检查内核信息:." | $saveCheckResult
 lsmod=$(lsmod)
@@ -1896,7 +1954,7 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[15.2]正在检查异常内核:" | $saveCheckResult
+echo "[15.2]正在检查异常内核[lsmod]:" | $saveCheckResult
 danger_lsmod=$(lsmod | grep -Ev "ablk_helper|ac97_bus|acpi_power_meter|aesni_intel|ahci|ata_generic|ata_piix|auth_rpcgss|binfmt_misc|bluetooth|bnep|bnx2|bridge|cdrom|cirrus|coretemp|crc_t10dif|crc32_pclmul|crc32c_intel|crct10dif_common|crct10dif_generic|crct10dif_pclmul|cryptd|dca|dcdbas|dm_log|dm_mirror|dm_mod|dm_region_hash|drm|drm_kms_helper|drm_panel_orientation_quirks|e1000|ebtable_broute|ebtable_filter|ebtable_nat|ebtables|edac_core|ext4|fb_sys_fops|floppy|fuse|gf128mul|ghash_clmulni_intel|glue_helper|grace|i2c_algo_bit|i2c_core|i2c_piix4|i7core_edac|intel_powerclamp|ioatdma|ip_set|ip_tables|ip6_tables|ip6t_REJECT|ip6t_rpfilter|ip6table_filter|ip6table_mangle|ip6table_nat|ip6table_raw|ip6table_security|ipmi_devintf|ipmi_msghandler|ipmi_si|ipmi_ssif|ipt_MASQUERADE|ipt_REJECT|iptable_filter|iptable_mangle|iptable_nat|iptable_raw|iptable_security|iTCO_vendor_support|iTCO_wdt|jbd2|joydev|kvm|kvm_intel|libahci|libata|libcrc32c|llc|lockd|lpc_ich|lrw|mbcache|megaraid_sas|mfd_core|mgag200|Module|mptbase|mptscsih|mptspi|nf_conntrack|nf_conntrack_ipv4|nf_conntrack_ipv6|nf_defrag_ipv4|nf_defrag_ipv6|nf_nat|nf_nat_ipv4|nf_nat_ipv6|nf_nat_masquerade_ipv4|nfnetlink|nfnetlink_log|nfnetlink_queue|nfs_acl|nfsd|parport|parport_pc|pata_acpi|pcspkr|ppdev|rfkill|sch_fq_codel|scsi_transport_spi|sd_mod|serio_raw|sg|shpchp|snd|snd_ac97_codec|snd_ens1371|snd_page_alloc|snd_pcm|snd_rawmidi|snd_seq|snd_seq_device|snd_seq_midi|snd_seq_midi_event|snd_timer|soundcore|sr_mod|stp|sunrpc|syscopyarea|sysfillrect|sysimgblt|tcp_lp|ttm|tun|uvcvideo|videobuf2_core|videobuf2_memops|videobuf2_vmalloc|videodev|virtio|virtio_balloon|virtio_console|virtio_net|virtio_pci|virtio_ring|virtio_scsi|vmhgfs|vmw_balloon|vmw_vmci|vmw_vsock_vmci_transport|vmware_balloon|vmwgfx|vsock|xfs|xt_CHECKSUM|xt_conntrack|xt_state")
 if [ -n "$danger_lsmod" ];then
 	(echo "[!]发现可疑内核模块:" && echo "$danger_lsmod") |  $saveDangerResult | $saveCheckResult
@@ -1906,7 +1964,7 @@ fi
 printf "\n" | $saveCheckResult
 
 echo "==========16.安装软件(rpm)==========" | $saveCheckResult
-echo "[16.1]正在检查rpm安装软件及版本情况:" | $saveCheckResult
+echo "[16.1]正在检查rpm安装软件及版本情况[rpm -qa]:" | $saveCheckResult
 software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
 if [ -n "$software" ];then
 	(echo "[+]系统安装与版本如下:" && echo "$software") | $saveCheckResult
@@ -1915,17 +1973,22 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[16.2]正在检查安装的可疑软件:" | $saveCheckResult
-danger_soft=$(rpm -qa  | awk -F- '{print $1}' | sort | uniq | grep -E "^(ncat|sqlmap|nmap|xray|beef|nikto|john|ettercap|backdoor|proxy|msfconsole|msf|*scan|nuclei|*brute*|gtfo|Titan)$")
-if [ -n "$danger_soft" ];then
-	(echo "[!]以下安装的软件可疑,需要人工分析:"  && echo "$danger_soft") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现安装可疑软件" | $saveCheckResult
-fi
+echo "[16.2]正在检查rpm安装的可疑软件:" | $saveCheckResult
+# 从文件中取出一个工具名然后匹配
+hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+for hacker_tools in $hacker_tools_list;do
+	danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
+	if [ -n "$danger_soft" ];then
+		(echo "[!]发现安装以下可疑软件:" && echo "$danger_soft") |  $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]未发现安装可疑软件" | $saveCheckResult
+	fi
+done
 printf "\n" | $saveCheckResult
 
+
 echo "==========17.环境变量==========" | $saveCheckResult
-echo "[17.1]正在检查环境变量:" | $saveCheckResult
+echo "[17.1]正在检查环境变量[env]:" | $saveCheckResult
 env=$(env)
 if [ -n "$env" ];then
 	(echo "[+]环境变量:" && echo "$env") | $saveCheckResult
@@ -1941,7 +2004,7 @@ echo "[+]磁盘使用情况如下:" && df -h  | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
-echo "[18.1.2]正在检查磁盘使用是否过大:" | $saveCheckResult
+echo "[18.1.2]正在检查磁盘使用是否过大[df -h]:" | $saveCheckResult
 echo "[说明]使用超过70%告警" | $saveCheckResult
 df=$(df -h | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
 if [ -n "$df" ];then
@@ -1951,17 +2014,17 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[18.2]正在检查CPU用情况:" | $saveCheckResult
+echo "[18.2]正在检查CPU用情况[more /proc/cpuinfo]:" | $saveCheckResult
 echo "[18.2.1]正在检查CPU相关信息:" | $saveCheckResult
 (echo "CPU硬件信息如下:" && more /proc/cpuinfo ) | $saveCheckResult
 (echo "CPU使用情况如下:" && ps -aux | sort -nr -k 3 | awk  '{print $1,$2,$3,$NF}') | $saveCheckResult
 printf "\n" | $saveCheckResult
 
-echo "[18.2.2]正在检查占用CPU前5资源的进程:" | $saveCheckResult
-(echo "占用CPU资源前5进程:" && ps -aux | sort -nr -k 3 | head -5)  | $saveCheckResult
+echo "[18.2.2]正在检查占用CPU前5资源的进程[ps -aux | sort -nr -k 3 | head -5]:" | $saveCheckResult
+(echo "占用CPU资源前5进程[ps -aux | sort -nr -k 3 | head -5]:" && ps -aux | sort -nr -k 3 | head -5)  | $saveCheckResult
 printf "\n" | $saveCheckResult
 
-echo "[18.2.3]正在检查占用CPU较大的进程:" | $saveCheckResult
+echo "[18.2.3]正在检查占用CPU较大的进程[ps -aux | sort -nr -k 3 | head -5 | awk '{if($3>=20) print $0}']:" | $saveCheckResult
 pscpu=$(ps -aux | sort -nr -k 3 | head -5 | awk '{if($3>=20) print $0}')
 if [ -n "$pscpu" ];then
 	echo "[!]以下进程占用的CPU超过20%:" && echo "UID         PID   PPID  C STIME TTY          TIME CMD" 
@@ -1973,12 +2036,12 @@ printf "\n" | $saveCheckResult
 
 echo "[18.3]正在分析内存情况:" | $saveCheckResult
 echo "[18.3.1]正在检查内存相关信息:" | $saveCheckResult
-(echo "[+]内存信息如下:" && more /proc/meminfo) | $saveCheckResult
-(echo "[+]内存使用情况如下:" && free -m) | $saveCheckResult
+(echo "[+]内存信息如下[more /proc/meminfo]:" && more /proc/meminfo) | $saveCheckResult
+(echo "[+]内存使用情况如下[free -m]:" && free -m) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 echo "[18.3.2]正在检查内存占用前5资源的进程:" | $saveCheckResult
-(echo "[+]占用内存资源前5进程:" && ps -aux | sort -nr -k 4 | head -5) | $saveCheckResult
+(echo "[+]占用内存资源前5进程[ps -aux | sort -nr -k 4 | head -5]:" && ps -aux | sort -nr -k 4 | head -5) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 echo "[18.3.3]正在检查内存占用较多的进程:" | $saveCheckResult
@@ -1993,7 +2056,7 @@ printf "\n" | $saveCheckResult
 
 echo "[18.4]系统运行及负载情况:" | $saveCheckResult
 echo "[18.4.1]正在检查系统运行时间及负载情况:." | $saveCheckResult
-(echo "[+]系统运行时间如下:" && uptime) | $saveCheckResult
+(echo "[+]系统运行时间如下[uptime]:" && uptime) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
@@ -2022,4 +2085,4 @@ echo "检查结束!" | $saveCheckResult
 echo "Version:3.0" | $saveCheckResult
 echo "Author:sun97" | $saveCheckResult
 echo "Mail:jiuwei977@foxmail.com" |	$saveCheckResult
-echo "Date:2023.8.19" | $saveCheckResult
+echo "Date:2024.6.16" | $saveCheckResult

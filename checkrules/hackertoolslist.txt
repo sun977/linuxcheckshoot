@@ -1,5 +1,6 @@
 nc
 sqlmap
+ncat
 nmap
 xray
 beef
