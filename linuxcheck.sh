@@ -1532,7 +1532,7 @@ printf "\n" | $saveCheckResult
 echo "[12.4]正在检查最近24小时内变动的所有文件:" | $saveCheckResult
 #查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
 echo "[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
-(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) $saveDangerResult | $saveCheckResult
+(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) | $saveDangerResult | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
