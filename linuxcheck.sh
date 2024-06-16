@@ -492,7 +492,7 @@ if [ -n "$tcpport" ];then
 	for port in $tcpport
 	do
 		# 进入到 checkrules 目录下
-		for i in `cat ./checkrules/dangerstcpports.txt`
+		for i in `cat ${current_dir}/checkrules/dangerstcpports.txt`
 		do
 			tcpport=`echo $i | awk -F "[:]" '{print $1}'`
 			desc=`echo $i | awk -F "[:]" '{print $2}'`
@@ -544,7 +544,7 @@ count=0
 if [ -n "$udpport" ];then
 	for port in $udpport
 	do
-		for i in `cat ./checkrules/dangersudpports.txt`
+		for i in `cat ${current_dir}/checkrules/dangersudpports.txt`
 		do
 			udpport=`echo $i | awk -F "[:]" '{print $1}'`
 			desc=`echo $i | awk -F "[:]" '{print $2}'`
@@ -1541,7 +1541,7 @@ echo "[12.5]正在检查全盘是否存在黑客工具[./checkrules/hackertoolsl
 # 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
 # hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 echo "[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)" | $saveCheckResult
-for hacker_tool in `cat ./checkrules/hackertoolslist.txt`
+for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
 do
 	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
 	if [ -n "$findhackertool" ];then
