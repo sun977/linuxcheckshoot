@@ -13,10 +13,10 @@ cat <<EOF
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
 
-Version:3.0
+Version:4.0
 Author:sun97
 Mail:jiuwei977@foxmail.com
-Date:2023.8.19
+Date:2024.6.16
 
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
