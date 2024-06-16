@@ -1545,7 +1545,7 @@ for hacker_tool in `cat ./checkrules/hackertoolslist.txt`
 do
 	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
 	if [ -n "$findhackertool" ];then
-		(echo "[!]发现全盘存在可疑黑客工具:" && echo "$findhackertool") |  $saveDangerResult | $saveCheckResult
+		(echo "[!]发现全盘存在可疑黑客工具:$hacker_tool" && echo "$findhackertool") |  $saveDangerResult | $saveCheckResult
 	else
 		echo "[+]未发现全盘存在可疑黑可工具:$hacker_tool" | $saveCheckResult
 	fi
