@@ -1920,7 +1920,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[14.9]正在分析wtmp日志:" | $saveCheckResult
+echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
 echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
 lasts=$(last | grep pts | grep -vw :0)
 if [ -n "$lasts" ];then
