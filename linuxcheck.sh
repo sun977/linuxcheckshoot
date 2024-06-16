@@ -1522,7 +1522,7 @@ printf "\n" | $saveCheckResult
 echo "[12.2]正在检查webshell文件:" | $saveCheckResult
 echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
 echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
-
+printf "\n" | $saveCheckResult
 
 echo "[12.3]正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:" | $saveCheckResult
 echo "[说明]find / -mtime -1 -type f " | $saveCheckResult
