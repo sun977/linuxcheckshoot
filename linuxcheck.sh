@@ -8,7 +8,7 @@ cat <<EOF
 *********************************************************************
     __     __                      ______            
    / /    /_/____   __  __ _  __ / ____/__  __ ____ 
-  / /    / // __ \ / / / /| |/_// / __ / / / // __ \
+  / /    / // __ \ / / / /| |/_// / __ / / / // __ \\
  / /___ / // / / // /_/ /_>  < / /_/ // /_/ // / / /
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
@@ -24,6 +24,8 @@ Date:2024.6.16
 		2、修改了找不到高危端口的文件bug
 		3、增加了检测系统环境变量的功能[.bashrc|.bash_profile|.zshrc|.viminfo等]
 		4、增加了journalctl日志输出
+	2024.07.17:
+		1、修改了logo显示bug
 
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
@@ -2083,6 +2085,6 @@ fi
 
 echo "检查结束!" | $saveCheckResult
 echo "Version:3.0" | $saveCheckResult
-echo "Author:sun97" | $saveCheckResult
+echo "Author:sun977" | $saveCheckResult
 echo "Mail:jiuwei977@foxmail.com" |	$saveCheckResult
 echo "Date:2024.6.16" | $saveCheckResult
