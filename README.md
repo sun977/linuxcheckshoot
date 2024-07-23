@@ -18,6 +18,11 @@ Date:2024.6.16
 		2、修改了找不到高危端口的文件bug
 		3、增加了检测系统环境变量的功能[.bashrc|.bash_profile|.zshrc|.viminfo等]
 		4、增加了journalctl日志输出
+        2024.07.17:
+		1、修改了logo显示bug
+	2024.x.x(规划)：
+		1、优化掉ifconfig命令全部使用ip替换
+		2、支持多linux系统
 
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
