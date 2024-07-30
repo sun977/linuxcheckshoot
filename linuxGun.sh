@@ -31,8 +31,8 @@ typeset YELLOW='\033[0;33m'
 typeset GREEN='\033[0;32m'
 typeset NC='\033[0m'
 
-# banner 函数
-echo_banner() {
+# banner 函数  格式需要调整
+echoBanner() {
     echo -e "${YELLOW}****************************************************************${NC}"
     echo -e "${GREEN}*      __     __                      ______                     ${NC}"
     echo -e "${GREEN}*     / /    /_/____   __  __ _  __ / ____/__  __ ____           ${NC}"
@@ -57,15 +57,13 @@ echo_banner() {
 
 }
 
-
-
-
-
+# ------------------------
+# 基础变量定义
 # 脚本转换确保可以在Linux下运行
-dos2unix linuxcheck.sh
+dos2unix linuxgun.sh
 date=$(date +%Y%m%d)
 # 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-ipadd=$(ifconfig -a | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}')
+ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 
 # 创建输出目录变量，当前目录下的output目录
 current_dir=$(pwd)  
@@ -93,48 +91,67 @@ if [ $(whoami) != "root" ];then
 	exit 1
 fi
 
+# ------------------------
+
 # 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
 cd $check_file  
 saveCheckResult="tee -a checkresult.txt" 
 saveDangerResult="tee -a dangerlist.txt"
 
+# ------------------------
+
 ################################################################
 
 
+# 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
+
+# 采集系统基础信息
+baseInfo(){
+    echo -e "${GREEN}==========${YELLOW}1.Get System Info${GREEN}==========${NC}"
+    echo -e "${YELLOW}[1.0]Get System Basic Info${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[1.1]IP地址信息[ip addr]:${NC}" | $saveCheckResult
+    ip=$(ip addr | grep -w inet | awk '{print $2}')
+    if [ -n "$ip" ];then
+        (echo -e "${YELLOW}[+]本机IP地址信息:${NC}" && echo "$ip")  | $saveCheckResult
+    else
+        echo -e "${RED}[!]本机未配置IP地址${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 系统版本信息
+    echo -e "${YELLOW}[1.2]系统版本信息[uname -a]:${NC}" | $saveCheckResult
+    unameInfo=$(uname -a)
+    if [ -n "$unameInfo" ];then
+        # (echo -e "${YELLOW}[+]系统内核版本信息:${NC}" && echo "$unameInfo") | $saveCheckResult
+        echo -e "${YELLOW}[+]系统版本信息如下:${NC}" | $saveCheckResult
+        osName=$(echo $unameInfo | awk '{print $1}')  # 系统名称
+        hostName=$(echo $unameInfo | awk '{print $2}')  # 主机名
+        kernelVerson=$(echo $unameInfo | awk '{print $3}')  # 内核版本
+        arch=$(echo $unameInfo | awk '{print $12}')  # 系统架构
+        echo -e "${YELLOW}[+]系统名称:$osName${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]主机名:$hostName${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]内核版本:$kernelVerson${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]系统架构:$arch${NC}" | $saveCheckResult
+    
+    else
+        echo -e "${RED}[!]未发系统版本信息${NC}" | $saveCheckResult
+    fi
+
+    # 系统发行版本
+    echo -e "${YELLOW}[1.3]系统发行版本信息[/etc/*-release]:${NC}" | $saveCheckResult
+    systemver=$(cat /etc/*-release)
+    if [ -n "$systemver" ];then
+        (echo -e "${YELLOW}[+]系统发行版本信息:${NC}" && echo "$systemver") | $saveCheckResult
+    else
+        echo -e "${RED}[!]未发现系统发行版本信息${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+}
+
+
+# 检查开始的地方
 echo "LinuxGun 正在检查..."  | $saveCheckResult
-echo "==========1.系统基础信息==========" | $saveCheckResult
-echo "[1.0]正在采集系统基础信息:" && "$saveCheckResult"
-echo "[1.1]IP地址信息[ip add]:" | $saveCheckResult
-# ip=$(ifconfig -a | grep -w inet | awk '{print $2}')
-ip=$(ip add | grep -w inet | awk '{print $2}')
 
-# 判断ip是否为空
-if [ -n "$ip" ];then
-	(echo "[+]本机IP地址信息:" && echo "$ip")  | $saveCheckResult
-else
-	echo "[!]本机未配置IP地址" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[1.2]系统内核版本[uname -a]:" | $saveCheckResult
-corever=$(uname -a)
-if [ -n "$corever" ];then
-	(echo "[+]系统内核版本信息:" && echo "$corever") | $saveCheckResult
-else
-	echo "[!]未发现内核版本信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[1.3]作系统信息[/etc/*-release]:" | $saveCheckResult
-systemver=$(cat /etc/*-release)
-if [ -n "$systemver" ];then
-	(echo "[+]系统版本信息:" && echo "$systemver") | $saveCheckResult
-else
-	echo "[!]未发现系统版本信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
@@ -208,7 +225,8 @@ printf "\n" | $saveCheckResult
 
 
 echo "[2.4.1]正在分析是否有网卡处于混杂模式[ifconfig]:" | $saveCheckResult
-Promisc=`ifconfig | grep PROMISC | gawk -F: '{ print $1}'`
+# Promisc=`ifconfig | grep PROMISC | gawk -F: '{ print $1}'`
+Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
 if [ -n "$Promisc" ];then
 	(echo "[!]网卡处于混杂模式:" && echo "$Promisc") | $saveDangerResult | $saveCheckResult
 else
@@ -217,7 +235,8 @@ fi
 printf "\n" | $saveCheckResult
 
 echo "[2.4.2]正在分析是否有网卡处于监听模式[ifconfig]:" | $saveCheckResult
-Monitor=`ifconfig | grep -E "Mode:Monitor" | gawk -F: '{ print $1}'`
+# Monitor=`ifconfig | grep -E "Mode:Monitor" | gawk -F: '{ print $1}'`
+Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
 if [ -n "$Monitor" ];then
 	(echo "[!]网卡处于监听模式:" && echo "$Monitor") |  $saveDangerResult | $saveCheckResult
 else
