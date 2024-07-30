@@ -50,9 +50,9 @@ echo_banner() {
     echo -e "${GREEN}    3.基线检查的功能                                               ${NC}"
     echo -e "${GREEN}    4.黑客工具检查的功能                                            ${NC}"
     echo -e "${GREEN}如何使用:                                                         ${NC}"
-    echo -e "${GREEN}    1. 需要将本脚本上传到相应的服务器中                               ${NC}"
-    echo -e "${GREEN}    2. 执行 chmod +x linuxgun.sh                                 ${NC}"
-    echo -e "${GREEN}    3. 执行 ./linuxgun.sh 即可运行检查                             ${NC}"
+    echo -e "${GREEN}    1.需要将本脚本上传到相应的服务器中                                ${NC}"
+    echo -e "${GREEN}    2.执行 chmod +x linuxgun.sh                                  ${NC}"
+    echo -e "${GREEN}    3.执行 ./linuxgun.sh 即可运行检查                              ${NC}"
     echo -e "${YELLOW}****************************************************************${NC}"
 
 }
