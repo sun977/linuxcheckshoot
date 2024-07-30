@@ -153,154 +153,152 @@ baseInfo(){
 echo "LinuxGun 正在检查..."  | $saveCheckResult
 
 
+# 网络信息
+networkInfo(){
+    echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
+    echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.1]Get ARP Table[arp -a -n]:${NC}" | $saveCheckResult
+    arp=$(arp -a -n)
+    if [ -n "$arp" ];then
+        (echo -e "${YELLOW}[+]ARP Table:${NC}" && echo "$arp") | $saveCheckResult
+    else
+        echo -e "${RED}[!]未发现ARP表${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别，然后输出重复的MAC地址以及它们的出现次数
+    # 该命令用于统计arp表中的MAC地址出现次数，并显示重复的MAC地址及其出现频率。
+    # 具体解释如下：
+    # - `arp -a -n`：查询ARP表，并以IP地址和MAC地址的格式显示结果。
+    # - `awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}'`：使用awk命令进行处理。
+    #   - `{++S[$4]}`：对数组S中以第四个字段（即MAC地址）作为索引的元素加1进行计数。
+    #   - `END {for(a in S) {if($2>1) print $2,a,S[a]}}`：在处理完所有行之后，遍历数组S。
+    #     - `for(a in S)`：遍历数组S中的每个元素。
+    #     - `if($2>1)`：如果第二个字段（即计数）大于1，则表示这是一个重复的MAC地址。
+    #     - `print $2,a,S[a]`：打印重复的MAC地址的计数、MAC地址本身和出现的次数。
+
+    # ARP攻击检查
+    echo -e "${YELLOW}[2.2]Check ARP Attack[arp -a -n]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}" | $saveCheckResult
+    arpattack=$(arp -a -n | awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}')
+    if [ -n "$arpattack" ];then
+        (echo -e "${RED}[!]发现存在ARP攻击:${NC}" && echo "$arpattack") | $saveDangerResult | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]未发现ARP攻击${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 网络连接信息
+    echo -e "${YELLOW}[2.3]Get Network Connection Info${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.1]Check Network Connection[netstat -anlp]:${NC}" | $saveCheckResult
+    netstat=$(netstat -anlp | grep ESTABLISHED) # 过滤出已经建立的连接 ESTABLISHED
+    netstatnum=$(netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
+    if [ -n "$netstat" ];then
+        (echo -e "${YELLOW}[+]Established Network Connection:${NC}" && echo "$netstat") | $saveCheckResult
+        if [ -n "$netstatnum" ];then
+            (echo -e "${YELLOW}[+]Number of each state:${NC}" && echo "$netstatnum") | $saveCheckResult
+        fi
+    else
+        echo -e "${YELLOW}[+]No network connection${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # DNS 信息
+    echo -e "${YELLOW}[2.3.2]Check DNS Info[/etc/resolv.conf]:${NC}" | $saveCheckResult
+    resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}')
+    if [ -n "$resolv" ];then
+        (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv") | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]未发现DNS服务器${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 网卡模式
+    echo -e "${YELLOW}[2.4]Check Network Card Mode[ip addr]:${NC}" | $saveCheckResult
+    ifconfigmode=$(ip addr | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
+    if [ -n "$ifconfigmode" ];then
+        (echo -e "${YELLOW}[+]网卡模式如下:${NC}" && echo "$ifconfigmode") | $saveCheckResult
+    else
+        echo -e "${RED}[!]未发现网卡模式${NC}" | $saveCheckResult
+    fi
+
+    # 混杂模式
+    echo -e "${YELLOW}[2.4.1]Check Promiscuous Mode[ip addr]:${NC}" | $saveCheckResult
+    Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
+    if [ -n "$Promisc" ];then
+        (echo -e "${RED}[!]网卡处于混杂模式:${NC}" && echo "$Promisc") |  $saveDangerResult | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]未发现网卡处于混杂模式${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 监听模式
+    echo -e "${YELLOW}[2.4.2]Check Monitor Mode[ip addr]:${NC}" | $saveCheckResult
+    Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
+    if [ -n "$Monitor" ];then
+        (echo -e "${RED}[!]网卡处于监听模式:${NC}" && echo "$Monitor") |  $saveDangerResult | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]未发现网卡处于监听模式${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 网络路由信息
+    echo -e "${YELLOW}[2.5]Get Network Route Info${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.5.1]Check Route Table[route -n]:${NC}" | $saveCheckResult
+    route=$(route -n)
+    if [ -n "$route" ];then
+        (echo -e "${YELLOW}[+]路由表如下:${NC}" && echo "$route") | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]未发现路由器表${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 路由转发
+    echo -e "${YELLOW}[2.5.2]Check IP Forward[/proc/sys/net/ipv4/ip_forward]:${NC}" | $saveCheckResult
+    ip_forward=$(cat /proc/sys/net/ipv4/ip_forward)  # 1:开启路由转发 0:未开启路由转发
+    # 判断IP转发是否开启
+    if [ "$ip_forward" -eq 1 ]; then
+        echo -e "${RED}[!]该服务器开启路由转发,请注意!${NC}" | $saveDangerResult | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    # 防火墙策略
+    echo -e "${YELLOW}[2.6]Get Firewall Policy${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.6.1]Check Firewalld Policy[systemctl status firewalld]:${NC}" | $saveCheckResult
+    firewalledstatus=$(systemctl status firewalld | grep "active (running)")
+    firewalledpolicy=$(firewall-cmd --list-all)
+    if [ -n "$firewalledstatus" ];then
+        echo -e "${YELLOW}[+]该服务器防火墙已打开${NC}" | $saveCheckResult
+        if [ -n "$firewalledpolicy" ];then
+            (echo -e "${YELLOW}[+]防火墙策略如下${NC}" && echo "$firewalledpolicy") | $saveCheckResult
+        else
+            echo -e "${RED}[!]防火墙策略未配置,建议配置防火墙策略!${NC}" |  $saveDangerResult | $saveCheckResult
+        fi
+    else
+        echo -e "${RED}[!]防火墙未开启,建议开启防火墙${NC}" |  $saveDangerResult | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    echo -e "${YELLOW}[2.6.2]Check Iptables Policy[service iptables status]:${NC}" | $saveCheckResult
+    firewalledstatus=$(service iptables status | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
+    firewalledpolicy=$(iptables -L)
+    if [ -n "$firewalledstatus" ];then
+        echo -e "${YELLOW}[+]iptables已打开${NC}" | $saveCheckResult
+        if [ -n "$firewalledpolicy" ];then
+            (echo -e "${YELLOW}[+]iptables策略如下${NC}" && echo "$firewalledpolicy") | $saveCheckResult
+        else
+            echo -e "${RED}[!]iptables策略未配置,建议配置iptables策略!${NC}" |  $saveDangerResult | $saveCheckResult
+        fi
+    else
+        echo -e "${RED}[!]iptables未开启,建议开启防火墙${NC}" |  $saveDangerResult | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+}
 
 
-echo "==========2.网络连接情况==========" | $saveCheckResult
-echo "[2.0]正在采集ARP表信息:" && "$saveCheckResult"
-echo "[2.1]ARP表项[arp -a -n]:" | $saveCheckResult
-arp=$(arp -a -n)
-if [ -n "$arp" ];then
-	(echo "[+]ARP表项如下:" && echo "$arp") | $saveCheckResult
-else
-	echo "[!]未发现arp表" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
-
-# 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别，然后输出重复的MAC地址以及它们的出现次数
-# 该命令用于统计arp表中的MAC地址出现次数，并显示重复的MAC地址及其出现频率。
-# 具体解释如下：
-# - `arp -a -n`：查询ARP表，并以IP地址和MAC地址的格式显示结果。
-# - `awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}'`：使用awk命令进行处理。
-#   - `{++S[$4]}`：对数组S中以第四个字段（即MAC地址）作为索引的元素加1进行计数。
-#   - `END {for(a in S) {if($2>1) print $2,a,S[a]}}`：在处理完所有行之后，遍历数组S。
-#     - `for(a in S)`：遍历数组S中的每个元素。
-#     - `if($2>1)`：如果第二个字段（即计数）大于1，则表示这是一个重复的MAC地址。
-#     - `print $2,a,S[a]`：打印重复的MAC地址的计数、MAC地址本身和出现的次数。
-
-echo "[2.2]正在检测是否存在ARP攻击[arp -a -n]:" | $saveCheckResult
-echo "[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数" | $saveCheckResult
-arpattack=$(arp -a -n | awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}')
-if [ -n "$arpattack" ];then
-	(echo "[!]发现存在ARP攻击:" && echo "$arpattack") | $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现ARP攻击" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.3]正在采集网络连接信息:" && "$saveCheckResult"
-echo "[2.3.1]正在检查网络连接情况[netstat -anlp]:" | $saveCheckResult
-netstat=$(netstat -anlp | grep ESTABLISHED)
-netstatnum=$(netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
-if [ -n "$netstat" ];then
-	(echo "[+]建立网络连接情况如下:" && echo "$netstat") | $saveCheckResult
-	if [ -n "$netstatnum" ];then
-		(echo "[+]各个状态的数量如下:" && echo "$netstatnum") | $saveCheckResult
-	fi
-else
-	echo "[+]未发现网络连接" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[2.3.2]正在检查网络DNS[/etc/resolv.conf]:" | $saveCheckResult
-resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}') 
-if [ -n "$resolv" ];then
-	(echo "[+]该服务器使用以下DNS服务器:" && echo "$resolv") | $saveCheckResult
-else
-	echo "[+]未发现DNS服务器" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.4]正在检查网卡模式[ip addr]:" | $saveCheckResult
-# ifconfigmode=$(ifconfig -a | grep flags | awk -F '[: = < >]' '{print "网卡:",$1,"模式:",$5}')
-ifconfigmode=$(ip addr | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
-if [ -n "$ifconfigmode" ];then
-	(echo "网卡工作模式如下:" && echo "$ifconfigmode") | $saveCheckResult
-else
-	echo "[+]未找到网卡模式相关信息,请人工分析" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.4.1]正在分析是否有网卡处于混杂模式[ifconfig]:" | $saveCheckResult
-# Promisc=`ifconfig | grep PROMISC | gawk -F: '{ print $1}'`
-Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
-if [ -n "$Promisc" ];then
-	(echo "[!]网卡处于混杂模式:" && echo "$Promisc") | $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现网卡处于混杂模式" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[2.4.2]正在分析是否有网卡处于监听模式[ifconfig]:" | $saveCheckResult
-# Monitor=`ifconfig | grep -E "Mode:Monitor" | gawk -F: '{ print $1}'`
-Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
-if [ -n "$Monitor" ];then
-	(echo "[!]网卡处于监听模式:" && echo "$Monitor") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现网卡处于监听模式" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.5]正在采集网络路由信息:" && "$saveCheckResult"
-echo "[2.5.1]正在检查路由表[route -n]:" | $saveCheckResult
-route=$(route -n)
-if [ -n "$route" ];then
-	(echo "[+]路由表如下:" && echo "$route") | $saveCheckResult
-else
-	echo "[+]未发现路由器表" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.5.2]正在分析是否开启转发功能[/proc/sys/net/ipv4/ip_forward]:" | $saveCheckResult
-#数值分析
-#1:开启路由转发
-#0:未开启路由转发
-ip_forward=`more /proc/sys/net/ipv4/ip_forward | gawk -F: '{if ($1==1) print "1"}'`
-if [ -n "$ip_forward" ];then
-	echo "[!]该服务器开启路由转发,请注意!" |  $saveDangerResult  | $saveCheckResult
-else
-	echo "[+]该服务器未开启路由转发" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-
-echo "[2.6]正在采集防火墙策略:" && "$saveCheckResult"
-echo "[2.6.1]正在检查firewalld策略[systemctl status firewalld]:" | $saveCheckResult
-firewalledstatus=$(systemctl status firewalld | grep "active (running)")
-firewalledpolicy=$(firewall-cmd --list-all)
-if [ -n "$firewalledstatus" ];then
-	echo "[+]该服务器防火墙已打开"
-	if [ -n "$firewalledpolicy" ];then
-		(echo "[+]防火墙策略如下" && echo "$firewalledpolicy") | $saveCheckResult
-	else
-		echo "[!]防火墙策略未配置,建议配置防火墙策略!" |  $saveDangerResult | $saveCheckResult
-	fi
-else
-	echo "[!]防火墙未开启,建议开启防火墙" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[2.6.2]正在检查iptables策略[service iptables status]:" | $saveCheckResult
-firewalledstatus=$(service iptables status | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
-firewalledpolicy=$(iptables -L)
-if [ -n "$firewalledstatus" ];then
-	echo "[+]iptables已打开"
-	if [ -n "$firewalledpolicy" ];then
-		(echo "[+]iptables策略如下" && echo "$firewalledpolicy") | $saveCheckResult
-	else
-		echo "[!]iptables策略未配置,建议配置iptables策略!" |  $saveDangerResult | $saveCheckResult
-	fi
-else
-	echo "[!]iptables未开启,建议开启防火墙" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
