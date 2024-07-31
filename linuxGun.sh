@@ -203,6 +203,9 @@ networkInfo(){
     fi
     printf "\n" | $saveCheckResult
 
+    # 端口信息
+    
+
     # DNS 信息
     echo -e "${YELLOW}[2.3.2]Check DNS Info[/etc/resolv.conf]:${NC}" | $saveCheckResult
     resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}')
