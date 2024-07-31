@@ -7,10 +7,10 @@
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
 
-Version:4.0
+Version:5.0
 Author:sun977
 Mail:jiuwei977@foxmail.com
-Date:2024.6.16
+Date:2024.07.31
 
 更新日志:
 	2024.06.16:
@@ -24,6 +24,12 @@ Date:2024.6.16
 		1、优化掉ifconfig命令全部使用ip替换
 	2024.x.x:
 		2、支持多linux系统
+	[说明]:
+		1、linuxcheck.sh 可正常使用,照常维护和更新,其更新日志记录在linuxcheck.sh中
+		2、linuxGun.sh 为新开发 5.x 版本脚本,模块化分解(开发中)
+		3、README.md 的变动记录的是 linuxGun.sh 设想和实现
+		4、一些好的建议和更新会在 linuxGun.sh 和 linuxcheck.sh 中都体现
+
 
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
