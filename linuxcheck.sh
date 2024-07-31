@@ -13,10 +13,10 @@ cat <<EOF
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
 
-Version:4.0
+Version:4.2
 Author:sun977
 Mail:jiuwei977@foxmail.com
-Date:2024.6.16
+Date:2024.07.31
 
 更新日志:
 	2024.06.16:
@@ -24,8 +24,12 @@ Date:2024.6.16
 		2、修改了找不到高危端口的文件bug
 		3、增加了检测系统环境变量的功能[.bashrc|.bash_profile|.zshrc|.viminfo等]
 		4、增加了journalctl日志输出
-	2024.07.17:
+        2024.07.17:
 		1、修改了logo显示bug
+	2024.07.30:
+		1、优化掉ifconfig命令全部使用ip替换
+	2024.x.x:
+		2、支持多linux系统
 
 检查说明:
 	1.首先采集原始信息保存到当前目录的 output/liuxcheck_[your-ip]_[date]/check_file 目录下
