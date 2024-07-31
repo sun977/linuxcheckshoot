@@ -244,7 +244,8 @@ EOF
 dos2unix linuxcheck.sh
 date=$(date +%Y%m%d)
 # 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-ipadd=$(ifconfig -a | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}')
+# ipadd=$(ifconfig -a | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}')
+ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 
 # 创建输出目录变量，当前目录下的output目录
 current_dir=$(pwd)  
@@ -387,7 +388,8 @@ printf "\n" | $saveCheckResult
 
 
 echo "[2.4.1]正在分析是否有网卡处于混杂模式[ifconfig]:" | $saveCheckResult
-Promisc=`ifconfig | grep PROMISC | gawk -F: '{ print $1}'`
+# Promisc=`ifconfig | grep PROMISC | gawk -F: '{ print $1}'`
+Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
 if [ -n "$Promisc" ];then
 	(echo "[!]网卡处于混杂模式:" && echo "$Promisc") | $saveDangerResult | $saveCheckResult
 else
@@ -396,7 +398,8 @@ fi
 printf "\n" | $saveCheckResult
 
 echo "[2.4.2]正在分析是否有网卡处于监听模式[ifconfig]:" | $saveCheckResult
-Monitor=`ifconfig | grep -E "Mode:Monitor" | gawk -F: '{ print $1}'`
+# Monitor=`ifconfig | grep -E "Mode:Monitor" | gawk -F: '{ print $1}'`
+Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
 if [ -n "$Monitor" ];then
 	(echo "[!]网卡处于监听模式:" && echo "$Monitor") |  $saveDangerResult | $saveCheckResult
 else
