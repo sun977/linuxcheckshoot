@@ -204,11 +204,112 @@ networkInfo(){
     printf "\n" | $saveCheckResult
 
     # 端口信息
-    
+    ## 检测 TCP 端口
+    echo -e "${YELLOW}[2.3.2]Check Port Info[netstat -anlp]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[说明]TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[说明]只有绑定在0.0.0.0上局域网才可以访问${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}" | $saveCheckResult
+    tcpopen=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    if [ -n "$tcpopen" ];then
+        (echo -e "${YELLOW}[+]Open TCP ports and corresponding services:${NC}" && echo "$tcpopen") | $saveCheckResult
+    else
+        echo -e "${RED}[!]No open TCP ports${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    tcpAccessPort=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    if [ -n "$tcpAccessPort" ];then
+        (echo -e "${RED}[!]The following TCP ports are open to the local area network or the Internet, please note!${NC}" && echo "$tcpAccessPort") | $saveDangerResult | $saveCheckResult
+    else
+        echo -e "${YELLOW}[+]The port is not open to the local area network or the Internet${NC}" | $saveCheckResult
+    fi
+
+    ## 检测 TCP 高危端口
+    echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[说明]Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}" | $saveCheckResult
+    declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
+    # 读取文件并填充关联数组
+    while IFS=: read -r port description; do
+        danger_ports["$port"]="$description"
+    done < "${current_dir}/checkrules/dangerstcpports.txt"
+    # 获取所有监听中的TCP端口
+    listening_TCP_ports=$(netstat -anlpt | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的TCP端口
+    tcpCount=0  # 初始化计数器
+    # 遍历所有监听端口
+    for port in $listening_TCP_ports; do
+        # 如果端口在危险端口列表中
+        if [[ -n "${danger_ports[$port]}" ]]; then
+            # 输出端口及描述
+            echo "${RED}[!]$port,${danger_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            ((tcpCount++))
+        fi
+    done
+
+    if [ $tcpCount -eq 0 ]; then
+        echo "${YELLOW}[+]No TCP dangerous ports found${NC}" | $saveCheckResult
+    else
+        echo "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}" | $saveCheckResult | $saveDangerResult
+        echo "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    ## 检测 UDP 端口
+    echo -e "${YELLOW}[2.3.2.3]Check UDP Port Info[netstat -anlup]:${NC}" | $saveCheckResult
+    udpopen=$(netstat -anlup | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    if [ -n "$udpopen" ];then
+        (echo -e "${YELLOW}[+]Open UDP ports and corresponding services:${NC}" && echo "$udpopen") | $saveCheckResult
+    else
+        echo -e "${RED}[!]No open UDP ports${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    udpAccessPort=$(netstat -anlup | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
+    # 检查是否有UDP端口
+    if [ -n "$udpAccessPort" ]; then
+        echo -e "${YELLOW}[+]以下UDP端口面向局域网或互联网开放:${NC}" | $saveCheckResult
+        for port in $udpAccessPort; do
+            if nc -z -w1 127.0.0.1 $port </dev/null; then
+                echo "$port" | $saveCheckResult
+            fi
+        done
+    else
+        echo -e "${YELLOW}[+]未发现在UDP端口面向局域网或互联网开放.${NC}" | $saveCheckResult
+    fi
+    printf "\n" | $saveCheckResult
+
+    ## 检测 UDP 高危端口
+    echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[说明]Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}" | $saveCheckResult
+    declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
+    # 读取文件并填充关联数组
+    while IFS=: read -r port description; do
+        danger_udp_ports["$port"]="$description"
+    done < "${current_dir}/checkrules/dangersudpports.txt"
+    # 获取所有监听中的UDP端口
+    listening_UDP_ports=$(netstat -anlup | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的UDP端口
+    udpCount=0  # 初始化计数器
+    # 遍历所有监听端口
+    for port in $listening_UDP_ports; do
+        # 如果端口在危险端口列表中
+        if [[ -n "${danger_udp_ports[$port]}" ]]; then
+            # 输出端口及描述
+            echo "${RED}[!]$port,${danger_udp_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            ((udpCount++))
+        fi
+    done
+
+    if [ $udpCount -eq 0 ]; then
+        echo "${YELLOW}[+]No UDP dangerous ports found${NC}" | $saveCheckResult
+    else
+        echo "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}" | $saveCheckResult | $saveDangerResult
+        echo "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+    fi
+    printf "\n" | $saveCheckResult
 
     # DNS 信息
-    echo -e "${YELLOW}[2.3.2]Check DNS Info[/etc/resolv.conf]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.3]Check DNS Info[/etc/resolv.conf]:${NC}" | $saveCheckResult
     resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}')
+
     if [ -n "$resolv" ];then
         (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv") | $saveCheckResult
     else
@@ -302,109 +403,6 @@ networkInfo(){
 
 
 
-
-
-
-echo "==========3.端口信息==========" | $saveCheckResult
-echo "[3.1]正在检查TCP开放端口[netstat -antlp]:" | $saveCheckResult
-echo "[说明]TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放" | $saveCheckResult
-echo "[说明]只有绑定在0.0.0.0上局域网才可以访问" | $saveCheckResult
-listenport=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
-if [ -n "$listenport" ];then
-	(echo "[+]该服务器开放TCP端口以及对应的服务:" && echo "$listenport") | $saveCheckResult
-else
-	echo "[!]系统未开放TCP端口" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-accessport=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
-if [ -n "$accessport" ];then
-	(echo "[!]以下TCP端口面向局域网或互联网开放,请注意！" && echo "$accessport") | $saveCheckResult
-else
-	echo "[+]端口未面向局域网或互联网开放" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-
-echo "[3.2]正在检查TCP高危端口[netstat -antlp]:" | $saveCheckResult
-echo "[说明]开放端口 dangerstcpports.txt 中的定义的端口匹配,匹配成功则为高危端口" | $saveCheckResult
-tcpport=`netstat -anlpt | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
-count=0
-if [ -n "$tcpport" ];then
-	for port in $tcpport
-	do
-		# 进入到 checkrules 目录下
-		for i in `cat ${current_dir}/checkrules/dangerstcpports.txt`
-		do
-			tcpport=`echo $i | awk -F "[:]" '{print $1}'`
-			desc=`echo $i | awk -F "[:]" '{print $2}'`
-			process=`echo $i | awk -F "[:]" '{print $3}'`
-			if [ $tcpport == $port ];then
-				echo "$tcpport,$desc,$process" | $saveDangerResult | $saveCheckResult
-				count=count+1
-			fi
-		done
-	done
-fi
-if [ $count = 0 ];then
-	echo "[+]未发现TCP高危端口" | $saveCheckResult
-else
-	echo "[!]请人工对TCP危险端口进行关联分析与确认" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[3.3]正在检查UDP开放端口[netstat -anlup]:" | $saveCheckResult
-udpopen=$(netstat -anlup | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
-if [ -n "$udpopen" ];then
-	(echo "[+]该服务器开放UDP端口以及对应的服务:" && echo "$udpopen") | $saveCheckResult
-else
-	echo "[!]系统未开放UDP端口" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-udpports=$(netstat -anlup | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
-if [ -n "$udpports" ];then
-	echo "[+]以下UDP端口面向局域网或互联网开放:" | $saveCheckResult
-	for port in $udpports
-	do
-		nc -uz 127.0.0.1 $port
-		if [ $? -eq 0 ];then
-			echo $port  | $saveCheckResult
-		fi
-	done
-else 
-	echo "[+]未发现在UDP端口面向局域网或互联网开放." | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[3.4]正在检查UDP高危端口[netstat -anlup]:"
-echo "[说明]开放端口 dangersudpports.txt 中的定义的端口匹配,匹配成功则为高危端口" | $saveCheckResult
-udpport=`netstat -anlpu | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
-count=0
-if [ -n "$udpport" ];then
-	for port in $udpport
-	do
-		for i in `cat ${current_dir}/checkrules/dangersudpports.txt`
-		do
-			udpport=`echo $i | awk -F "[:]" '{print $1}'`
-			desc=`echo $i | awk -F "[:]" '{print $2}'`
-			process=`echo $i | awk -F "[:]" '{print $3}'`
-			if [ $udpport == $port ];then
-				echo "$udpport,$desc,$process" | $saveDangerResult | $saveCheckResult
-				count=count+1
-			fi
-		done
-	done
-fi
-if [ $count = 0 ];then
-	echo "[+]未发现UDP高危端口" | $saveCheckResult
-else
-	echo "[!]请人工对UDP危险端口进行关联分析与确认"
-fi
-printf "\n" | $saveCheckResult
 
 
 echo "==========4.系统进程==========" | $saveCheckResult
