@@ -494,31 +494,57 @@ printf "\n" | $saveCheckResult
 
 echo "[3.2]正在检查TCP高危端口[netstat -antlp]:" | $saveCheckResult
 echo "[说明]开放端口 dangerstcpports.txt 中的定义的端口匹配,匹配成功则为高危端口" | $saveCheckResult
-tcpport=`netstat -anlpt | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
-count=0
-if [ -n "$tcpport" ];then
-	for port in $tcpport
-	do
-		# 进入到 checkrules 目录下
-		for i in `cat ${current_dir}/checkrules/dangerstcpports.txt`
-		do
-			tcpport=`echo $i | awk -F "[:]" '{print $1}'`
-			desc=`echo $i | awk -F "[:]" '{print $2}'`
-			process=`echo $i | awk -F "[:]" '{print $3}'`
-			if [ $tcpport == $port ];then
-				echo "$tcpport,$desc,$process" | $saveDangerResult | $saveCheckResult
-				count=count+1
-			fi
-		done
-	done
-fi
-if [ $count = 0 ];then
-	echo "[+]未发现TCP高危端口" | $saveCheckResult
+# tcpport=`netstat -anlpt | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
+# count=0
+# if [ -n "$tcpport" ];then
+# 	for port in $tcpport
+# 	do
+# 		# 进入到 checkrules 目录下
+# 		for i in `cat ${current_dir}/checkrules/dangerstcpports.txt`
+# 		do
+# 			tcpport=`echo $i | awk -F "[:]" '{print $1}'`
+# 			desc=`echo $i | awk -F "[:]" '{print $2}'`
+# 			process=`echo $i | awk -F "[:]" '{print $3}'`
+# 			if [ $tcpport == $port ];then
+# 				echo "$tcpport,$desc,$process" | $saveDangerResult | $saveCheckResult
+# 				count=count+1
+# 			fi
+# 		done
+# 	done
+# fi
+# if [ $count = 0 ];then
+# 	echo "[+]未发现TCP高危端口" | $saveCheckResult
+# else
+# 	echo "[!]请人工对TCP危险端口进行关联分析与确认" | $saveCheckResult
+# fi
+# printf "\n" | $saveCheckResult
+
+#### 20240731 update
+declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
+# 读取文件并填充关联数组
+while IFS=: read -r port description; do
+    danger_ports["$port"]="$description"
+done < "${current_dir}/checkrules/dangerstcpports.txt"
+# 获取所有监听中的TCP端口
+listening_TCP_ports=$(netstat -anlpt | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的TCP端口
+tcpCount=0  # 初始化计数器
+# 遍历所有监听端口
+for port in $listening_TCP_ports; do
+    # 如果端口在危险端口列表中
+    if [[ -n "${danger_ports[$port]}" ]]; then
+        # 输出端口及描述
+        echo "${RED}[!]$port,${danger_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+        ((tcpCount++))
+    fi
+done
+
+if [ $tcpCount -eq 0 ]; then
+    echo "[+]未发现TCP高危端口" | $saveCheckResult
 else
-	echo "[!]请人工对TCP危险端口进行关联分析与确认" | $saveCheckResult
+    echo "[!]总共发现TCP高危端口: $tcpCount ${NC}" | $saveCheckResult | $saveDangerResult
+    echo "[!]请人工对TCP危险端口进行关联分析与确认" | $saveCheckResult | $saveDangerResult
 fi
 printf "\n" | $saveCheckResult
-
 
 echo "[3.3]正在检查UDP开放端口[netstat -anlup]:" | $saveCheckResult
 udpopen=$(netstat -anlup | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
@@ -547,27 +573,54 @@ printf "\n" | $saveCheckResult
 
 echo "[3.4]正在检查UDP高危端口[netstat -anlup]:"
 echo "[说明]开放端口 dangersudpports.txt 中的定义的端口匹配,匹配成功则为高危端口" | $saveCheckResult
-udpport=`netstat -anlpu | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
-count=0
-if [ -n "$udpport" ];then
-	for port in $udpport
-	do
-		for i in `cat ${current_dir}/checkrules/dangersudpports.txt`
-		do
-			udpport=`echo $i | awk -F "[:]" '{print $1}'`
-			desc=`echo $i | awk -F "[:]" '{print $2}'`
-			process=`echo $i | awk -F "[:]" '{print $3}'`
-			if [ $udpport == $port ];then
-				echo "$udpport,$desc,$process" | $saveDangerResult | $saveCheckResult
-				count=count+1
-			fi
-		done
-	done
-fi
-if [ $count = 0 ];then
-	echo "[+]未发现UDP高危端口" | $saveCheckResult
+# udpport=`netstat -anlpu | awk '{print $4}' | awk -F: '{print $NF}' | sort | uniq | grep '[0-9].*'`
+# count=0
+# if [ -n "$udpport" ];then
+# 	for port in $udpport
+# 	do
+# 		for i in `cat ${current_dir}/checkrules/dangersudpports.txt`
+# 		do
+# 			udpport=`echo $i | awk -F "[:]" '{print $1}'`
+# 			desc=`echo $i | awk -F "[:]" '{print $2}'`
+# 			process=`echo $i | awk -F "[:]" '{print $3}'`
+# 			if [ $udpport == $port ];then
+# 				echo "$udpport,$desc,$process" | $saveDangerResult | $saveCheckResult
+# 				count=count+1
+# 			fi
+# 		done
+# 	done
+# fi
+# if [ $count = 0 ];then
+# 	echo "[+]未发现UDP高危端口" | $saveCheckResult
+# else
+# 	echo "[!]请人工对UDP危险端口进行关联分析与确认"
+# fi
+# printf "\n" | $saveCheckResult
+
+#### 20240731 update
+declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
+# 读取文件并填充关联数组
+while IFS=: read -r port description; do
+    danger_udp_ports["$port"]="$description"
+done < "${current_dir}/checkrules/dangersudpports.txt"
+# 获取所有监听中的UDP端口
+listening_UDP_ports=$(netstat -anlup | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的UDP端口
+udpCount=0  # 初始化计数器
+# 遍历所有监听端口
+for port in $listening_UDP_ports; do
+    # 如果端口在危险端口列表中
+    if [[ -n "${danger_udp_ports[$port]}" ]]; then
+        # 输出端口及描述
+        echo "[!]$port,${danger_udp_ports[$port]}" | $saveCheckResult | $saveDangerResult
+        ((udpCount++))
+    fi
+done
+
+if [ $udpCount -eq 0 ]; then
+    echo "[+]未发现UDP高危端口" | $saveCheckResult
 else
-	echo "[!]请人工对UDP危险端口进行关联分析与确认"
+    echo "[!]总共发现UDP高危端口: $udpCount " | $saveCheckResult | $saveDangerResult
+    echo "[!]请人工对UDP危险端口进行关联分析与确认" | $saveCheckResult | $saveDangerResult
 fi
 printf "\n" | $saveCheckResult
 
