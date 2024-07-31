@@ -560,10 +560,10 @@ if [ -n "$udpports" ];then
 	echo "[+]以下UDP端口面向局域网或互联网开放:" | $saveCheckResult
 	for port in $udpports
 	do
-		nc -uz 127.0.0.1 $port
-		if [ $? -eq 0 ];then
-			echo $port  | $saveCheckResult
-		fi
+		# nc -uz 127.0.0.1 $port
+        if nc -z -w1 127.0.0.1 $port </dev/null; then
+            echo "$port" | $saveCheckResult
+        fi
 	done
 else 
 	echo "[+]未发现在UDP端口面向局域网或互联网开放." | $saveCheckResult
