@@ -60,7 +60,7 @@ echoBanner() {
 # ------------------------
 # 基础变量定义
 # 脚本转换确保可以在Linux下运行
-dos2unix linuxgun.sh
+# dos2unix linuxgun.sh # 将windows格式的脚本转换为Linux格式 不是必须
 date=$(date +%Y%m%d)
 # 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
 ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
