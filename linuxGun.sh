@@ -54,13 +54,61 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 基线检查
 
 
-
-# 写一个 banner 函数
+# ------------------------
+# 基础变量定义
+# 输出颜色定义
 typeset RED='\033[0;31m'
 typeset BLUE='\033[0;34m'
 typeset YELLOW='\033[0;33m'
 typeset GREEN='\033[0;32m'
 typeset NC='\033[0m'
+
+# 脚本转换确保可以在Linux下运行
+# dos2unix linuxgun.sh # 将windows格式的脚本转换为Linux格式 不是必须
+date=$(date +%Y%m%d)
+# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
+ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
+
+# 创建输出目录变量，当前目录下的output目录
+current_dir=$(pwd)  
+check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
+log_file="${check_file}/log"
+
+# 删除原有的输出目录
+rm -rf $check_file
+rm -rf $log_file
+
+# 创建新的输出目录 检查目录 日志目录
+mkdir -p $check_file
+mkdir -p $log_file
+echo "LinuxGun v5.0 检查项" > ${check_file}/checkresult.txt
+echo "" >> ${check_file}/checkresult.txt
+echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
+echo "" >> ${check_file}/dangerlist.txt
+
+# 判断目录是否存在
+if [ ! -d "$check_file" ];then
+	echo "检查 ${check_file} 目录不存在,请检查"
+	exit 1
+fi
+
+if [ $(whoami) != "root" ];then
+	echo "安全检查必须使用root账号,否则某些项无法检查"
+	exit 1
+fi
+
+# ------------------------
+
+# 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
+cd $check_file  
+saveCheckResult="tee -a checkresult.txt" 
+saveDangerResult="tee -a dangerlist.txt"
+
+# ------------------------
+
+################################################################
+
+# 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
 
 # banner 函数  格式需要调整
 echoBanner() {
@@ -87,54 +135,6 @@ echoBanner() {
     echo -e "${YELLOW}****************************************************************${NC}"
 
 }
-
-# ------------------------
-# 基础变量定义
-# 脚本转换确保可以在Linux下运行
-# dos2unix linuxgun.sh # 将windows格式的脚本转换为Linux格式 不是必须
-date=$(date +%Y%m%d)
-# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
-
-# 创建输出目录变量，当前目录下的output目录
-current_dir=$(pwd)  
-check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
-log_file="${check_file}/log"
-
-# 删除原有的输出目录
-rm -rf $check_file
-rm -rf $log_file
-
-# 创建新的输出目录 检查目录 日志目录
-mkdir -p $check_file
-mkdir -p $log_file
-echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
-echo "" >> $check_file/dangerlist.txt
-
-# 判断目录是否存在
-if [ ! -d "$check_file" ];then
-	echo "检查${check_file}目录不存在,请检查"
-	exit 1
-fi
-
-if [ $(whoami) != "root" ];then
-	echo "安全检查必须使用root账号,否则某些项无法检查"
-	exit 1
-fi
-
-# ------------------------
-
-# 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
-cd $check_file  
-saveCheckResult="tee -a checkresult.txt" 
-saveDangerResult="tee -a dangerlist.txt"
-
-# ------------------------
-
-################################################################
-
-
-# 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
 
 # 采集系统基础信息
 baseInfo(){
@@ -178,11 +178,6 @@ baseInfo(){
     fi
     printf "\n"  
 }
-
-
-# 检查开始的地方
-echo "LinuxGun 正在检查..."   
-
 
 # 网络信息
 networkInfo(){
@@ -431,7 +426,6 @@ networkInfo(){
     fi
     printf "\n"  
 }
-
 
 # 进程信息分析
 processInfo(){
