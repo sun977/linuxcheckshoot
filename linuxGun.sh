@@ -5,7 +5,8 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 更新功能,所有系统通用【等待更新】
 # 使用函数形式优化代码
 # 模块化：linuxgun.sh --[option] 的方式调用各个模块
-# 根据参数执行不同的功能
+# 根据参数执行不同的功能 
+# 输出 放在最后的处理函数上,内部函数不在单独设置输出
 
 # if [[ "$1" == "--ps" ]] || [[ "$1" == "-p" ]]; then
 #     check_nginx_ps
@@ -24,7 +25,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #     echo "  $0 -i /usr/sbin/nginx /etc/nginx/nginx.conf"
 # fi
 
-# 大纲
+# 大纲 summary
 # 系统信息排查
 #  - 系统基础信息
 #  - 用户信息分析
