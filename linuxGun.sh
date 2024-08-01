@@ -139,63 +139,63 @@ saveDangerResult="tee -a dangerlist.txt"
 # 采集系统基础信息
 baseInfo(){
     echo -e "${GREEN}==========${YELLOW}1.Get System Info${GREEN}==========${NC}"
-    echo -e "${YELLOW}[1.0]Get System Basic Info${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[1.1]IP地址信息[ip addr]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[1.0]Get System Basic Info${NC}"  
+    echo -e "${YELLOW}[1.1]IP地址信息[ip addr]:${NC}"  
     ip=$(ip addr | grep -w inet | awk '{print $2}')
     if [ -n "$ip" ];then
-        (echo -e "${YELLOW}[+]本机IP地址信息:${NC}" && echo "$ip")  | $saveCheckResult
+        (echo -e "${YELLOW}[+]本机IP地址信息:${NC}" && echo "$ip")   
     else
-        echo -e "${RED}[!]本机未配置IP地址${NC}" | $saveCheckResult
+        echo -e "${RED}[!]本机未配置IP地址${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 系统版本信息
-    echo -e "${YELLOW}[1.2]系统版本信息[uname -a]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[1.2]系统版本信息[uname -a]:${NC}"  
     unameInfo=$(uname -a)
     if [ -n "$unameInfo" ];then
-        # (echo -e "${YELLOW}[+]系统内核版本信息:${NC}" && echo "$unameInfo") | $saveCheckResult
-        echo -e "${YELLOW}[+]系统版本信息如下:${NC}" | $saveCheckResult
+        # (echo -e "${YELLOW}[+]系统内核版本信息:${NC}" && echo "$unameInfo")  
+        echo -e "${YELLOW}[+]系统版本信息如下:${NC}"  
         osName=$(echo $unameInfo | awk '{print $1}')  # 系统名称
         hostName=$(echo $unameInfo | awk '{print $2}')  # 主机名
         kernelVerson=$(echo $unameInfo | awk '{print $3}')  # 内核版本
         arch=$(echo $unameInfo | awk '{print $12}')  # 系统架构
-        echo -e "${YELLOW}[+]系统名称:$osName${NC}" | $saveCheckResult
-        echo -e "${YELLOW}[+]主机名:$hostName${NC}" | $saveCheckResult
-        echo -e "${YELLOW}[+]内核版本:$kernelVerson${NC}" | $saveCheckResult
-        echo -e "${YELLOW}[+]系统架构:$arch${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]系统名称:$osName${NC}"  
+        echo -e "${YELLOW}[+]主机名:$hostName${NC}"  
+        echo -e "${YELLOW}[+]内核版本:$kernelVerson${NC}"  
+        echo -e "${YELLOW}[+]系统架构:$arch${NC}"  
     
     else
-        echo -e "${RED}[!]未发系统版本信息${NC}" | $saveCheckResult
+        echo -e "${RED}[!]未发系统版本信息${NC}"  
     fi
 
     # 系统发行版本
-    echo -e "${YELLOW}[1.3]系统发行版本信息[/etc/*-release]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[1.3]系统发行版本信息[/etc/*-release]:${NC}"  
     systemver=$(cat /etc/*-release)
     if [ -n "$systemver" ];then
-        (echo -e "${YELLOW}[+]系统发行版本信息:${NC}" && echo "$systemver") | $saveCheckResult
+        (echo -e "${YELLOW}[+]系统发行版本信息:${NC}" && echo "$systemver")  
     else
-        echo -e "${RED}[!]未发现系统发行版本信息${NC}" | $saveCheckResult
+        echo -e "${RED}[!]未发现系统发行版本信息${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 }
 
 
 # 检查开始的地方
-echo "LinuxGun 正在检查..."  | $saveCheckResult
+echo "LinuxGun 正在检查..."   
 
 
 # 网络信息
 networkInfo(){
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
-    echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[2.1]Get ARP Table[arp -a -n]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
+    echo -e "${YELLOW}[2.1]Get ARP Table[arp -a -n]:${NC}"  
     arp=$(arp -a -n)
     if [ -n "$arp" ];then
-        (echo -e "${YELLOW}[+]ARP Table:${NC}" && echo "$arp") | $saveCheckResult
+        (echo -e "${YELLOW}[+]ARP Table:${NC}" && echo "$arp")  
     else
-        echo -e "${RED}[!]未发现ARP表${NC}" | $saveCheckResult
+        echo -e "${RED}[!]未发现ARP表${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别，然后输出重复的MAC地址以及它们的出现次数
     # 该命令用于统计arp表中的MAC地址出现次数，并显示重复的MAC地址及其出现频率。
@@ -209,55 +209,55 @@ networkInfo(){
     #     - `print $2,a,S[a]`：打印重复的MAC地址的计数、MAC地址本身和出现的次数。
 
     # ARP攻击检查
-    echo -e "${YELLOW}[2.2]Check ARP Attack[arp -a -n]:${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.2]Check ARP Attack[arp -a -n]:${NC}"  
+    echo -e "${YELLOW}[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}"  
     arpattack=$(arp -a -n | awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}')
     if [ -n "$arpattack" ];then
-        (echo -e "${RED}[!]发现存在ARP攻击:${NC}" && echo "$arpattack") | $saveDangerResult | $saveCheckResult
+        (echo -e "${RED}[!]发现存在ARP攻击:${NC}" && echo "$arpattack") 
     else
-        echo -e "${YELLOW}[+]未发现ARP攻击${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现ARP攻击${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 网络连接信息
-    echo -e "${YELLOW}[2.3]Get Network Connection Info${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[2.3.1]Check Network Connection[netstat -anlp]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3]Get Network Connection Info${NC}"  
+    echo -e "${YELLOW}[2.3.1]Check Network Connection[netstat -anlp]:${NC}"  
     netstat=$(netstat -anlp | grep ESTABLISHED) # 过滤出已经建立的连接 ESTABLISHED
     netstatnum=$(netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
     if [ -n "$netstat" ];then
-        (echo -e "${YELLOW}[+]Established Network Connection:${NC}" && echo "$netstat") | $saveCheckResult
+        (echo -e "${YELLOW}[+]Established Network Connection:${NC}" && echo "$netstat")  
         if [ -n "$netstatnum" ];then
-            (echo -e "${YELLOW}[+]Number of each state:${NC}" && echo "$netstatnum") | $saveCheckResult
+            (echo -e "${YELLOW}[+]Number of each state:${NC}" && echo "$netstatnum")  
         fi
     else
-        echo -e "${YELLOW}[+]No network connection${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]No network connection${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 端口信息
     ## 检测 TCP 端口
-    echo -e "${YELLOW}[2.3.2]Check Port Info[netstat -anlp]:${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[说明]TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[说明]只有绑定在0.0.0.0上局域网才可以访问${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.2]Check Port Info[netstat -anlp]:${NC}"  
+    echo -e "${YELLOW}[说明]TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
+    echo -e "${YELLOW}[说明]只有绑定在0.0.0.0上局域网才可以访问${NC}"  
+    echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}"  
     tcpopen=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$tcpopen" ];then
-        (echo -e "${YELLOW}[+]Open TCP ports and corresponding services:${NC}" && echo "$tcpopen") | $saveCheckResult
+        (echo -e "${YELLOW}[+]Open TCP ports and corresponding services:${NC}" && echo "$tcpopen")  
     else
-        echo -e "${RED}[!]No open TCP ports${NC}" | $saveCheckResult
+        echo -e "${RED}[!]No open TCP ports${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     tcpAccessPort=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$tcpAccessPort" ];then
-        (echo -e "${RED}[!]The following TCP ports are open to the local area network or the Internet, please note!${NC}" && echo "$tcpAccessPort") | $saveDangerResult | $saveCheckResult
+        (echo -e "${RED}[!]The following TCP ports are open to the local area network or the Internet, please note!${NC}" && echo "$tcpAccessPort")
     else
-        echo -e "${YELLOW}[+]The port is not open to the local area network or the Internet${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]The port is not open to the local area network or the Internet${NC}" 
     fi
 
     ## 检测 TCP 高危端口
-    echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[说明]Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}"  
+    echo -e "${YELLOW}[说明]Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     while IFS=: read -r port description; do
@@ -271,46 +271,46 @@ networkInfo(){
         # 如果端口在危险端口列表中
         if [[ -n "${danger_ports[$port]}" ]]; then
             # 输出端口及描述
-            echo -e "${RED}[!]$port,${danger_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            echo -e "${RED}[!]$port,${danger_ports[$port]}${NC}"    
             ((tcpCount++))
         fi
     done
 
     if [ $tcpCount -eq 0 ]; then
-        echo -e "${YELLOW}[+]No TCP dangerous ports found${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]No TCP dangerous ports found${NC}"  
     else
-        echo -e "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}" | $saveCheckResult | $saveDangerResult
-        echo -e "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}"    
+        echo -e "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}"    
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     ## 检测 UDP 端口
-    echo -e "${YELLOW}[2.3.2.3]Check UDP Port Info[netstat -anlup]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.2.3]Check UDP Port Info[netstat -anlup]:${NC}"  
     udpopen=$(netstat -anlup | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$udpopen" ];then
-        (echo -e "${YELLOW}[+]Open UDP ports and corresponding services:${NC}" && echo "$udpopen") | $saveCheckResult
+        (echo -e "${YELLOW}[+]Open UDP ports and corresponding services:${NC}" && echo "$udpopen")  
     else
-        echo -e "${RED}[!]No open UDP ports${NC}" | $saveCheckResult
+        echo -e "${RED}[!]No open UDP ports${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     udpAccessPort=$(netstat -anlup | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
     # 检查是否有UDP端口
     if [ -n "$udpAccessPort" ]; then
-        echo -e "${YELLOW}[+]以下UDP端口面向局域网或互联网开放:${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]以下UDP端口面向局域网或互联网开放:${NC}"  
         for port in $udpAccessPort; do
             if nc -z -w1 127.0.0.1 $port </dev/null; then
-                echo "$port" | $saveCheckResult
+                echo "$port"  
             fi
         done
     else
-        echo -e "${YELLOW}[+]未发现在UDP端口面向局域网或互联网开放.${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现在UDP端口面向局域网或互联网开放.${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     ## 检测 UDP 高危端口
-    echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[说明]Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}"  
+    echo -e "${YELLOW}[说明]Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     while IFS=: read -r port description; do
@@ -324,112 +324,112 @@ networkInfo(){
         # 如果端口在危险端口列表中
         if [[ -n "${danger_udp_ports[$port]}" ]]; then
             # 输出端口及描述
-            echo -e "${RED}[!]$port,${danger_udp_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            echo -e "${RED}[!]$port,${danger_udp_ports[$port]}${NC}"    
             ((udpCount++))
         fi
     done
 
     if [ $udpCount -eq 0 ]; then
-        echo -e "${YELLOW}[+]No UDP dangerous ports found${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]No UDP dangerous ports found${NC}"  
     else
-        echo -e "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}" | $saveCheckResult | $saveDangerResult
-        echo -e "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}"    
+        echo -e "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}"    
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # DNS 信息
-    echo -e "${YELLOW}[2.3.3]Check DNS Info[/etc/resolv.conf]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.3.3]Check DNS Info[/etc/resolv.conf]:${NC}"  
     resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}')
 
     if [ -n "$resolv" ];then
-        (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv") | $saveCheckResult
+        (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv")  
     else
-        echo -e "${YELLOW}[+]未发现DNS服务器${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现DNS服务器${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 网卡模式
-    echo -e "${YELLOW}[2.4]Check Network Card Mode[ip addr]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.4]Check Network Card Mode[ip addr]:${NC}"  
     ifconfigmode=$(ip addr | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
     if [ -n "$ifconfigmode" ];then
-        (echo -e "${YELLOW}[+]网卡模式如下:${NC}" && echo "$ifconfigmode") | $saveCheckResult
+        (echo -e "${YELLOW}[+]网卡模式如下:${NC}" && echo "$ifconfigmode")  
     else
-        echo -e "${RED}[!]未发现网卡模式${NC}" | $saveCheckResult
+        echo -e "${RED}[!]未发现网卡模式${NC}"  
     fi
 
     # 混杂模式
-    echo -e "${YELLOW}[2.4.1]Check Promiscuous Mode[ip addr]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.4.1]Check Promiscuous Mode[ip addr]:${NC}"  
     Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
     if [ -n "$Promisc" ];then
-        (echo -e "${RED}[!]网卡处于混杂模式:${NC}" && echo "$Promisc") |  $saveDangerResult | $saveCheckResult
+        (echo -e "${RED}[!]网卡处于混杂模式:${NC}" && echo "$Promisc") 
     else
-        echo -e "${YELLOW}[+]未发现网卡处于混杂模式${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现网卡处于混杂模式${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 监听模式
-    echo -e "${YELLOW}[2.4.2]Check Monitor Mode[ip addr]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.4.2]Check Monitor Mode[ip addr]:${NC}"  
     Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
     if [ -n "$Monitor" ];then
-        (echo -e "${RED}[!]网卡处于监听模式:${NC}" && echo "$Monitor") |  $saveDangerResult | $saveCheckResult
+        (echo -e "${RED}[!]网卡处于监听模式:${NC}" && echo "$Monitor")
     else
-        echo -e "${YELLOW}[+]未发现网卡处于监听模式${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现网卡处于监听模式${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 网络路由信息
-    echo -e "${YELLOW}[2.5]Get Network Route Info${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[2.5.1]Check Route Table[route -n]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.5]Get Network Route Info${NC}"  
+    echo -e "${YELLOW}[2.5.1]Check Route Table[route -n]:${NC}"  
     route=$(route -n)
     if [ -n "$route" ];then
-        (echo -e "${YELLOW}[+]路由表如下:${NC}" && echo "$route") | $saveCheckResult
+        (echo -e "${YELLOW}[+]路由表如下:${NC}" && echo "$route")  
     else
-        echo -e "${YELLOW}[+]未发现路由器表${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]未发现路由器表${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 路由转发
-    echo -e "${YELLOW}[2.5.2]Check IP Forward[/proc/sys/net/ipv4/ip_forward]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.5.2]Check IP Forward[/proc/sys/net/ipv4/ip_forward]:${NC}"  
     ip_forward=$(cat /proc/sys/net/ipv4/ip_forward)  # 1:开启路由转发 0:未开启路由转发
     # 判断IP转发是否开启
     if [ "$ip_forward" -eq 1 ]; then
-        echo -e "${RED}[!]该服务器开启路由转发,请注意!${NC}" | $saveDangerResult | $saveCheckResult
+        echo -e "${RED}[!]该服务器开启路由转发,请注意!${NC}"    
     else
-        echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}"  
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
     # 防火墙策略
-    echo -e "${YELLOW}[2.6]Get Firewall Policy${NC}" | $saveCheckResult
-    echo -e "${YELLOW}[2.6.1]Check Firewalld Policy[systemctl status firewalld]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.6]Get Firewall Policy${NC}"  
+    echo -e "${YELLOW}[2.6.1]Check Firewalld Policy[systemctl status firewalld]:${NC}"  
     firewalledstatus=$(systemctl status firewalld | grep "active (running)")
     firewalledpolicy=$(firewall-cmd --list-all)
     if [ -n "$firewalledstatus" ];then
-        echo -e "${YELLOW}[+]该服务器防火墙已打开${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]该服务器防火墙已打开${NC}"  
         if [ -n "$firewalledpolicy" ];then
-            (echo -e "${YELLOW}[+]防火墙策略如下${NC}" && echo "$firewalledpolicy") | $saveCheckResult
+            (echo -e "${YELLOW}[+]防火墙策略如下${NC}" && echo "$firewalledpolicy")  
         else
-            echo -e "${RED}[!]防火墙策略未配置,建议配置防火墙策略!${NC}" |  $saveDangerResult | $saveCheckResult
+            echo -e "${RED}[!]防火墙策略未配置,建议配置防火墙策略!${NC}" 
         fi
     else
-        echo -e "${RED}[!]防火墙未开启,建议开启防火墙${NC}" |  $saveDangerResult | $saveCheckResult
+        echo -e "${RED}[!]防火墙未开启,建议开启防火墙${NC}" 
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 
-    echo -e "${YELLOW}[2.6.2]Check Iptables Policy[service iptables status]:${NC}" | $saveCheckResult
+    echo -e "${YELLOW}[2.6.2]Check Iptables Policy[service iptables status]:${NC}"  
     firewalledstatus=$(service iptables status | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
     firewalledpolicy=$(iptables -L)
     if [ -n "$firewalledstatus" ];then
-        echo -e "${YELLOW}[+]iptables已打开${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]iptables已打开${NC}"  
         if [ -n "$firewalledpolicy" ];then
-            (echo -e "${YELLOW}[+]iptables策略如下${NC}" && echo "$firewalledpolicy") | $saveCheckResult
+            (echo -e "${YELLOW}[+]iptables策略如下${NC}" && echo "$firewalledpolicy")  
         else
-            echo -e "${RED}[!]iptables策略未配置,建议配置iptables策略!${NC}" |  $saveDangerResult | $saveCheckResult
+            echo -e "${RED}[!]iptables策略未配置,建议配置iptables策略!${NC}" 
         fi
     else
-        echo -e "${RED}[!]iptables未开启,建议开启防火墙${NC}" |  $saveDangerResult | $saveCheckResult
+        echo -e "${RED}[!]iptables未开启,建议开启防火墙${NC}" 
     fi
-    printf "\n" | $saveCheckResult
+    printf "\n"  
 }
 
 
