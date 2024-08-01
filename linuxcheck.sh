@@ -562,7 +562,7 @@ if [ -n "$udpports" ];then
 	do
 		# nc -uz 127.0.0.1 $port
         if nc -z -w1 127.0.0.1 $port </dev/null; then
-            echo "$port" | $saveCheckResult
+        	echo "$port" | $saveCheckResult
         fi
 	done
 else 
