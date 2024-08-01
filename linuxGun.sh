@@ -240,16 +240,16 @@ networkInfo(){
         # 如果端口在危险端口列表中
         if [[ -n "${danger_ports[$port]}" ]]; then
             # 输出端口及描述
-            echo "${RED}[!]$port,${danger_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            echo -e "${RED}[!]$port,${danger_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
             ((tcpCount++))
         fi
     done
 
     if [ $tcpCount -eq 0 ]; then
-        echo "${YELLOW}[+]No TCP dangerous ports found${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]No TCP dangerous ports found${NC}" | $saveCheckResult
     else
-        echo "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}" | $saveCheckResult | $saveDangerResult
-        echo "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
     fi
     printf "\n" | $saveCheckResult
 
@@ -293,16 +293,16 @@ networkInfo(){
         # 如果端口在危险端口列表中
         if [[ -n "${danger_udp_ports[$port]}" ]]; then
             # 输出端口及描述
-            echo "${RED}[!]$port,${danger_udp_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
+            echo -e "${RED}[!]$port,${danger_udp_ports[$port]}${NC}" | $saveCheckResult | $saveDangerResult
             ((udpCount++))
         fi
     done
 
     if [ $udpCount -eq 0 ]; then
-        echo "${YELLOW}[+]No UDP dangerous ports found${NC}" | $saveCheckResult
+        echo -e "${YELLOW}[+]No UDP dangerous ports found${NC}" | $saveCheckResult
     else
-        echo "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}" | $saveCheckResult | $saveDangerResult
-        echo "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}" | $saveCheckResult | $saveDangerResult
+        echo -e "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}" | $saveCheckResult | $saveDangerResult
     fi
     printf "\n" | $saveCheckResult
 
