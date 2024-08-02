@@ -429,9 +429,23 @@ networkInfo(){
 
 # 进程信息分析
 processInfo(){
-    # 
-
-
+    # 输出所有系统进程
+    showAllProcess(){
+        echo -e "${YELLOW}[4.1]Get System Process[ps -aux]:${NC}"  
+        echo -e "${YELLOW}[COMMAND]:ps -auxww ${NC}"
+        ps=$(ps -auxww)
+        if [ -n "$ps" ];then
+            (echo -e "${YELLOW}[+]System Process:${NC}" && echo "$ps")  
+        else
+            echo -e "${YELLOW}[+]No system process${NC}"  
+        fi
+        printf "\n"  
+    }
+    # 检查内存占用top5的进程
+    ## 内存占用超过 20% 的进程
+    # 检查CPU占用top5的进程
+    ## cpu占用超过 20% 的进程
+    # 敏感进程匹配[匹配规则]
 }
 
 
