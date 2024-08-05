@@ -2106,7 +2106,7 @@ echo "[18.3.2]正在检查内存占用前5资源的进程:" | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 echo "[18.3.3]正在检查内存占用较多的进程:" | $saveCheckResult
-psmem=$(ps -aux | sort -nr -k 4 | head -5 | awk '{if($4>=2) print $0}')
+psmem=$(ps -aux | sort -nr -k 4 | head -5 | awk '{if($4>=20) print $0}')
 if [ -n "$psmem" ];then
 	echo "[!]以下进程占用的内存超过20%:" && echo "UID         PID   PPID  C STIME TTY          TIME CMD"
 	echo "$psmem" |  $saveDangerResult | $saveCheckResult
