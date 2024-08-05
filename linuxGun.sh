@@ -440,15 +440,7 @@ processInfo(){
 
 
 
-echo "==========4.系统进程==========" | $saveCheckResult
 
-echo "[4.2]正在检查守护进程[/etc/xinetd.d/rsync]:" | $saveCheckResult
-if [ -e /etc/xinetd.d/rsync ];then
-	(echo "[+]系统守护进程:" && more /etc/xinetd.d/rsync | grep -v "^#") | $saveCheckResult
-else
-	echo "[+]未发现守护进程" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 echo "==========5.启动项情况==========" | $saveCheckResult
 echo "[5.1]正在检查用户自定义启动项[chkconfig --list]:" | $saveCheckResult
