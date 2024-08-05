@@ -461,8 +461,44 @@ processInfo(){
 }
 
 
+# 系统信息排查
+systemCheck(){
+	# 基础信息排查
+	# 用户信息排查
+	# 计划任务排查
+	# 历史命令排查
+}
 
+# 文件信息排查
+fileCheck(){
+	# 自启动项分析
+	# 系统服务分析
+	# 敏感目录排查
+	# 新增文件排查
+	# 隐藏文件排查
+	# 特殊文件排查
+	# 日志文件分析
+}
 
+# 后门排查
+backdoorCheck(){
+}
+
+# webshell 排查
+webshellCheck(){
+}
+
+# 病毒排查
+virusCheck(){
+}
+
+# 其他排查
+otherCheck(){
+}
+
+# 基线检查
+baselineCheck(){
+}
 
 
 
