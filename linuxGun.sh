@@ -429,11 +429,11 @@ networkInfo(){
 
 # 进程信息分析
 processInfo(){
-	echo -e "[+]输出所有系统进程[ps -auxww]:" && ps -auxww
-	echo -e "[+]检查内存占用top5的进程[ps -aux | sort -nr -k 4 | head -5]:" && ps -aux | sort -nr -k 4 | head -5
-	echo -e "[+]检查内存占用超过20%的进程[ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5]:" && ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5
-    # 检查CPU占用top5的进程
-    ## cpu占用超过 20% 的进程
+	echo -e "${YELLOW}[+]输出所有系统进程[ps -auxww]:${NC}" && ps -auxww
+	echo -e "${YELLOW}[+]检查内存占用top5的进程[ps -aux | sort -nr -k 4 | head -5]:${NC}" && ps -aux | sort -nr -k 4 | head -5
+	echo -e "${YELLOW}[+]检查内存占用超过20%的进程[ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5]:${NC}" && ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5
+	echo -e "${YELLOW}[+]检查CPU占用top5的进程[ps -aux | sort -nr -k 3 | head -5]:${NC}" && ps -aux | sort -nr -k 3 | head -5
+	echo -e "${YELLOW}[+]检查CPU占用超过20%的进程[ps -aux | sort -nr -k 3 | awk '{if($3>=20) print }' | head -5]:${NC}" && ps -aux | sort -nr -k 3 | awk '{if($3>=20) print $0}' | head -5
     # 敏感进程匹配[匹配规则]
 }
 
@@ -441,15 +441,6 @@ processInfo(){
 
 
 echo "==========4.系统进程==========" | $saveCheckResult
-echo "[4.1]正在检查系统进程[ps -aux]:" | $saveCheckResult
-ps=$(ps -aux)
-if [ -n "$ps" ];then
-	(echo "[+]系统进程如下:" && echo "$ps") | $saveCheckResult
-else
-	echo "[+]未发现系统进程" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
 
 echo "[4.2]正在检查守护进程[/etc/xinetd.d/rsync]:" | $saveCheckResult
 if [ -e /etc/xinetd.d/rsync ];then
