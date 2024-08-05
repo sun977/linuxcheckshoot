@@ -435,7 +435,32 @@ processInfo(){
 	echo -e "${YELLOW}[+]检查CPU占用top5的进程[ps -aux | sort -nr -k 3 | head -5]:${NC}" && ps -aux | sort -nr -k 3 | head -5
 	echo -e "${YELLOW}[+]检查CPU占用超过20%的进程[ps -aux | sort -nr -k 3 | awk '{if($3>=20) print }' | head -5]:${NC}" && ps -aux | sort -nr -k 3 | awk '{if($3>=20) print $0}' | head -5
     # 敏感进程匹配[匹配规则]
+	echo -e "${YELLOW}[+]根据规则列表 dangerspslist.txt 匹配检查敏感进程${NC}"
+	danger_ps_list=$(cat ${current_dir}/checkrules/dangerspslist.txt) # 敏感进程程序名列表
+	# 循环输出敏感进程的进程名称和 PID 和 所属用户
+	ps_output=$(ps -auxww)
+	for psname in $danger_ps_list; do
+		filtered_output=$(echo "$ps_output" | awk -v proc="$psname" '
+			BEGIN { found = 0 }
+			{
+				if ($11 ~ proc) {
+					print;
+					found++;
+				}
+			}
+			END {
+				if (found > 0) {
+					printf($0)
+					printf("\n'${YELLOW}'[!]发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
+				}
+			}'
+		)
+		# 输出敏感进程
+		# echo -e "${RED}[!]敏感进程如下:${NC}" && echo "$filtered_output"
+		echo -e "${RED}$filtered_output${NC}"
+	done
 }
+
 
 
 
@@ -1876,22 +1901,7 @@ printf "\n" | $saveCheckResult
 echo "[18.2]正在检查CPU用情况[more /proc/cpuinfo]:" | $saveCheckResult
 echo "[18.2.1]正在检查CPU相关信息:" | $saveCheckResult
 (echo "CPU硬件信息如下:" && more /proc/cpuinfo ) | $saveCheckResult
-(echo "CPU使用情况如下:" && ps -aux | sort -nr -k 3 | awk  '{print $1,$2,$3,$NF}') | $saveCheckResult
-printf "\n" | $saveCheckResult
 
-echo "[18.2.2]正在检查占用CPU前5资源的进程[ps -aux | sort -nr -k 3 | head -5]:" | $saveCheckResult
-(echo "占用CPU资源前5进程[ps -aux | sort -nr -k 3 | head -5]:" && ps -aux | sort -nr -k 3 | head -5)  | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-echo "[18.2.3]正在检查占用CPU较大的进程[ps -aux | sort -nr -k 3 | head -5 | awk '{if($3>=20) print $0}']:" | $saveCheckResult
-pscpu=$(ps -aux | sort -nr -k 3 | head -5 | awk '{if($3>=20) print $0}')
-if [ -n "$pscpu" ];then
-	echo "[!]以下进程占用的CPU超过20%:" && echo "UID         PID   PPID  C STIME TTY          TIME CMD" 
-	echo "$pscpu" | tee -a 20.2.3_pscpu.txt | $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现进程占用资源超过20%" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 echo "[18.3]正在分析内存情况:" | $saveCheckResult
 echo "[18.3.1]正在检查内存相关信息:" | $saveCheckResult
@@ -1899,19 +1909,6 @@ echo "[18.3.1]正在检查内存相关信息:" | $saveCheckResult
 (echo "[+]内存使用情况如下[free -m]:" && free -m) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
-echo "[18.3.2]正在检查内存占用前5资源的进程:" | $saveCheckResult
-(echo "[+]占用内存资源前5进程[ps -aux | sort -nr -k 4 | head -5]:" && ps -aux | sort -nr -k 4 | head -5) | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-echo "[18.3.3]正在检查内存占用较多的进程:" | $saveCheckResult
-psmem=$(ps -aux | sort -nr -k 4 | head -5 | awk '{if($4>=2) print $0}')
-if [ -n "$psmem" ];then
-	echo "[!]以下进程占用的内存超过20%:" && echo "UID         PID   PPID  C STIME TTY          TIME CMD"
-	echo "$psmem" |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现进程占用内存资源超过20%" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 echo "[18.4]系统运行及负载情况:" | $saveCheckResult
 echo "[18.4.1]正在检查系统运行时间及负载情况:." | $saveCheckResult
