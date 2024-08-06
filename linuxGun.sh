@@ -465,8 +465,41 @@ processInfo(){
 systemCheck(){
 	# 基础信息排查
 	# 用户信息排查
-	# 计划任务排查
+	# 计划任务排查 crontabCheck
 	# 历史命令排查
+}
+
+
+# 计划任务排查
+crontabCheck(){
+	# 系统计划任务收集
+	echo -e "${YELLOW}输出系统计划任务[/etc/crontab | /etc/cron*/* ]:${NC}" 
+	echo -e "${YELLOW}[+]系统计划任务[/etc/crontab]:${NC}" && cat /etc/crontab
+	echo -e "${YELLOW}[+]系统计划任务[/etc/cron*/*]:${NC}" && cat /etc/cron*/*
+
+	# 用户计划任务收集
+	echo -e "${YELLOW}[+]输出用户计划任务[/var/spool/cron/*]:${NC}" 
+	for user_cron in $(ls /var/spool/cron); do
+		echo "Cron tasks for user: $user_cron"
+		cat /var/spool/cron/$user_cron
+	done
+
+	# 用户/系统计划任务分析
+	hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))"  /etc/crontab /etc/cron*/* /var/spool/cron/*)  # 输出所有可疑计划任务
+	if [ $? -eq 0 ];then
+		(echo "${RED}[!]发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
+	else
+		echo "${YELLOW}[+]未发现可疑系统定时任务${NC}" 
+	fi
+
+}
+
+# 系统服务排查
+systemServiceCheck(){
+	# 系统服务收集
+	# 系统服务分析
+	# 用户服务收集
+	# 用户服务分析
 }
 
 # 文件信息排查
