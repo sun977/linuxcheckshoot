@@ -480,7 +480,7 @@ crontabCheck(){
 	# 用户计划任务收集
 	echo -e "${YELLOW}[+]输出用户计划任务[/var/spool/cron/*]:${NC}" 
 	for user_cron in $(ls /var/spool/cron); do
-		echo "Cron tasks for user: $user_cron"
+		echo -e "${YELLOW}Cron tasks for user: $user_cron ${NC}"
 		cat /var/spool/cron/$user_cron
 	done
 
@@ -491,6 +491,29 @@ crontabCheck(){
 	else
 		echo "${YELLOW}[+]未发现可疑系统定时任务${NC}" 
 	fi
+
+	# 系统计划任务状态分析
+	echo -e "${YELLOW}[+]检测定时任务访问信息:${NC}" 
+	echo -e "${YELLOW}[+]检测定时任务访问信息[stat /etc/crontab | /etc/cron*/* | /var/spool/cron/*]:${NC}" 
+	for cronfile in /etc/crontab /etc/cron*/* /var/spool/cron/*; do
+		if [ -f "$cronfile" ]; then
+			echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}" && cat "$cronfile"
+			echo -e "${YELLOW}stat [${cronfile}] ${NC}" && stat "$cronfile"
+			# 从这里可以看到计划任务的状态[最近修改时间等]
+			# "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
+            # "Modify:修改时间,文件内容改变会导致该时间更新" 
+            # "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新
+
+			# # 检测可疑计划任务[可以写在内部，但是颜色有点问题]
+			# echo -e "${YELLOW}[+]检测可疑计划任务:${NC}"
+			# hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$cronfile")
+			# if [ $? -eq 0 ];then
+			# 	(echo "${RED}[!]发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
+			# else
+			# 	echo "${YELLOW}[+]未发现可疑系统定时任务${NC}" 
+			# fi
+		fi
+	done
 
 }
 
@@ -607,14 +630,32 @@ historyCheck(){
 
 }
 
+# 用户信息排查
+userCheck(){
+	# 正在登录的用户
+	# 系统最后登录用户
+	# 检查用户信息/etc/passwd
+	# 检查可登录用户
+	# 检查超级用户
+	# 检查克隆用户
+	# 检查非系统自带用户
+	# 检查用户信息/etc/shadow
+	# - 检查空口令用户
+	# - 检查空口令且可登录用户
+	# - 检查口令未加密用户
+	# 检查用户组信息/etc/group
+	# - 检查特权用户组
+	# - 检查相同GID的用户组
+	# - 检查相同用户组名
 
+}
 
 # 系统信息排查
 systemCheck(){
-	# 基础信息排查
-	# 用户信息排查
+	# 基础信息排查 baseInfo
+	# 用户信息排查 
 	# 计划任务排查 crontabCheck
-	# 历史命令排查
+	# 历史命令排查 historyCheck
 }
 
 # 系统服务排查
@@ -654,6 +695,16 @@ otherCheck(){
 
 # 基线检查
 baselineCheck(){
+}
+
+# k8s排查
+k8sCheck(){
+}
+
+
+# 攻击角度信息收集
+attackAngleCheck(){
+	# 
 }
 
 
