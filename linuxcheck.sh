@@ -1470,11 +1470,20 @@ if [ -n "$nginx_bin" ];then
 	echo "[+]Nginx服务二进制文件路径为:$nginx_bin" | $saveCheckResult
 	# echo "[+]正在寻找 nginx.conf 配置文件路径"
 	# 获取 nginx 配置文件位置，如果 nginx -V 获取不到，则默认为/etc/nginx/nginx.conf
-	ngin_conf=$(eval "$nginx_bin -V 2>&1" | awk '/configure arguments:/ {gsub(/.*--conf-path=/,"",$0); print}' || echo "/etc/nginx/nginx.conf") # 获取nginx 配置文件
+	config_output="$($nginx_bin -V 2>&1)"
+	config_path=$(echo "$config_output" | awk '/configure arguments:/ {split($0,a,"--conf-path="); if (length(a[2])>0) print a[2]}')  # 获取 nginx 配置文件路径
+
+	# 如果 awk 命令成功返回了配置文件路径，则使用它，否则使用默认路径
+	if [ -n "$config_path" ] && [ -f "$config_path" ]; then
+		ngin_conf="$config_path"
+	else
+		ngin_conf="/etc/nginx/nginx.conf"
+	fi
+
 	if [ -f "$ngin_conf" ];then
-		echo "[+]Nginx配置文件可能的路径为:" && echo $ngin_conf | $saveCheckResult  # 输出变量值
-		echo "[+]Nginx配置文件内容为:" && cat $ngin_conf | $saveCheckResult   # 查看值文件内容
-		echo "[10.6.2]正在检查Nginx端口转发配置[nginx/conf/nginx.conf]:" | $saveCheckResult
+		(echo "[+]Nginx配置文件可能的路径为:" && echo $ngin_conf) | $saveCheckResult  # 输出变量值
+		(echo "[+]Nginx配置文件内容为:" && cat $ngin_conf | grep -v "^$") | $saveCheckResult   # 查看值文件内容
+		echo "[10.6.2]正在检查Nginx端口转发配置[$ngin_conf]:" | $saveCheckResult
 		nginxportconf=$(cat $ngin_conf | grep -E "listen|server|server_name|upstream|proxy_pass|location"| grep -v "^$")
 		if [ -n "$nginxportconf" ];then
 			(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult | $saveDangerResult
@@ -1488,25 +1497,6 @@ else
 	echo "[+]未发现Nginx服务" | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
-
-
-# echo "[10.6.2]正在检查Nginx端口转发配置[nginx/conf/nginx.conf]:" | $saveCheckResult
-# # nginx=$(whereis nginx | awk -F: '{print $2}')  # 会cat nginx 的二进制文件 发生报错
-# # nginx_bin=$(which nginx) # 获取nginx 二进制文件
-# # 使用[10.6.1]的变量
-# if [ -f "$ngin_conf" ];then
-# 	echo "[+]nginx配置文件如下:" && echo $ngin_conf
-# 	nginxportconf=$(cat $ngin_conf | grep -E "listen|server|server_name|upstream|proxy_pass|location"| grep -v "^$")
-# 	if [ -n "$nginxportconf" ];then
-# 		(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult | $saveDangerResult
-# 	else
-# 		echo "[+]未发现端口转发配置" | $saveCheckResult
-# 	fi
-# else
-# 	echo "[+]未发现nginx配置文件" | $saveCheckResult
-# fi
-# printf "\n" | $saveCheckResult
-
 
 
 echo "[10.7]正在检查SNMP配置策略:" | $saveCheckResult
