@@ -31,6 +31,15 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #  - 用户信息分析
 #  - 计划任务分析
 #  - 历史命令分析
+	# - 输出当前shell系统历史命令[history]
+	# - 输出用系历史命令[.bash_history]
+	# - 是否下载过脚本文件
+	# - 是否通过主机下载,传输过文件
+	# - 是否增加,删除过账号
+	# - 是否执行过黑客命令
+	# - 其他敏感命令
+	# - 检查系统中所有可能的历史文件路径[补充]
+	# - 输出系统中所有用户的历史文件[补充]
 # 网络链接排查
 #  - ARP 攻击分析
 #  - 网络连接分析
@@ -51,6 +60,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 病毒排查
 # 其他排查
 # 基线检查
+# k8s排查
 
 
 # ------------------------
@@ -500,9 +510,100 @@ historyCheck(){
 	# - 无命令编号: 由于 /[user]/.bash_history 是一个普通的文本文件，它的输出没有命令编号，你不能直接使用 !number 的方式来引用历史命令。
 	# 注意: 大多数情况下 linux 系统会为每个用户创建一个 .bash_history 文件。
 	# 		set +o history 是关闭命令历史记录功能，set -o history 重新打开[只影响当前的 shell 会话]
+	
+	# 输出 root 历史命令[history]
+	echo -e "${YELLOW}[+]输出当前shell下历史命令[history]:${NC}"
+	historyTmp=$(history)
+	if [ -n "$historyTmp" ];then
+		(echo -e "${YELLOW}[+]当前shell下history历史命令如下:${NC}" && echo "$historyTmp") 
+	else
+		echo -e "${RED}[!]未发现历史命令,请检查是否记录及已被清除${NC}" 
+	fi
 
+	# 读取/root/.bash_history文件的内容到变量history中
+	echo -e "${YELLOW}[+]输出操作系统历史命令[cat /root/.bash_history]:${NC}"
+	if [ -f /root/.bash_history ]; then
+		history=$(cat /root/.bash_history)
+		if [ -n "$history" ]; then
+			# 如果文件非空，输出历史命令
+			(echo -e "${YELLOW}[+]操作系统历史命令如下:${NC}" && echo "$history") 
+		else
+			# 如果文件为空，输出警告信息
+			echo -e "${RED}[!]未发现历史命令,请检查是否记录及已被清除${NC}" 
+		fi
+	else
+		# 如果文件不存在，同样输出警告信息
+		echo -e "${RED}[!]未发现历史命令文件,请检查/root/.bash_history是否存在${NC}" 
+	fi
 
-# 历史记录文件是否被删除，被复制，被清除？
+	# 历史命令分析
+	## 检查是否下载过脚本
+	echo -e "${YELLOW}[+]检查是否下载过脚本[cat /root/.bash_history | grep -E '((wget|curl|yum|apt-get|python).*\.(sh|pl|py|exe)$)']:${NC}"
+	scripts=$(cat /root/.bash_history | grep -E "((wget|curl|yum|apt-get|python).*\.(sh|pl|py|exe)$)" | grep -v grep)
+	if [ -n "$scripts" ]; then
+		(echo -e "${RED}[!]发现下载过脚本,请注意!${NC}" && echo "$scripts") 
+	else
+		echo -e "${YELLOW}[+]未发现下载过脚本${NC}" 
+	fi
+
+	## 检查是否通过主机下载/传输过文件
+	echo -e "${YELLOW}[+]检查是否通过主机下载/传输过文件[cat /root/.bash_history | grep -E '(sz|rz|scp)']:${NC}"
+	fileTransfer=$(cat /root/.bash_history | grep -E "(sz|rz|scp)" | grep -v grep)
+	if [ -n "$fileTransfer" ]; then
+		(echo -e "${RED}[!]发现通过主机下载/传输过文件,请注意!${NC}" && echo "$fileTransfer") 
+	else
+		echo -e "${YELLOW}[+]未发现通过主机下载/传输过文件${NC}" 
+	fi
+
+	## 检查是否增加/删除过账号
+	echo -e "${YELLOW}[+]检查是否增加/删除过账号[cat /root/.bash_history | grep -E '(useradd|groupadd|userdel|groupdel)']:${NC}"
+	addDelhistory=$(cat /root/.bash_history | grep -E "(useradd|groupadd|userdel|groupdel)" | grep -v grep)
+	if [ -n "$addDelhistory" ]; then
+		(echo -e "${RED}[!]发现增加/删除账号,请注意!${NC}" && echo "$addDelhistory") 
+	else
+		echo -e "${YELLOW}[+]未发现增加/删除账号${NC}" 
+	fi
+
+	## 检查是否存在黑客命令 
+	echo -e "${YELLOW}[说明]匹配规则可自行维护,列表如下:id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get${NC}"
+	hackCommand=$(cat /root/.bash_history | grep -E "id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get" | grep -v grep)
+	if [ -n "$hackCommand" ]; then
+		(echo -e "${RED}[!]发现黑客命令,请注意!${NC}" && echo "$hackCommand") 
+	else
+		echo -e "${YELLOW}[+]未发现黑客命令${NC}" 
+	fi
+
+	## 其他可疑命令[set +o history]等 例如 chattr 修改文件属性
+	echo -e "${YELLOW}[+]检查是否存在黑客命令[cat /root/.bash_history | grep -E '(chattr|chmod|rm|set +o history)'${NC}"
+	otherCommand=$(cat /root/.bash_history | grep -E "(chattr|chmod|rm|set +o history)" | grep -v grep)
+	if [ -n "$otherCommand" ]; then
+		(echo -e "${RED}[!]发现其他可疑命令,请注意!${NC}" && echo "$otherCommand") 
+	else
+		echo -e "${YELLOW}[+]未发现其他可疑命令${NC}" 
+	fi
+
+	# 检查历史记录目录，看是否被备份，注意：这里可以看开容器持久化的.bash_history
+	echo -e "${YELLOW}[+]输出系统中所有可能的.bash_history*文件路径:${NC}"
+	findOut=$(find / -name ".bash_history*" -type f -exec ls -l {} \;) # 输出所有.bash_history文件[包含容器]
+	if [ -n "$findOut" ]; then
+		echo -e "${YELLOW}以下历史命令文件如有未检查需要人工手动检查，有可能涵盖容器内 history 文件${NC}"
+		(echo -e "${YELLOW}[+]系统中所有可能的.bash_history*文件如下:${NC}" && echo "$findOut") 
+	else
+		echo -e "${RED}[!]未发现系统中存在历史命令文件,请人工检查机器是否被清理攻击痕迹${NC}" 
+	fi
+
+	# 输出其他用户的历史命令[cat /[user]/.bash_history]
+	# 使用awk处理/etc/passwd文件，提取用户名和主目录，并检查.bash_history文件
+	echo -e "${YELLOW}[+]遍历系统用户并输出其的历史命令[cat /[user]/.bash_history]${NC}"
+	awk -F: '{
+		user=$1
+		home=$6
+		if (-f home"/.bash_history") {
+			print "----- User: " user " -----"
+			system("cat " home "/.bash_history")
+			print ""
+		}
+	}' /etc/passwd
 
 }
 
