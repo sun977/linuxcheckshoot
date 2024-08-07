@@ -30,7 +30,8 @@ Date:2024.08.07
 		1、优化掉ifconfig命令全部使用ip替换
 	2024.08.07:
 		1、优化了命令格式,不再使用``方式
-		2、优化了一些输出细节
+		2、新增敏感进程规则匹配,用户可自定义进程规则文件dangerspslist.txt
+		3、优化了一些输出细节
 	2024.x.x:
 		2、支持多linux系统
 
@@ -646,6 +647,33 @@ else
 	echo "[+]未发现守护进程" | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
+
+
+echo "[4.3]根据规则列表 dangerspslist.txt 匹配检查敏感进程:" | $saveCheckResult
+danger_ps_list=$(cat ${current_dir}/checkrules/dangerspslist.txt) # 敏感进程程序名列表
+# 循环输出敏感进程的进程名称和 PID 和 所属用户
+ps_output=$(ps -auxww)
+for psname in $danger_ps_list; do
+	filtered_output=$(echo "$ps_output" | awk -v proc="$psname" '
+		BEGIN { found = 0 }
+		{
+			if ($11 ~ proc) {
+				print;
+				found++;
+			}
+		}
+		END {
+			if (found > 0) {
+				printf($0)
+				printf("\n'${YELLOW}'[!]发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
+			}
+		}'
+	)
+	# 输出敏感进程
+	# echo -e "${RED}[!]敏感进程如下:${NC}" && echo "$filtered_output"
+	echo -e "${RED}$filtered_output${NC}"
+done
+
 
 echo "==========5.启动项情况==========" | $saveCheckResult
 echo "[5.1]正在检查用户自定义启动项[chkconfig --list]:" | $saveCheckResult
