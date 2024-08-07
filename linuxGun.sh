@@ -679,7 +679,7 @@ userCheck(){
 	# - 检查特权用户组
 	# - 检查相同GID的用户组
 	# - 检查相同用户组名
-	
+
 
 }
 
@@ -870,77 +870,6 @@ printf "\n" | $saveCheckResult
 
 
 echo "==========9.用户登陆情况==========" | $saveCheckResult
-echo "[9.1]正在检查正在登录的用户[who]:" | $saveCheckResult
-(echo "[+]系统登录用户:" && who ) | $saveCheckResult
-printf "\n" | $saveCheckResult
-(echo "[+]系统最后登陆用户:" && last ) | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "[9.2]正在查看用户信息[/etc/passwd]:" | $saveCheckResult
-echo "[说明]用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]" | $saveCheckResult
-more /etc/passwd  | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "[9.3]正在检查是否存在超级用户[/etc/passwd]:" | $saveCheckResult
-echo "[+]UID=0的为超级用户,系统默认root的UID为0" | $saveCheckResult
-Superuser=`more /etc/passwd | egrep -v '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}'`
-if [ -n "$Superuser" ];then
-	echo "[!]除root外发现超级用户:" |  $saveDangerResult | $saveCheckResult
-	for user in $Superuser
-	do
-		echo $user | $saveCheckResult
-		if [ "${user}" = "toor" ];then
-			echo "[!]BSD系统默认安装toor用户,其他系统默认未安装toor用户,若非BSD系统建议删除该账号" | $saveCheckResult
-		fi
-	done
-else
-	echo "[+]未发现超级用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[9.4]正在检查是否存在克隆用户[/etc/passwd]:" | $saveCheckResult
-echo "[+]UID相同为克隆用户" | $saveCheckResult
-uid=`awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd`
-if [ -n "$uid" ];then
-	echo "[!]发现下面用户的UID相同:" |  $saveDangerResult | $saveCheckResult
-	(more /etc/passwd | grep $uid | awk -F: '{print $1}') |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现相同UID的用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[9.5]正在检查可登录的用户[/etc/passwd]:" | $saveCheckResult
-loginuser=`cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}'`
-if [ -n "$loginuser" ];then
-	echo "[!]以下用户可以登录主机:" |  $saveDangerResult | $saveCheckResult
-	for user in $loginuser
-	do
-		echo $user |  $saveDangerResult | $saveCheckResult
-	done
-else
-	echo "[+]未发现可以登录的用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[9.6]正在检查非系统本身自带用户[/etc/login.defs]" | $saveCheckResult
-if [ -f /etc/login.defs ];then
-	uid=$(grep "^UID_MIN" /etc/login.defs | awk '{print $2}')
-	(echo "系统最小UID为"$uid) | $saveCheckResult
-	nosystemuser=`gawk -F: '{if ($3>='$uid' && $3!=65534) {print $1}}' /etc/passwd`
-	if [ -n "$nosystemuser" ];then
-		(echo "以下用户为非系统本身自带用户:" && echo "$nosystemuser") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]未发现除系统本身外的其他用户" | $saveCheckResult
-	fi
-fi
-printf "\n" | $saveCheckResult
-
-
 echo "[9.7]正在检查shadow文件[/etc/shadow]:" | $saveCheckResult
 echo "[说明]用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]" | $saveCheckResult
 (echo "[+]shadow文件如下:" && more /etc/shadow ) | $saveCheckResult
