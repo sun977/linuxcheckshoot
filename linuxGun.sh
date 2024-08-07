@@ -517,7 +517,6 @@ crontabCheck(){
 
 }
 
-
 # 历史命令排查
 historyCheck(){
 	# history 和 cat /[user]/.bash_history 的区别
@@ -632,13 +631,46 @@ historyCheck(){
 
 # 用户信息排查
 userCheck(){
-	# 正在登录的用户
-	# 系统最后登录用户
+	echo -e "${YELLOW}[+]输出正在登录的用户:${NC}" && who  # 正在登录的用户
+	echo -e "${YELLOW}[+]输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
 	# 检查用户信息/etc/passwd
+	echo -e "${YELLOW}[说明]用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]${NC}"
+	echo -e "${YELLOW}[+]show /etc/passwd:${NC}" && cat /etc/passwd
 	# 检查可登录用户
-	# 检查超级用户
+	loginUser=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
+	if [ -n "$loginUser" ]; then
+		echo -e "${RED}[!]发现可登录用户,请注意!${NC}" && echo "$loginUser"
+	else
+		echo -e "${YELLOW}[+]未发现可登录用户${NC}" 
+	fi
+	# 检查超级用户[除了 root 外的超级用户]
+	echo -e "${YELLOW}[说明]UID=0的为超级用户,系统默认root的UID为0 ${NC}"
+	superUser=$(cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}')
+	if [ -n "$superUser" ]; then
+		echo -e "${RED}[!]发现超级用户,请注意!${NC}" && echo "$superUser"
+	else
+		echo -e "${YELLOW}[+]未发现超级用户${NC}" 
+	fi
 	# 检查克隆用户
+	echo -e "${YELLOW}[说明]UID相同为克隆用户${NC}"
+	cloneUserUid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd)
+	if [ -n "$cloneUserUid" ]; then
+		echo -e "${RED}[!]发现克隆用户,请注意!${NC}" && (cat /etc/passwd | grep $cloneUserUid | awk -F: '{print $1}') 
+	else
+		echo -e "${YELLOW}[+]未发现克隆用户${NC}" 
+	fi
 	# 检查非系统自带用户
+	## 原理：从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,找出非系统自带用户
+	echo -e "${YELLOW}[说明]从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
+	if [ -f /etc/login.defs ]; then
+		defaultUid=$(grep -E "^UID_MIN" /etc/login.defs | awk '{print $2}')
+		noSystemUser=$(gawk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd)
+		if [ -n "$noSystemUser" ]; then
+			echo -e "${RED}[!]发现非系统自带用户,请注意!${NC}" && echo "$noSystemUser"
+		else
+			echo -e "${YELLOW}[+]未发现非系统自带用户${NC}" 
+		fi
+	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
 	# - 检查空口令且可登录用户
@@ -647,6 +679,7 @@ userCheck(){
 	# - 检查特权用户组
 	# - 检查相同GID的用户组
 	# - 检查相同用户组名
+	
 
 }
 
