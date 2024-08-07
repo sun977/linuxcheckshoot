@@ -13,10 +13,10 @@ cat <<EOF
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
 
-Version:4.2
+Version:4.3
 Author:sun977
 Mail:jiuwei977@foxmail.com
-Date:2024.07.31
+Date:2024.08.07
 
 更新日志:
 	2024.06.16:
@@ -28,6 +28,9 @@ Date:2024.07.31
 		1、修改了logo显示bug
 	2024.07.30:
 		1、优化掉ifconfig命令全部使用ip替换
+	2024.08.07:
+		1、优化了命令格式,不再使用``方式
+		2、优化了一些输出细节
 	2024.x.x:
 		2、支持多linux系统
 
@@ -244,7 +247,7 @@ Date:2024.07.31
 EOF
 
 # 脚本转换确保可以在Linux下运行
-dos2unix linuxcheck.sh
+# dos2unix linuxcheck.sh
 date=$(date +%Y%m%d)
 # 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
 # ipadd=$(ifconfig -a | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}')
@@ -426,7 +429,7 @@ echo "[2.5.2]正在分析是否开启转发功能[/proc/sys/net/ipv4/ip_forward]
 #数值分析
 #1:开启路由转发
 #0:未开启路由转发
-ip_forward=`cat /proc/sys/net/ipv4/ip_forward | gawk -F: '{if ($1==1) print "1"}'`
+ip_forward=$(cat /proc/sys/net/ipv4/ip_forward | gawk -F: '{if ($1==1) print "1"}')
 if [ -n "$ip_forward" ];then
 	echo "[!]该服务器开启路由转发,请注意!" |  $saveDangerResult  | $saveCheckResult
 else
@@ -830,7 +833,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.3]正在检查是否存在超级用户[/etc/passwd]:" | $saveCheckResult
 echo "[+]UID=0的为超级用户,系统默认root的UID为0" | $saveCheckResult
-Superuser=`cat /etc/passwd | egrep -v '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}'`
+Superuser=$(cat /etc/passwd | egrep -v '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}')
 if [ -n "$Superuser" ];then
 	echo "[!]除root外发现超级用户:" |  $saveDangerResult | $saveCheckResult
 	for user in $Superuser
@@ -848,7 +851,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.4]正在检查是否存在克隆用户[/etc/passwd]:" | $saveCheckResult
 echo "[+]UID相同为克隆用户" | $saveCheckResult
-uid=`awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd`
+uid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd)
 if [ -n "$uid" ];then
 	echo "[!]发现下面用户的UID相同:" |  $saveDangerResult | $saveCheckResult
 	(cat /etc/passwd | grep $uid | awk -F: '{print $1}') |  $saveDangerResult | $saveCheckResult
@@ -859,7 +862,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[9.5]正在检查可登录的用户[/etc/passwd]:" | $saveCheckResult
-loginuser=`cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}'`
+loginuser=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
 if [ -n "$loginuser" ];then
 	echo "[!]以下用户可以登录主机:" |  $saveDangerResult | $saveCheckResult
 	for user in $loginuser
@@ -876,7 +879,7 @@ echo "[9.6]正在检查非系统本身自带用户[/etc/login.defs]" | $saveChec
 if [ -f /etc/login.defs ];then
 	uid=$(grep "^UID_MIN" /etc/login.defs | awk '{print $2}')
 	(echo "系统最小UID为"$uid) | $saveCheckResult
-	nosystemuser=`gawk -F: '{if ($3>='$uid' && $3!=65534) {print $1}}' /etc/passwd`
+	nosystemuser=$(awk -F: '{if ($3>='$uid' && $3!=65534) {print $1}}' /etc/passwd)
 	if [ -n "$nosystemuser" ];then
 		(echo "以下用户为非系统本身自带用户:" && echo "$nosystemuser") |  $saveDangerResult | $saveCheckResult
 	else
@@ -894,7 +897,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.8]正在检查空口令用户[/etc/shadow]:" | $saveCheckResult
 echo "[原理]shadow文件中密码字段(第二个字段)为空的用户即为空口令用户" | $saveCheckResult
-nopasswd=`gawk -F: '($2=="") {print $1}' /etc/shadow`
+nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
 if [ -n "$nopasswd" ];then
 	(echo "[!]以下用户口令为空:" && echo "$nopasswd") | $saveCheckResult
 else
@@ -1000,7 +1003,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.12.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
 emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-nopasswd=`gawk -F: '($2=="") {print $1}' /etc/shadow`
+nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
 if [ -n "$emptypasswd" ];then
 	echo "[!]允许空口令登录,请注意!"
 	if [ -n "$nopasswd" ];then
@@ -1132,7 +1135,7 @@ printf "\n" | $saveCheckResult
 echo "[9.13.10]正在检查limits.conf文件权限[/etc/security/limits.conf]:" | $saveCheckResult
 cat /etc/security/limits.conf | grep -v ^# | grep core
 if [ $? -eq 0 ];then
-	soft=`cat /etc/security/limits.conf | grep -v ^# | grep core | awk -F ' ' '{print $2}'`
+	soft=$(cat /etc/security/limits.conf | grep -v ^# | grep core | awk -F ' ' '{print $2}')
 	for i in $soft
 	do
 		if [ $i = "soft" ];then
@@ -1152,7 +1155,7 @@ echo "[9.14.1]正在检查passwd文件属性:" | $saveCheckResult
 flag=0
 for ((x=1;x<=15;x++))
 do
-	apend=`lsattr /etc/passwd | cut -c $x`
+	apend=$(lsattr /etc/passwd | cut -c $x)
 	if [ $apend = "i" ];then
 		echo "/etc/passwd文件存在i安全属性,符合要求" | $saveCheckResult
 		flag=1
@@ -1178,7 +1181,7 @@ echo "[9.14.2]正在检查shadow文件属性:" | $saveCheckResult
 flag=0
 for ((x=1;x<=15;x++))
 do
-	apend=`lsattr /etc/shadow | cut -c $x`
+	apend=$(lsattr /etc/shadow | cut -c $x)
 	if [ $apend = "i" ];then
 		echo "/etc/shadow文件存在i安全属性,符合要求" | $saveCheckResult
 		flag=1
@@ -1198,7 +1201,7 @@ echo "[9.14.3]正在检查gshadow文件属性:" | $saveCheckResult
 flag=0
 for ((x=1;x<=15;x++))
 do
-	apend=`lsattr /etc/gshadow | cut -c $x`
+	apend=$(lsattr /etc/gshadow | cut -c $x)
 	if [ $apend = "i" ];then
 		echo "/etc/gshadow文件存在i安全属性,符合要求" | $saveCheckResult
 		flag=1
@@ -1218,7 +1221,7 @@ echo "[9.14.4]正在检查group文件属性:" | $saveCheckResult
 flag=0
 for ((x=1;x<=15;x++))
 do
-	apend=`lsattr /etc/group | cut -c $x`
+	apend=$(lsattr /etc/group | cut -c $x)
 	if [ $apend = "i" ];then
 		echo "/etc/group文件存在i安全属性,符合要求" | $saveCheckResult
 		flag=1
@@ -1329,9 +1332,9 @@ printf "\n" | $saveCheckResult
 
 
 echo "[10.2.4]正在检查账号超时锁定策略[/etc/profile]:" | $saveCheckResult
-account_timeout=`cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}'` 
+account_timeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
 if [ "$account_timeout" != ""  ];then
-	TMOUT=`cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}'`
+	TMOUT=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
 	if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
 		echo "[+]账号超时时间为${TMOUT}秒,符合要求" | $saveCheckResult
 	else
@@ -1385,7 +1388,7 @@ printf "\n" | $saveCheckResult
 
 echo "[10.4.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
 emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-nopasswd=`gawk -F: '($2=="") {print $1}' /etc/shadow`
+nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
 if [ -n "$emptypasswd" ];then
 	echo "[!]允许空口令登录,请注意!"
 	if [ -n "$nopasswd" ];then
@@ -1602,7 +1605,9 @@ echo "[12.5]正在检查全盘是否存在黑客工具[./checkrules/hackertoolsl
 # 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
 # hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 echo "[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)" | $saveCheckResult
-for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
+hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt)
+# for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
+for hacker_tool in $hacker_tools_list
 do
 	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
 	if [ -n "$findhackertool" ];then
@@ -2143,7 +2148,7 @@ fi
 
 
 echo "检查结束!" | $saveCheckResult
-echo "Version:3.0" | $saveCheckResult
+echo "Version:4.3" | $saveCheckResult
 echo "Author:sun977" | $saveCheckResult
 echo "Mail:jiuwei977@foxmail.com" |	$saveCheckResult
-echo "Date:2024.6.16" | $saveCheckResult
+echo "Date:2024.08.07" | $saveCheckResult
