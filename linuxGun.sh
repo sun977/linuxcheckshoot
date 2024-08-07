@@ -498,7 +498,7 @@ crontabCheck(){
 	for cronfile in /etc/crontab /etc/cron*/* /var/spool/cron/*; do
 		if [ -f "$cronfile" ]; then
 			echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}" && cat "$cronfile"
-			echo -e "${YELLOW}stat [${cronfile}] ${NC}" && stat "$cronfile"
+			echo -e "${YELLOW}stat [${cronfile}] ${NC}" && stat "$cronfile" | grep -E "Access|Modify|Change" | grep -v "("
 			# 从这里可以看到计划任务的状态[最近修改时间等]
 			# "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
             # "Modify:修改时间,文件内容改变会导致该时间更新" 
