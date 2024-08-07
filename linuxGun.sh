@@ -474,8 +474,8 @@ processInfo(){
 crontabCheck(){
 	# 系统计划任务收集
 	echo -e "${YELLOW}输出系统计划任务[/etc/crontab | /etc/cron*/* ]:${NC}" 
-	echo -e "${YELLOW}[+]系统计划任务[/etc/crontab]:${NC}" && cat /etc/crontab
-	echo -e "${YELLOW}[+]系统计划任务[/etc/cron*/*]:${NC}" && cat /etc/cron*/*
+	echo -e "${YELLOW}[+]系统计划任务[/etc/crontab]:${NC}" && (cat /etc/crontab | grep -v "^$")  # 去除空行
+	echo -e "${YELLOW}[+]系统计划任务[/etc/cron*/*]:${NC}" && (cat /etc/cron*/* | grep -v "^$")
 
 	# 用户计划任务收集
 	echo -e "${YELLOW}[+]输出用户计划任务[/var/spool/cron/*]:${NC}" 
@@ -497,7 +497,7 @@ crontabCheck(){
 	echo -e "${YELLOW}[+]检测定时任务访问信息[stat /etc/crontab | /etc/cron*/* | /var/spool/cron/*]:${NC}" 
 	for cronfile in /etc/crontab /etc/cron*/* /var/spool/cron/*; do
 		if [ -f "$cronfile" ]; then
-			echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}" && cat "$cronfile"
+			echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}" && (cat "$cronfile" | grep -v "^$")  # 去除空行
 			echo -e "${YELLOW}stat [${cronfile}] ${NC}" && stat "$cronfile" | grep -E "Access|Modify|Change" | grep -v "("
 			# 从这里可以看到计划任务的状态[最近修改时间等]
 			# "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
@@ -621,7 +621,7 @@ historyCheck(){
 		user=$1
 		home=$6
 		if (-f home"/.bash_history") {
-			print "----- User: " user " -----"
+			print "[----- History for User: "user" -----]"
 			system("cat " home "/.bash_history")
 			print ""
 		}
@@ -631,12 +631,14 @@ historyCheck(){
 
 # 用户信息排查
 userCheck(){
-	echo -e "${YELLOW}[+]输出正在登录的用户:${NC}" && who  # 正在登录的用户
+	echo -e "${YELLOW}[+]输出正在登录的用户:${NC}" && w  # 正在登录的用户 或者 who 都行
 	echo -e "${YELLOW}[+]输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
 	# 检查用户信息/etc/passwd
+	echo -e "${YELLOW}[+]检查用户信息[/etc/passwd]${NC}"
 	echo -e "${YELLOW}[说明]用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]${NC}"
 	echo -e "${YELLOW}[+]show /etc/passwd:${NC}" && cat /etc/passwd
 	# 检查可登录用户
+	echo -e "${YELLOW}[+]检查可登录用户[cat /etc/passwd | grep -E '/bin/bash$' | awk -F: '{print \$1}']${NC}"
 	loginUser=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
 	if [ -n "$loginUser" ]; then
 		echo -e "${RED}[!]发现可登录用户,请注意!${NC}" && echo "$loginUser"
@@ -644,14 +646,16 @@ userCheck(){
 		echo -e "${YELLOW}[+]未发现可登录用户${NC}" 
 	fi
 	# 检查超级用户[除了 root 外的超级用户]
+	echo -e "${YELLOW}[+]检查除root外超级用户[cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if(\$3==0) print \$1}'] ${NC}"
 	echo -e "${YELLOW}[说明]UID=0的为超级用户,系统默认root的UID为0 ${NC}"
 	superUser=$(cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}')
 	if [ -n "$superUser" ]; then
-		echo -e "${RED}[!]发现超级用户,请注意!${NC}" && echo "$superUser"
+		echo -e "${RED}[!]发现其他超级用户,请注意!${NC}" && echo "$superUser"
 	else
-		echo -e "${YELLOW}[+]未发现超级用户${NC}" 
+		echo -e "${YELLOW}[+]未发现超其他级用户${NC}" 
 	fi
 	# 检查克隆用户
+	echo -e "${YELLOW}[+]检查克隆用户[awk -F: '{a[\$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd] ${NC}"
 	echo -e "${YELLOW}[说明]UID相同为克隆用户${NC}"
 	cloneUserUid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd)
 	if [ -n "$cloneUserUid" ]; then
@@ -661,6 +665,7 @@ userCheck(){
 	fi
 	# 检查非系统自带用户
 	## 原理：从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,找出非系统自带用户
+	echo -e "${YELLOW}[+]检查非系统自带用户[awk -F: '{if (\$3>='\$defaultUid' && \$3!=65534) {print }}' /etc/passwd] ${NC}"
 	echo -e "${YELLOW}[说明]从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
 	if [ -f /etc/login.defs ]; then
 		defaultUid=$(grep -E "^UID_MIN" /etc/login.defs | awk '{print $2}')
@@ -673,9 +678,10 @@ userCheck(){
 	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
+	echo -e "${YELLOW}[+]检查空口令用户[awk -F: '(\$2=="") {print \$1}' /etc/shadow] ${NC}"
 	echo -e "${YELLOW}[说明]用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]${NC}"
 	echo -e "${YELLOW}[+]show /etc/shadow:${NC}" && cat /etc/shadow 
-	echo -e "${YELLOW}[原理]shadow文件中密码字段(第二个字段)为空的用户即为空口令用户 ${NC}"
+	echo -e "${YELLOW}[原理]shadow文件中密码字段(第2个字段)为空的用户即为空口令用户 ${NC}"
 	emptyPasswdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
 	if [ -n "$emptyPasswdUser" ]; then
 		echo -e "${RED}[!]发现空口令用户,请注意!${NC}" && echo "$emptyPasswdUser"
@@ -693,6 +699,7 @@ userCheck(){
 	##1.passwd -d username
 	##2.echo "PermitEmptyPasswords yes" >>/etc/ssh/sshd_config
 	##3.service sshd restart
+	echo -e "${YELLOW}[+]检查空口令且可登录SSH的用户[/etc/passwd|/etc/shadow|/etc/ssh/sshd_config] ${NC}"
 	userList=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
 	noSetPwdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
 	isSSHPermit=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
@@ -705,12 +712,15 @@ userCheck(){
 					flag="1"
 				else
 					echo -e "${YELLOW}[+]发现空口令且不可登录SSH的用户,请注意!${NC}" && echo "$userA"
+				fi
+			fi
 		done
 	done
 	if [ -n "$flag" ]; then
 		echo -e "${YELLOW}[+]未发现空口令且可登录SSH的用户${NC}" 
 	fi
 	# - 检查口令未加密用户
+	echo -e "${YELLOW}[+]检查未加密口令用户[awk -F: '{if(\$2!="x") {print \$1}}' /etc/passwd] ${NC}"
 	noEncryptPasswdUser=$(awk -F: '{if($2!="x") {print $1}}' /etc/passwd)
 	if [ -n "$noEncryptPasswdUser" ]; then
 		echo -e "${RED}[!]发现未加密口令用户,请注意!${NC}" && echo "$noEncryptPasswdUser"
@@ -718,28 +728,46 @@ userCheck(){
 		echo -e "${YELLOW}[+]未发现未加密口令用户${NC}" 
 	fi
 	# 检查用户组信息/etc/group
+	echo -e "${YELLOW}[+]检查用户组信息[/etc/group] ${NC}"
 	echo -e "${YELLOW}[说明]组名:组密码:GID:组成员列表[共4个字段] ${NC}"
 	echo -e "${YELLOW}[+]show /etc/group:${NC}" && cat /etc/group
 	# - 检查特权用户组[除root组之外]
+	echo -e "${YELLOW}[+]检查特权用户组[cat /etc/group | grep -v '^#' | awk -F: '{if (\$1!="root"&&\$3==0) print \$1}'] ${NC}"
 	echo -e "${YELLOW}[说明]GID=0的为超级用户组,系统默认root组的GID为0 ${NC}"
-	privilegeGroupUsers=$(cat /etc/group | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}')
-	if [ -n "$privilegeGroupUsers" ]; then
-		echo -e "${RED}[!]发现特权用户组,请注意!${NC}" && echo "$privilegeGroupUsers"
+	privGroupUsers=$(cat /etc/group | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}')
+	if [ -n "$privGroupUsers" ]; then
+		echo -e "${RED}[!]发现特权用户组,请注意!${NC}" && echo "$privGroupUsers"
 	else
 		echo -e "${YELLOW}[+]未发现特权用户组${NC}" 
 	fi
 	# - 检查相同GID的用户组
+	echo -e "${YELLOW}[+]检查相同GID的用户组[cat /etc/group | grep -v '^#' | awk -F: '{print \$3}' | uniq -d] ${NC}"
+	groupUid=$(cat /etc/group | grep -v "^$" | awk -F: '{print $3}' | uniq -d)
+	if [ -n "$groupUid" ];then
+		echo -e "${RED}[!]发现相同GID用户组:${NC}" && echo "$groupUid"
+	else
+		echo -e "${YELLOW}[+]未发现相同GID的用户组${NC}" 
+	fi
 	# - 检查相同用户组名
-
-
+	echo -e "${YELLOW}[+]检查相同用户组名[cat /etc/group | grep -v '^$' | awk -F: '{print \$1}' | uniq -d] ${NC}"
+	groupName=$(cat /etc/group | grep -v "^$" | awk -F: '{print $1}' | uniq -d)
+	if [ -n "$groupName" ];then
+		echo -e "${RED}发现相同用户组名:${NC}" && echo "$groupName"
+	else
+		echo -e "${YELLOW}[+]未发现相同用户组名${NC}" 
+	fi
 }
 
 # 系统信息排查
 systemCheck(){
 	# 基础信息排查 baseInfo
-	# 用户信息排查 
+	baseInfo
+	# 用户信息排查 userCheck
+	userCheck
 	# 计划任务排查 crontabCheck
+	crontabCheck
 	# 历史命令排查 historyCheck
+	historyCheck
 }
 
 # 系统服务排查
