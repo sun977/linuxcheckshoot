@@ -370,7 +370,7 @@ fi
 printf "\n" | $saveCheckResult
 
 echo "[2.3.2]正在检查网络DNS[/etc/resolv.conf]:" | $saveCheckResult
-resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}') 
+resolv=$(cat /etc/resolv.conf | grep ^nameserver | awk '{print $NF}') 
 if [ -n "$resolv" ];then
 	(echo "[+]该服务器使用以下DNS服务器:" && echo "$resolv") | $saveCheckResult
 else
@@ -426,7 +426,7 @@ echo "[2.5.2]正在分析是否开启转发功能[/proc/sys/net/ipv4/ip_forward]
 #数值分析
 #1:开启路由转发
 #0:未开启路由转发
-ip_forward=`more /proc/sys/net/ipv4/ip_forward | gawk -F: '{if ($1==1) print "1"}'`
+ip_forward=`cat /proc/sys/net/ipv4/ip_forward | gawk -F: '{if ($1==1) print "1"}'`
 if [ -n "$ip_forward" ];then
 	echo "[!]该服务器开启路由转发,请注意!" |  $saveDangerResult  | $saveCheckResult
 else
@@ -638,7 +638,7 @@ printf "\n" | $saveCheckResult
 
 echo "[4.2]正在检查守护进程[/etc/xinetd.d/rsync]:" | $saveCheckResult
 if [ -e /etc/xinetd.d/rsync ];then
-	(echo "[+]系统守护进程:" && more /etc/xinetd.d/rsync | grep -v "^#") | $saveCheckResult
+	(echo "[+]系统守护进程:" && cat /etc/xinetd.d/rsync | grep -v "^#") | $saveCheckResult
 else
 	echo "[+]未发现守护进程" | $saveCheckResult
 fi
@@ -677,9 +677,9 @@ printf "\n" | $saveCheckResult
 
 echo "==========6.定时任务==========" | $saveCheckResult
 echo "[6.1]正在检查系统定时任务[/etc/crontab]:" | $saveCheckResult
-syscrontab=$(more /etc/crontab | grep -v "# run-parts" | grep run-parts)
+syscrontab=$(cat /etc/crontab | grep -v "# run-parts" | grep run-parts)
 if [ -n "$syscrontab" ];then
-	(echo "[!]发现存在系统定时任务:" && more /etc/crontab ) |  $saveDangerResult | $saveCheckResult
+	(echo "[!]发现存在系统定时任务:" && cat /etc/crontab ) |  $saveDangerResult | $saveCheckResult
 else
 	echo "[+]未发现系统定时任务" | $saveCheckResult
 fi
@@ -733,7 +733,7 @@ printf "\n" | $saveCheckResult
 
 echo "==========8.关键文件检查==========" | $saveCheckResult
 echo "[8.1]正在检查hosts文件[/etc/hosts](未检查.bash_history|.zsh_history文件):" | $saveCheckResult
-hosts=$(more /etc/hosts)
+hosts=$(cat /etc/hosts)
 if [ -n "$hosts" ];then
 	(echo "[+]hosts文件如下:" && echo "$hosts") | $saveCheckResult
 else
@@ -762,7 +762,7 @@ printf "\n" | $saveCheckResult
 
 echo "[8.4]正在检查authorized_keys文件[/root/.ssh/authorized_keys]:" | $saveCheckResult
 echo "[说明]authorized_keys文件是用于SSH密钥认证的文件,它用于存储用户在远程登录时所允许的公钥,可定位谁可以免密登陆该主机" | $saveCheckResult
-authkey=$(more /root/.ssh/authorized_keys)
+authkey=$(cat /root/.ssh/authorized_keys)
 if [ -n "$authkey" ];then
 	(echo "[!]发现被授权登录的用户公钥信息如下" && echo "$authkey") | $saveCheckResult
 else
@@ -773,7 +773,7 @@ printf "\n" | $saveCheckResult
 
 echo "[8.5]正在检查known_hosts文件[/root/.ssh/known_hosts]:" | $saveCheckResult
 echo "[说明]known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机" | $saveCheckResult
-knownhosts=$(more /root/.ssh/known_hosts | awk '{print $1}')
+knownhosts=$(cat /root/.ssh/known_hosts | awk '{print $1}')
 if [ -n "$knownhosts" ];then
 	(echo "[!]发现已知远程主机公钥信息如下:" && echo "$knownhosts") | $saveCheckResult
 else
@@ -795,10 +795,10 @@ envfile="/root/.bashrc /root/.bash_profile /root/.zshrc /root/.viminfo /etc/prof
 for file in $envfile;do
 	if [ -e $file ];then
 		echo "[+]环境变量文件:$file" | $saveCheckResult
-		more $file | $saveCheckResult
+		cat $file | $saveCheckResult
 		printf "\n" | $saveCheckResult
 		# 文件内容中是否包含关键字 curl http https wget 等关键字
-		if [ -n "$(more $file | grep -E "curl|wget|http|https|python")" ];then
+		if [ -n "$(cat $file | grep -E "curl|wget|http|https|python")" ];then
 			echo "[!]发现环境变量文件[$file]中包含curl|wget|http|https|python等关键字!" | $saveDangerResult | $saveCheckResult
 		fi 
 	else
@@ -824,13 +824,13 @@ printf "\n" | $saveCheckResult
 
 echo "[9.2]正在查看用户信息[/etc/passwd]:" | $saveCheckResult
 echo "[说明]用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]" | $saveCheckResult
-more /etc/passwd  | $saveCheckResult
+cat /etc/passwd  | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
 echo "[9.3]正在检查是否存在超级用户[/etc/passwd]:" | $saveCheckResult
 echo "[+]UID=0的为超级用户,系统默认root的UID为0" | $saveCheckResult
-Superuser=`more /etc/passwd | egrep -v '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}'`
+Superuser=`cat /etc/passwd | egrep -v '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}'`
 if [ -n "$Superuser" ];then
 	echo "[!]除root外发现超级用户:" |  $saveDangerResult | $saveCheckResult
 	for user in $Superuser
@@ -851,7 +851,7 @@ echo "[+]UID相同为克隆用户" | $saveCheckResult
 uid=`awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd`
 if [ -n "$uid" ];then
 	echo "[!]发现下面用户的UID相同:" |  $saveDangerResult | $saveCheckResult
-	(more /etc/passwd | grep $uid | awk -F: '{print $1}') |  $saveDangerResult | $saveCheckResult
+	(cat /etc/passwd | grep $uid | awk -F: '{print $1}') |  $saveDangerResult | $saveCheckResult
 else
 	echo "[+]未发现相同UID的用户" | $saveCheckResult
 fi
@@ -888,7 +888,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.7]正在检查shadow文件[/etc/shadow]:" | $saveCheckResult
 echo "[说明]用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]" | $saveCheckResult
-(echo "[+]shadow文件如下:" && more /etc/shadow ) | $saveCheckResult
+(echo "[+]shadow文件如下:" && cat /etc/shadow ) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
@@ -949,12 +949,12 @@ printf "\n" | $saveCheckResult
 echo "[9.11]正在检查用户组信息:" | $saveCheckResult
 echo "[9.11.1]正在检查用户组信息[/etc/group]:" | $saveCheckResult
 echo "[+]用户组信息如下:"
-(more /etc/group | grep -v "^#") | $saveCheckResult
+(cat /etc/group | grep -v "^#") | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
 echo "[9.11.2]正在检查特权用户[/etc/group]:" | $saveCheckResult
-roots=$(more /etc/group | grep -v '^#' | gawk -F: '{if ($1!="root"&&$3==0) print $1}')
+roots=$(cat /etc/group | grep -v '^#' | gawk -F: '{if ($1!="root"&&$3==0) print $1}')
 if [ -n "$roots" ];then
 	echo "[!]除root用户外root组还有以下用户:" |  $saveDangerResult | $saveCheckResult
 	for user in $roots
@@ -968,7 +968,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[9.11.3]正在检查相应GID用户组[/etc/group]:" | $saveCheckResult
-groupuid=$(more /etc/group | grep -v "^$" | awk -F: '{print $3}' | uniq -d)
+groupuid=$(cat /etc/group | grep -v "^$" | awk -F: '{print $3}' | uniq -d)
 if [ -n "$groupuid" ];then
 	(echo "[!]发现相同GID用户组:" && echo "$groupuid") |  $saveDangerResult | $saveCheckResult
 else
@@ -978,7 +978,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[9.11.4]正在检查相同用户组名[/etc/group]:" | $saveCheckResult
-groupname=$(more /etc/group | grep -v "^$" | awk -F: '{print $1}' | uniq -d)
+groupname=$(cat /etc/group | grep -v "^$" | awk -F: '{print $1}' | uniq -d)
 if [ -n "$groupname" ];then
 	(echo "[!]发现相同用户组名:" && echo "$groupname") |  $saveDangerResult | $saveCheckResult
 else
@@ -989,7 +989,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.12]正在检查SSHD登陆配置:" | $saveCheckResult
 echo "[9.12.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
-sshdconfig=$(more /etc/ssh/sshd_config | egrep -v "#|^$")
+sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
 if [ -n "$sshdconfig" ];then
 	(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
 else
@@ -1026,7 +1026,7 @@ printf "\n" | $saveCheckResult
 
 echo "[9.12.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
 echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
-protocolver=$(more /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
+protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
 if [ "$protocolver" -eq "2" ];then
 	echo "[+]openssh使用ssh2协议,符合要求" 
 else
@@ -1253,7 +1253,7 @@ echo "|----------------------------------------------------------------|" | $sav
 echo "==========10.策略配置检查(基线检查)==========" | $saveCheckResult
 echo "[10.1]正在检查远程允许策略:" | $saveCheckResult
 echo "[10.1.1]正在检查远程允许策略[/etc/hosts.allow]:" | $saveCheckResult
-hostsallow=$(more /etc/hosts.allow | grep -v '#')
+hostsallow=$(cat /etc/hosts.allow | grep -v '#')
 if [ -n "$hostsallow" ];then
 	(echo "[!]允许以下IP远程访问:" && echo "$hostsallow") |  $saveDangerResult | $saveCheckResult
 else
@@ -1263,7 +1263,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[10.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:" | $saveCheckResult
-hostsdeny=$(more /etc/hosts.deny | grep -v '#')
+hostsdeny=$(cat /etc/hosts.deny | grep -v '#')
 if [ -n "$hostsdeny" ];then
 	(echo "[!]拒绝以下IP远程访问:" && echo "$hostsdeny") | $saveCheckResult
 else
@@ -1274,7 +1274,7 @@ printf "\n" | $saveCheckResult
 
 echo "[10.2]正在检查密码有效期策略:" | $saveCheckResult
 echo "[10.2.1]正在检查密码有效期策略[/etc/login.defs ]:" | $saveCheckResult
-(echo "[+]密码有效期策略如下:" && more /etc/login.defs | grep -v "#" | grep PASS ) | $saveCheckResult
+(echo "[+]密码有效期策略如下:" && cat /etc/login.defs | grep -v "#" | grep PASS ) | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 echo "[10.2.1.1]正在进行口令生存周期检查:" | $saveCheckResult
@@ -1312,7 +1312,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[10.2.2]正在检查密码复杂度策略[/etc/pam.d/system-auth]:" | $saveCheckResult
-(echo "[+]密码复杂度策略如下:" && more /etc/pam.d/system-auth | grep -v "#") | $saveCheckResult
+(echo "[+]密码复杂度策略如下:" && cat /etc/pam.d/system-auth | grep -v "#") | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
@@ -1374,7 +1374,7 @@ printf "\n" | $saveCheckResult
 
 echo "[10.4]正在检查SSHD配置策略:" | $saveCheckResult
 echo "[10.4.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
-sshdconfig=$(more /etc/ssh/sshd_config | egrep -v "#|^$")
+sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
 if [ -n "$sshdconfig" ];then
 	(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
 else
@@ -1411,7 +1411,7 @@ printf "\n" | $saveCheckResult
 
 echo "[10.4.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
 echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
-protocolver=$(more /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
+protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
 if [ "$protocolver" -eq "2" ];then
 	echo "[+]openssh使用ssh2协议,符合要求" 
 else
@@ -1421,7 +1421,7 @@ fi
 
 echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
 echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
-nisconfig=$(more /etc/nsswitch.conf | egrep -v '#|^$')
+nisconfig=$(cat /etc/nsswitch.conf | egrep -v '#|^$')
 if [ -n "$nisconfig" ];then
 	(echo "[+]NIS服务配置如下:" && echo "$nisconfig") | $saveCheckResult
 else
@@ -1434,7 +1434,7 @@ echo "[10.6]正在检查nginx配置策略:" | $saveCheckResult
 echo "[10.6.1]正在检查Nginx配置文件[nginx/conf/nginx.conf]:" | $saveCheckResult
 nginx=$(whereis nginx | awk -F: '{print $2}')
 if [ -n "$nginx" ];then
-	(echo "[+]Nginx配置文件如下:" && more $nginx/conf/nginx.conf) | $saveCheckResult
+	(echo "[+]Nginx配置文件如下:" && cat $nginx/conf/nginx.conf) | $saveCheckResult
 else
 	echo "[+]未发现Nginx服务" | $saveCheckResult
 fi
@@ -1443,7 +1443,7 @@ printf "\n" | $saveCheckResult
 
 echo "[10.6.2]正在检查Nginx端口转发配置[nginx/conf/nginx.conf]:" | $saveCheckResult
 nginx=$(whereis nginx | awk -F: '{print $2}')
-nginxportconf=$(more $nginx/conf/nginx.conf | egrep "listen|server |server_name |upstream|proxy_pass|location"| grep -v \#)
+nginxportconf=$(cat $nginx/conf/nginx.conf | egrep "listen|server |server_name |upstream|proxy_pass|location"| grep -v \#)
 if [ -n "$nginxportconf" ];then
 	(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult
 else
@@ -1477,7 +1477,7 @@ echo "|^----------------------------------------------------------------^|" | $s
 echo "==========11.历史命令==========" | $saveCheckResult
 echo "[11.1]正在检查历史命令[/root/.bash_history]:" | $saveCheckResult
 echo "[注意]如果历史命令被清除,请人工使用history命令上机检查(看历史命令序号是否断档)" | $saveCheckResult
-history=$(more /root/.bash_history)
+history=$(cat /root/.bash_history)
 if [ -n "$history" ];then
 	(echo "[+]操作系统历史命令如下:" && echo "$history") | $saveCheckResult
 else
@@ -1487,7 +1487,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[11.1.2]正在检查历史是否下载过脚本文件[/root/.bash_history]:" | $saveCheckResult
-scripts=$(more /root/.bash_history | grep -E "((wget|curl).*\.(sh|pl|py|exe)$)" | grep -v grep)
+scripts=$(cat /root/.bash_history | grep -E "((wget|curl).*\.(sh|pl|py|exe)$)" | grep -v grep)
 if [ -n "$scripts" ];then
 	(echo "[!]该服务器下载过脚本以下脚本：" && echo "$scripts") |  $saveDangerResult | $saveCheckResult
 else
@@ -1559,7 +1559,7 @@ fi
 
 
 echo "[11.2]正在检查数据库操作历史命令[/root/.mysql_history]:" | $saveCheckResult
-mysql_history=$(more /root/.mysql_history)
+mysql_history=$(cat /root/.mysql_history)
 if [ -n "$mysql_history" ];then
 	(echo "[+]数据库操作历史命令如下:" && echo "$mysql_history") | $saveCheckResult
 else
@@ -1770,7 +1770,7 @@ printf "\n" | $saveCheckResult
 echo "==========14.系统日志分析==========" | $saveCheckResult
 echo "[14.1]日志配置与打包:" | $saveCheckResult
 echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
-logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
+logconf=$(cat /etc/rsyslog.conf | egrep -v "#|^$")
 if [ -n "$logconf" ];then
 	(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
 else
@@ -1803,7 +1803,7 @@ echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
 
 echo "[14.2]正在分析secure日志:" | $saveCheckResult
 echo "[14.2.1]正在检查日志中登录成功记录[/var/log/secure*]:" | $saveCheckResult
-loginsuccess=$(more /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
+loginsuccess=$(cat /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
 if [ -n "$loginsuccess" ];then
 	(echo "[+]日志中分析到以下用户登录成功记录:" && echo "$loginsuccess")  | $saveCheckResult
 	(echo "[+]登录成功的IP及次数如下:" && grep "Accepted " /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c )  | $saveCheckResult
@@ -1815,7 +1815,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.2.2]检查日志中登录失败记录(SSH爆破)[/var/log/secure*]:" | $saveCheckResult
-loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
+loginfailed=$(cat /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
 if [ -n "$loginfailed" ];then
 	(echo "[!]日志中发现以下登录失败记录:" && echo "$loginfailed") | $saveDangerResult  | $saveCheckResult
 	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
@@ -1828,10 +1828,10 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
-systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
+systemlogin=$(cat /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
 if [ -n "$systemlogin" ];then
 	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
-	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
+	(echo "[+]本机登录账号及次数如下:" && cat /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
 else
 	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
 fi
@@ -1839,10 +1839,10 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
-newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+newusers=$(cat /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
 if [ -n "$newusers" ];then
 	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+	(echo "[+]新增用户账号及次数如下:" && cat /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
 else
 	echo "[+]日志中未发现新增加用户" | $saveCheckResult
 fi
@@ -1850,10 +1850,10 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
-newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+newgoup=$(cat /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
 if [ -n "$newgoup" ];then
 	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+	(echo "[+]新增用户组及次数如下:" && cat /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
 else
 	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
 fi
@@ -1862,9 +1862,9 @@ printf "\n" | $saveCheckResult
 
 echo "[14.3]正在分析message日志:" | $saveCheckResult
 #下面命令仅显示传输的文件名,并会将相同文件名的去重
-#more /var/log/message* | grep "ZMODEM:.*BPS" | awk -F '[]/]' '{print $0}' | sort | uniq
+#cat /var/log/message* | grep "ZMODEM:.*BPS" | awk -F '[]/]' '{print $0}' | sort | uniq
 echo "[14.3.1]正在检查传输文件[/var/log/message*]:" | $saveCheckResult
-zmodem=$(more /var/log/message* | grep "ZMODEM:.*BPS")
+zmodem=$(cat /var/log/message* | grep "ZMODEM:.*BPS")
 if [ -n "$zmodem" ];then
 	(echo "[!]传输文件情况:" && echo "$zmodem") |  $saveDangerResult | $saveCheckResult
 else
@@ -1874,7 +1874,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.3.2]正在检查日志中使用DNS服务器的情况[/var/log/message*]:" | $saveCheckResult
-dns_history=$(more /var/log/messages* | grep "using nameserver" | awk '{print $NF}' | awk -F# '{print $1}' | sort | uniq)
+dns_history=$(cat /var/log/messages* | grep "using nameserver" | awk '{print $NF}' | awk -F# '{print $1}' | sort | uniq)
 if [ -n "$dns_history" ];then
 	(echo "[!]该服务器曾经使用以下DNS:" && echo "$dns_history") |  $saveDangerResult | $saveCheckResult
 else
@@ -1885,7 +1885,7 @@ printf "\n" | $saveCheckResult
 
 echo "[14.4]正在分析ron日志:" | $saveCheckResult
 echo "[14.4.1]正在分析定时下载[/var/log/cron*]:" | $saveCheckResult
-cron_download=$(more /var/log/cron* | grep "wget|curl")
+cron_download=$(cat /var/log/cron* | grep "wget|curl")
 if [ -n "$cron_download" ];then
 	(echo "[!]定时下载情况:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
 else
@@ -1894,7 +1894,7 @@ fi
 printf "\n" | $saveCheckResult
 
 echo "[14.4.2]正在分析定时执行脚本[/var/log/cron*]:" | $saveCheckResult
-cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
+cron_shell=$(cat /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
 if [ -n "$cron_shell" ];then
 	(echo "[!]发现定时执行脚本:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
 else
@@ -1903,10 +1903,10 @@ fi
 printf "\n" | $saveCheckResult
 
 
-# ubuntu 是 more /var/log/apt/* 【后续补充】
+# ubuntu 是 cat /var/log/apt/* 【后续补充】
 echo "[14.5]正在分析yum日志:" | $saveCheckResult
 echo "[14.5.1]正在分析使用yum下载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_install=$(more /var/log/yum* | grep Installed | awk '{print $NF}' | sort | uniq)
+yum_install=$(cat /var/log/yum* | grep Installed | awk '{print $NF}' | sort | uniq)
 if [ -n "$yum_install" ];then
 	(echo "[+]曾使用yum下载以下软件:"  && echo "$yum_install") | $saveCheckResult
 else
@@ -1916,7 +1916,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
-yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
+yum_installscripts=$(cat /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
 if [ -n "$yum_installscripts" ];then
 	(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
 else
@@ -1926,7 +1926,7 @@ printf "\n" | $saveCheckResult
 
 
 echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_erased=$(more /var/log/yum* | grep Erased)
+yum_erased=$(cat /var/log/yum* | grep Erased)
 if [ -n "$yum_erased" ];then
 	(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
 else
@@ -1938,7 +1938,7 @@ echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertool
 # 从文件中取出一个工具名然后匹配
 hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 for hacker_tools in $hacker_tools_list;do
-	hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
+	hacker_tools=$(cat /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
 	if [ -n "$hacker_tools" ];then
 		(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
 	else
@@ -2075,9 +2075,9 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[18.2]正在检查CPU用情况[more /proc/cpuinfo]:" | $saveCheckResult
+echo "[18.2]正在检查CPU用情况[cat /proc/cpuinfo]:" | $saveCheckResult
 echo "[18.2.1]正在检查CPU相关信息:" | $saveCheckResult
-(echo "CPU硬件信息如下:" && more /proc/cpuinfo ) | $saveCheckResult
+(echo "CPU硬件信息如下:" && cat /proc/cpuinfo ) | $saveCheckResult
 (echo "CPU使用情况如下:" && ps -aux | sort -nr -k 3 | awk  '{print $1,$2,$3,$NF}') | $saveCheckResult
 printf "\n" | $saveCheckResult
 
@@ -2097,7 +2097,7 @@ printf "\n" | $saveCheckResult
 
 echo "[18.3]正在分析内存情况:" | $saveCheckResult
 echo "[18.3.1]正在检查内存相关信息:" | $saveCheckResult
-(echo "[+]内存信息如下[more /proc/meminfo]:" && more /proc/meminfo) | $saveCheckResult
+(echo "[+]内存信息如下[cat /proc/meminfo]:" && cat /proc/meminfo) | $saveCheckResult
 (echo "[+]内存使用情况如下[free -m]:" && free -m) | $saveCheckResult
 printf "\n" | $saveCheckResult
 

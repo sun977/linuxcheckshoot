@@ -664,7 +664,7 @@ userCheck(){
 	echo -e "${YELLOW}[说明]从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
 	if [ -f /etc/login.defs ]; then
 		defaultUid=$(grep -E "^UID_MIN" /etc/login.defs | awk '{print $2}')
-		noSystemUser=$(gawk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd)
+		noSystemUser=$(awk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd)
 		if [ -n "$noSystemUser" ]; then
 			echo -e "${RED}[!]发现非系统自带用户,请注意!${NC}" && echo "$noSystemUser"
 		else
@@ -673,10 +673,61 @@ userCheck(){
 	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
-	# - 检查空口令且可登录用户
+	echo -e "${YELLOW}[说明]用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]${NC}"
+	echo -e "${YELLOW}[+]show /etc/shadow:${NC}" && cat /etc/shadow 
+	echo -e "${YELLOW}[原理]shadow文件中密码字段(第二个字段)为空的用户即为空口令用户 ${NC}"
+	emptyPasswdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
+	if [ -n "$emptyPasswdUser" ]; then
+		echo -e "${RED}[!]发现空口令用户,请注意!${NC}" && echo "$emptyPasswdUser"
+	else
+		echo -e "${YELLOW}[+]未发现空口令用户${NC}" 
+	fi
+	# - 检查空口令且可登录SSH的用户
+	# 原理:
+	# 1. 从`/etc/passwd`文件中提取使用`/bin/bash`作为shell的用户名。--> 可登录的用户
+	# 2. 从`/etc/shadow`文件中获取密码字段为空的用户名。  --> 空密码的用户
+	# 3. 检查`/etc/ssh/sshd_config`中SSH服务器配置是否允许空密码。 --> ssh 是否允许空密码登录
+	# 4. 遍历步骤1中获取的每个用户名，并检查其是否与步骤2中获取的任何用户名匹配，并且根据步骤3是否允许空密码进行判断。如果存在匹配，则打印通知，表示存在空密码且允许登录的用户。
+	# 5. 最后，根据是否找到匹配，打印警告消息，要求人工分析配置和账户，或者打印消息表示未发现空口令且可登录的用户。
+	##允许空口令用户登录方法
+	##1.passwd -d username
+	##2.echo "PermitEmptyPasswords yes" >>/etc/ssh/sshd_config
+	##3.service sshd restart
+	userList=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
+	noSetPwdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
+	isSSHPermit=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
+	flag=""
+	for userA in $userList; do
+		for userB in $noSetPwdUser; do
+			if [ "$userA" == "$userB" ]; then
+				if [ -n "$isSSHPermit" ]; then
+					echo -e "${RED}[!]发现空口令且可登录SSH的用户,请注意!${NC}" && echo "$userA"
+					flag="1"
+				else
+					echo -e "${YELLOW}[+]发现空口令且不可登录SSH的用户,请注意!${NC}" && echo "$userA"
+		done
+	done
+	if [ -n "$flag" ]; then
+		echo -e "${YELLOW}[+]未发现空口令且可登录SSH的用户${NC}" 
+	fi
 	# - 检查口令未加密用户
+	noEncryptPasswdUser=$(awk -F: '{if($2!="x") {print $1}}' /etc/passwd)
+	if [ -n "$noEncryptPasswdUser" ]; then
+		echo -e "${RED}[!]发现未加密口令用户,请注意!${NC}" && echo "$noEncryptPasswdUser"
+	else
+		echo -e "${YELLOW}[+]未发现未加密口令用户${NC}" 
+	fi
 	# 检查用户组信息/etc/group
-	# - 检查特权用户组
+	echo -e "${YELLOW}[说明]组名:组密码:GID:组成员列表[共4个字段] ${NC}"
+	echo -e "${YELLOW}[+]show /etc/group:${NC}" && cat /etc/group
+	# - 检查特权用户组[除root组之外]
+	echo -e "${YELLOW}[说明]GID=0的为超级用户组,系统默认root组的GID为0 ${NC}"
+	privilegeGroupUsers=$(cat /etc/group | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}')
+	if [ -n "$privilegeGroupUsers" ]; then
+		echo -e "${RED}[!]发现特权用户组,请注意!${NC}" && echo "$privilegeGroupUsers"
+	else
+		echo -e "${YELLOW}[+]未发现特权用户组${NC}" 
+	fi
 	# - 检查相同GID的用户组
 	# - 检查相同用户组名
 
