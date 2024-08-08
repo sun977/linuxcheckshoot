@@ -156,7 +156,6 @@ baseInfo(){
     else
         echo -e "${RED}[!]本机未配置IP地址${NC}"  
     fi
-    printf "\n"  
 
     # 系统版本信息
     echo -e "${YELLOW}[1.2]系统版本信息[uname -a]:${NC}"  
@@ -199,8 +198,6 @@ networkInfo(){
     else
         echo -e "${RED}[!]未发现ARP表${NC}"  
     fi
-    printf "\n"  
-
     # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别，然后输出重复的MAC地址以及它们的出现次数
     # 该命令用于统计arp表中的MAC地址出现次数，并显示重复的MAC地址及其出现频率。
     # 具体解释如下：
@@ -221,7 +218,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现ARP攻击${NC}"  
     fi
-    printf "\n"  
 
     # 网络连接信息
     echo -e "${YELLOW}[2.3]Get Network Connection Info${NC}"  
@@ -236,7 +232,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]No network connection${NC}"  
     fi
-    printf "\n"  
 
     # 端口信息
     ## 检测 TCP 端口
@@ -250,7 +245,6 @@ networkInfo(){
     else
         echo -e "${RED}[!]No open TCP ports${NC}"  
     fi
-    printf "\n"  
 
     tcpAccessPort=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$tcpAccessPort" ];then
@@ -286,7 +280,6 @@ networkInfo(){
         echo -e "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}"    
         echo -e "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}"    
     fi
-    printf "\n"  
 
     ## 检测 UDP 端口
     echo -e "${YELLOW}[2.3.2.3]Check UDP Port Info[netstat -anlup]:${NC}"  
@@ -296,7 +289,6 @@ networkInfo(){
     else
         echo -e "${RED}[!]No open UDP ports${NC}"  
     fi
-    printf "\n"  
 
     udpAccessPort=$(netstat -anlup | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
     # 检查是否有UDP端口
@@ -310,7 +302,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现在UDP端口面向局域网或互联网开放.${NC}"  
     fi
-    printf "\n"  
 
     ## 检测 UDP 高危端口
     echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}"  
@@ -339,7 +330,6 @@ networkInfo(){
         echo -e "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}"    
         echo -e "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}"    
     fi
-    printf "\n"  
 
     # DNS 信息
     echo -e "${YELLOW}[2.3.3]Check DNS Info[/etc/resolv.conf]:${NC}"  
@@ -350,7 +340,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现DNS服务器${NC}"  
     fi
-    printf "\n"  
 
     # 网卡模式
     echo -e "${YELLOW}[2.4]Check Network Card Mode[ip addr]:${NC}"  
@@ -369,7 +358,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现网卡处于混杂模式${NC}"  
     fi
-    printf "\n"  
 
     # 监听模式
     echo -e "${YELLOW}[2.4.2]Check Monitor Mode[ip addr]:${NC}"  
@@ -379,7 +367,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现网卡处于监听模式${NC}"  
     fi
-    printf "\n"  
 
     # 网络路由信息
     echo -e "${YELLOW}[2.5]Get Network Route Info${NC}"  
@@ -390,7 +377,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]未发现路由器表${NC}"  
     fi
-    printf "\n"  
 
     # 路由转发
     echo -e "${YELLOW}[2.5.2]Check IP Forward[/proc/sys/net/ipv4/ip_forward]:${NC}"  
@@ -401,7 +387,6 @@ networkInfo(){
     else
         echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}"  
     fi
-    printf "\n"  
 
     # 防火墙策略
     echo -e "${YELLOW}[2.6]Get Firewall Policy${NC}"  
@@ -418,7 +403,6 @@ networkInfo(){
     else
         echo -e "${RED}[!]防火墙未开启,建议开启防火墙${NC}" 
     fi
-    printf "\n"  
 
     echo -e "${YELLOW}[2.6.2]Check Iptables Policy[service iptables status]:${NC}"  
     firewalledstatus=$(service iptables status | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
@@ -468,6 +452,7 @@ processInfo(){
 		# echo -e "${RED}[!]敏感进程如下:${NC}" && echo "$filtered_output"
 		echo -e "${RED}$filtered_output${NC}"
 	done
+	printf "\n" 
 }
 
 # 计划任务排查
@@ -514,7 +499,7 @@ crontabCheck(){
 			# fi
 		fi
 	done
-
+	printf "\n"
 }
 
 # 历史命令排查
@@ -626,6 +611,7 @@ historyCheck(){
 			print ""
 		}
 	}' /etc/passwd
+	printf "\n" 
 
 }
 
@@ -756,6 +742,7 @@ userCheck(){
 	else
 		echo -e "${YELLOW}[+]未发现相同用户组名${NC}" 
 	fi
+	printf "\n" 
 }
 
 # 系统信息排查
@@ -781,6 +768,7 @@ systemServiceCheck(){
 # 文件信息排查
 fileCheck(){
 	# 自启动项分析
+
 	# 系统服务分析
 	# 敏感目录排查
 	# 新增文件排查
