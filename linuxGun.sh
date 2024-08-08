@@ -757,19 +757,94 @@ systemCheck(){
 	historyCheck
 }
 
+# 系统自启动服务分析
+systemEnabledServiceCheck(){
+	# 系统自启动项服务分析
+	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
+	## 有些用户自启动配置在用户的.bashrc/.bash_profile/.profile/.bash_logout等文件中
+	## 判断系统的初始化程序[sysvinit|systemd|upstart(弃用)]
+	echo -e "${YELLOW}[+]正在辨认系统使用的初始化程序${NC}"
+	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	if [ -n "$systemInit" ];then
+		echo -e "${YELLOW}[+]系统初始化程序为:$systemInit ${NC}"
+		if [ "$systemInit" == "systemd" ];then
+			echo -e "${YELLOW}[+]正在检查systemd自启动项[systemctl list-unit-files]:${NC}"
+			systemd=$(systemctl list-unit-files | grep -E "enabled" )   # 输出启动项
+			systemdList=$(systemctl list-unit-files | grep -E "enabled" | awk '{print $1}') # 输出启动项名称列表
+			if [ -n "$systemd" ];then
+				echo -e "${YELLOW}[+]systemd自启动项:${NC}" && echo "$systemd"
+				# 分析系统启动项 【这里只是启动服务项，不包括其他服务项，所以在这里检查不完整，单独检查吧】
+				# 分析systemd启动项
+				echo -e "${YELLOW}[+]正在分析危险systemd启动项[systemctl list-unit-files]:${NC}"
+				echo -e "${YELLOW}[说明]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+				echo -e "${YELLOW}[说明]根据服务文件位置找到服务文件并匹配敏感命令${NC}"
+				# 循环
+				for service in $systemdList; do
+					echo -e "${YELLOW}[+]正在分析systemd启动项:$service${NC}"
+					# 根据服务名称找到服务文件位置
+					servicePath=$(systemctl show $service -p FragmentPath | awk -F "=" '{print $2}')  # 文件不存在的时候程序会中断 --- 20240808
+					if [ -n "$servicePath" ];then  # 判断文件是否存在
+						echo -e "${YELLOW}[+]找到service服务文件位置:$servicePath${NC}"
+						dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" $servicePath)
+						if [ -n "$dangerService" ];then
+							echo -e "${RED}[!]发现systemd启动项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
+						else
+							echo -e "${YELLOW}[+]未发现systemd启动项:${service}包含敏感命令或脚本${NC}" 
+						fi
+					else
+						echo -e "${RED}[!]未找到service服务文件位置:$service${NC}"
+					fi
+				done			
+
+			else
+				echo "[!]未发现systemd自启动项" 
+			fi
+		elif [ "$systemInit" == "init" ];then
+			echo -e "${YELLOW}[+]正在检查init自启动项[chkconfig --list]:${NC}"  # [chkconfig --list实际查看的是init.d下的服务]
+			init=$(chkconfig --list | grep -E ":on|启用" )
+			# initList=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}')
+			if [ -n "$init" ];then
+				echo -e "${YELLOW}[+]init自启动项:${NC}" && echo "$init"
+				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
+				# 分析sysvinit启动项
+				echo -e "${YELLOW}[+]正在分析危险init自启动项[chkconfig --list| awk '{print \$1}' | grep -E '\.(sh|pl|py|exe)$']:${NC}"
+				echo -e "${YELLOW}[说明]只根据服务启动名后缀检查可疑服务,并未匹配服务文件内容${NC}"
+				dangerServiceInit=$(chkconfig --list| awk '{print $1}' | grep -E "\.(sh|pl|py|exe)$") 
+				if [ -n "$dangerServiceInit" ];then
+					echo -e "${RED}[!]发现敏感init自启动项:${NC}" && echo "$dangerServiceInit"
+				else
+					echo -e "${YELLOW}[+]未发现敏感init自启动项:${NC}" 
+				fi
+
+			else
+				echo "[!]未发现init自启动项" 
+			fi
+		else
+			echo -e "${RED}[!]系统使用初始化程序本程序不适配,请手动检查${NC}"
+			echo -e "${YELLOW}[说明]如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+		fi
+	else
+		echo -e "${RED}[!]未识别到系统初始化程序,请手动检查${NC}"
+	fi
+}
+
 # 系统服务排查
 systemServiceCheck(){
-	# 系统服务收集
+	# 系统服务收集 
 	# 系统服务分析
+	# - 系统自启动服务分析    systemEnabledServiceCheck
+	# - 系统正在运行服务分析
 	# 用户服务收集
 	# 用户服务分析
+	# - 用户自启动项服务分析
+	# - 用户正在运行服务分析
 }
+
 
 # 文件信息排查
 fileCheck(){
-	# 自启动项分析
-
-	# 系统服务分析
+	# 系统服务排查 systemServiceCheck
+	# 用户服务排查
 	# 敏感目录排查
 	# 新增文件排查
 	# 隐藏文件排查
@@ -819,7 +894,7 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-
+# centos 7 之后都是 systemctl list-unit-files 命令
 echo "[5.2]正在检查系统自启动项[systemctl list-unit-files]:" | $saveCheckResult
 systemchkconfig=$(systemctl list-unit-files | grep enabled | awk '{print $1}')
 if [ -n "$systemchkconfig" ];then
