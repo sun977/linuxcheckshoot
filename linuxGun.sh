@@ -828,12 +828,17 @@ systemEnabledServiceCheck(){
 	fi
 }
 
+# 系统运行服务分析
+systemRunningServiceCheck(){
+}
+
+
 # 系统服务排查
 systemServiceCheck(){
 	# 系统服务收集 
 	# 系统服务分析
 	# - 系统自启动服务分析    systemEnabledServiceCheck
-	# - 系统正在运行服务分析
+	# - 系统正在运行服务分析   systemRunningServiceCheck
 	# 用户服务收集
 	# 用户服务分析
 	# - 用户自启动项服务分析
@@ -882,37 +887,6 @@ attackAngleCheck(){
 	# 
 }
 
-
-
-echo "==========5.启动项情况==========" | $saveCheckResult
-echo "[5.1]正在检查用户自定义启动项[chkconfig --list]:" | $saveCheckResult
-chkconfig=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}')
-if [ -n "$chkconfig" ];then
-	(echo "[+]用户自定义启动项:" && echo "$chkconfig") | $saveCheckResult
-else
-	echo "[!]未发现用户自定义启动项" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-# centos 7 之后都是 systemctl list-unit-files 命令
-echo "[5.2]正在检查系统自启动项[systemctl list-unit-files]:" | $saveCheckResult
-systemchkconfig=$(systemctl list-unit-files | grep enabled | awk '{print $1}')
-if [ -n "$systemchkconfig" ];then
-	(echo "[+]系统自启动项如下:" && echo "$systemchkconfig")  | $saveCheckResult
-else
-	echo "[+]未发现系统自启动项" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[5.3]正在分析危险启动项[chkconfig --list]:" | $saveCheckResult
-dangerstarup=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}' | grep -E "\.(sh|per|py|exe)$")
-if [ -n "$dangerstarup" ];then
-	(echo "[!]发现危险启动项:" && echo "$dangerstarup") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现危险启动项" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
