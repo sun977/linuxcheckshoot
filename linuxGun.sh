@@ -616,7 +616,7 @@ historyCheck(){
 }
 
 # 用户信息排查
-userCheck(){
+userInfoCheck(){
 	echo -e "${YELLOW}[+]输出正在登录的用户:${NC}" && w  # 正在登录的用户 或者 who 都行
 	echo -e "${YELLOW}[+]输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
 	# 检查用户信息/etc/passwd
@@ -749,8 +749,8 @@ userCheck(){
 systemCheck(){
 	# 基础信息排查 baseInfo
 	baseInfo
-	# 用户信息排查 userCheck
-	userCheck
+	# 用户信息排查 userInfoCheck
+	userInfoCheck
 	# 计划任务排查 crontabCheck
 	crontabCheck
 	# 历史命令排查 historyCheck
@@ -918,6 +918,14 @@ systemServiceCollect(){
 	fi
 }
 
+# 用户服务分析
+userServiceCheck(){
+	# 用户自启动项服务分析 /etc/rc.local /etc/init.d/*
+	# 有些用户自启动配置在用户的.bashrc/.bash_profile/.profile/.bash_logout等文件中
+
+
+}
+
 
 # 系统服务排查
 systemServiceCheck(){
@@ -926,8 +934,8 @@ systemServiceCheck(){
 	# - 系统自启动服务分析    systemEnabledServiceCheck
 	# - 系统正在运行服务分析   systemRunningServiceCheck
 	# 用户服务收集
-	# 用户服务分析
-	# - 用户自启动项服务分析
+	# 用户服务分析  userServiceCheck
+	# - 用户自启动项服务分析  /etc/rc.local /etc/init.d/*
 	# - 用户正在运行服务分析
 }
 
