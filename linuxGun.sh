@@ -763,6 +763,7 @@ systemEnabledServiceCheck(){
 	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
 	## 有些用户自启动配置在用户的.bashrc/.bash_profile/.profile/.bash_logout等文件中
 	## 判断系统的初始化程序[sysvinit|systemd|upstart(弃用)]
+	echo -e "${YELLOW}[+]正在检查自启动服务信息:${NC}"
 	echo -e "${YELLOW}[+]正在辨认系统使用的初始化程序${NC}"
 	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
 	if [ -n "$systemInit" ];then
@@ -797,7 +798,7 @@ systemEnabledServiceCheck(){
 				done			
 
 			else
-				echo "[!]未发现systemd自启动项" 
+				echo -e "${RED}[!]未发现systemd自启动项${NC}" 
 			fi
 		elif [ "$systemInit" == "init" ];then
 			echo -e "${YELLOW}[+]正在检查init自启动项[chkconfig --list]:${NC}"  # [chkconfig --list实际查看的是/etc/init.d/下的服务]
@@ -817,7 +818,7 @@ systemEnabledServiceCheck(){
 				fi
 
 			else
-				echo "[!]未发现init自启动项" 
+				echo -e "${RED}[!]未发现init自启动项${NC}" 
 			fi
 		else
 			echo -e "${RED}[!]系统使用初始化程序本程序不适配,请手动检查${NC}"
@@ -831,7 +832,7 @@ systemEnabledServiceCheck(){
 # 系统运行服务分析
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
-	echo -e "${YELLOW}[+]正在检查正在运行的服务[systemctl | grep -E '\.service.*running']:${NC}"
+	echo -e "${YELLOW}[+]正在检查正在运行中服务:${NC}"
 	# systemRunningService=$(systemctl | grep -E "\.service.*running")
 
 	echo -e "${YELLOW}[+]正在辨认系统使用的初始化程序${NC}"
@@ -870,7 +871,43 @@ systemRunningServiceCheck(){
 				done			
 
 			else
-				echo "[!]未发现systemd运行中服务项" 
+				echo -e "${RED}[!]未发现systemd运行中服务项${NC}" 
+			fi
+		else
+			echo -e "${RED}[!]系统使用初始化程序本程序不适配,请手动检查${NC}"
+			echo -e "${YELLOW}[说明]如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+		fi
+	else
+		echo -e "${RED}[!]未识别到系统初始化程序,请手动检查${NC}"
+	fi
+}
+
+# 系统服务收集
+systemServiceCollect(){
+	# 收集所有的系统服务信息,不做分析
+	echo -e "${YELLOW}[+]正在收集系统服务信息(不含威胁分析):${NC}"
+	echo -e "${YELLOW}[说明]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+	echo -e "${YELLOW}[+]正在辨认系统使用的初始化程序${NC}"
+	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	if [ -n "$systemInit" ];then
+		echo -e "${YELLOW}[+]系统初始化程序为:$systemInit ${NC}"
+		if [ "$systemInit" == "systemd" ];then
+			echo -e "${YELLOW}[+]正在收集systemd系统服务项[systemctl list-unit-files]:${NC}"
+			systemd=$(systemctl list-unit-files)   # 输出启动项
+			if [ -n "$systemd" ];then
+				echo -e "${YELLOW}[+]systemd系统服务项如下:${NC}" && echo "$systemd"		
+			else
+				echo -e "${RED}[!]未发现systemd系统服务项${NC}" 
+			fi
+		elif [ "$systemInit" == "init" ];then
+			echo -e "${YELLOW}[+]正在检查init系统服务项[chkconfig --list]:${NC}"  # [chkconfig --list实际查看的是/etc/init.d/下的服务]
+			init=$(chkconfig --list )
+			# initList=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}')
+			if [ -n "$init" ];then
+				echo -e "${YELLOW}[+]init系统服务项:${NC}" && echo "$init"
+				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
+			else
+				echo "[!]未发现init系统服务项" 
 			fi
 		else
 			echo -e "${RED}[!]系统使用初始化程序本程序不适配,请手动检查${NC}"
@@ -884,7 +921,7 @@ systemRunningServiceCheck(){
 
 # 系统服务排查
 systemServiceCheck(){
-	# 系统服务收集 
+	# 系统服务收集  systemServiceCollect
 	# 系统服务分析
 	# - 系统自启动服务分析    systemEnabledServiceCheck
 	# - 系统正在运行服务分析   systemRunningServiceCheck
@@ -938,17 +975,6 @@ attackAngleCheck(){
 
 
 
-
-
-echo "==========7.系统服务信息==========" | $saveCheckResult
-echo "[7.1]正在检查运行服务[systemctl | grep -E "\.service.*running"]:" | $saveCheckResult
-services=$(systemctl | grep -E "\.service.*running" | awk -F. '{print $1}')
-if [ -n "$services" ];then
-	(echo "[+]以下服务正在运行：" && echo "$services") | $saveCheckResult
-else
-	echo "[!]未发现正在运行的服务！" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 echo "==========8.关键文件检查==========" | $saveCheckResult
