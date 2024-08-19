@@ -991,7 +991,7 @@ userServiceCheck(){
 	done
 }
 
-# 系统服务排查
+# 系统服务排查 【完成】
 systemServiceCheck(){
 	# 系统服务收集  systemServiceCollect
 	systemServiceCollect
@@ -1006,26 +1006,74 @@ systemServiceCheck(){
 }
 
 
+# 敏感目录排查
+dirFileCheck(){
+	# /tmp/下
+	# /root下隐藏文件分析
+	# 其他
+}
+
+# SSH登录配置排查
+sshFileCheck(){
+	# sshd 配置文件分析
+	# 空口令登录
+	# root远程登录
+	# 公钥私钥文件分析
+	# authorized_keys 文件分析
+	# /etc/hosts 文件分析
+	# known_hosts 文件分析
+	# 其他
+}
+
+# 特殊文件排查
+specialFileCheck(){
+	# 24小时内新增文件分析
+	# 24小时内修改文件分析
+	# 环境变量分析
+	# 黑客工具检查匹配
+	# 其他
+}
+
+
+# 系统日志分析
+systemLogCheck(){
+	# 日志配置与打包
+	# secure日志分析
+	# message日志分析
+	# cron日志分析
+	# yum日志分析 
+	# dmesg日志分析
+	# btmp日志分析
+	# lastlog日志分析
+	# wtmp日志分析
+	# journalctl日志分析
+}
+
 # 文件信息排查
 fileCheck(){
 	# 系统服务排查 systemServiceCheck
-	# 敏感目录排查
-	# 新增文件排查
-	# 隐藏文件排查
-	# 特殊文件排查
-	# 日志文件分析
+	# 敏感目录排查 dirFileCheck
+	# 新增文件排查 specialFileCheck
+	# 隐藏文件排查 dirFileCheck
+	# 特殊文件排查 sshCheck | specialFileCheck
+	# 日志文件分析 systemLogCheck 【重点】
 }
 
 # 后门排查
 backdoorCheck(){
+	# 常见后门目录 /tmp /usr/bin /usr/sbin 
 }
 
 # webshell 排查
 webshellCheck(){
+	# 检查网站常见的目录
+	# 访问日志
 }
 
 # 病毒排查
 virusCheck(){
+	# 基础排查
+	# 病毒特有行为排查
 }
 
 # 其他排查
@@ -1034,6 +1082,7 @@ otherCheck(){
 
 # 基线检查
 baselineCheck(){
+	# 基线检查
 }
 
 # k8s排查
