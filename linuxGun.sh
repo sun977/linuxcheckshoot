@@ -146,7 +146,6 @@ echoBanner() {
     echo -e "${GREEN}    2.执行 chmod +x linuxgun.sh${NC}"
     echo -e "${GREEN}    3.执行 ./linuxgun.sh 即可运行检查${NC}"
 	echo -e "${YELLOW}================================================================${NC}"
-
 }
 
 # 采集系统基础信息
