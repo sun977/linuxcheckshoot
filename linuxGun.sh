@@ -48,8 +48,12 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #  - top进程分析
 #  - 敏感进程匹配[规则匹配]
 # 文件排查
-#  - 自启动项分析
-#  - 系统服务分析
+#  - 系统服务排查
+	# - 系统服务收集
+	# - 系统服务分析
+	# 	- 系统自启动服务分析
+	# 	- 系统正在运行的服务分析
+	# - 用户服务分析
 #  - 敏感目录排查
 #  - 新增文件排查
 #  - 特殊文件排查
@@ -920,30 +924,92 @@ systemServiceCollect(){
 
 # 用户服务分析
 userServiceCheck(){
-	# 用户自启动项服务分析 /etc/rc.local /etc/init.d/*
-	# 有些用户自启动配置在用户的.bashrc/.bash_profile/.profile/.bash_logout等文件中
+	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
+	## 输出 /etc/rc.d/rc.local
+	# 【判断是否存在】
+	echo -e "${YELLOW}[+]正在检查/etc/rc.d/rc.local是否存在:${NC}"
+	if [ -f "/etc/rc.d/rc.local" ];then
+		echo -e "${YELLOW}[+]/etc/rc.d/rc.local存在${NC}"
+		echo -e "${YELLOW}[+]正在检查/etc/rc.d/rc.local用户自启动服务:${NC}"
+		rcLocal=$(cat /etc/rc.d/rc.local)
+		if [ -n "$rcLocal" ];then
+			echo -e "${YELLOW}[+]/etc/rc.d/rc.local用户自启动项服务如下:${NC}" && echo "$rcLocal"
+		else
+			echo -e "${RED}[!]未发现/etc/rc.d/rc.local用户自启动服务${NC}"
+		fi
 
+		## 分析 /etc/rc.d/rc.local
+		echo -e "${YELLOW}[+]正在分析/etc/rc.d/rc.local用户自启动服务:${NC}"
+		dangerRclocal=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" /etc/rc.d/rc.local)
+		if [ -n "$dangerRclocal" ];then
+			echo -e "${RED}[!]发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:${NC}" && echo "$dangerRclocal"
+		else
+			echo -e "${YELLOW}[+]未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}" 
+		fi
+	else
+		echo -e "${RED}[!]/etc/rc.d/rc.local不存在${NC}"
+	fi
 
+	## 分析 /etc/init.d/*
+	echo -e "${YELLOW}[+]正在检查/etc/init.d/*用户自启动服务:${NC}"
+	dangerinitd=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))"  /etc/init.d/*)
+	if [ -n "$dangerinitd" ];then
+		(echo -e "${RED}[!]发现/etc/init.d/用户危险自启动服务:${NC}" && echo "$dangerinitd") 
+	else
+		echo -e "${YELLOW}[+]未发现/etc/init.d/用户危险自启动服务${NC}" 
+	fi
+
+	# 有些用户自启动配置在用户的.bashrc|.bash_profile|.profile|.bash_logout 等文件中
+	# 检查给定用户的配置文件中是否存在敏感命令或脚本
+	check_files() {
+		local user=$1
+		local home_dir="/home/$user"
+		# 特殊处理 root 用户
+		if [ "$user" = "root" ]; then
+			home_dir="/root"
+		fi
+
+		local files=(".bashrc" ".bash_profile" ".profile" ".bash_logout" ".zshrc")  # 定义检查的配置文件列表
+		for file in "${files[@]}"; do
+			if [ -f "$home_dir/$file" ]; then  # $home_dir/$file
+				echo -e "${YELLOW}[+]正在检查用户: $user 的 $file 文件: ${NC}"
+				local results=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$home_dir/$file")
+				if [ -n "$results" ]; then
+					echo -e "${RED}[+]用户: $user 的 $file 文件存在敏感命令或脚本:${NC}" && echo "$results"
+				else
+					echo -e "${YELLOW}[+]用户: $user 的 $file 文件不存在敏感命令或脚本${NC}"
+				fi
+			else
+				echo -e "${YELLOW}[+]用户: $user 的 $file 文件不存在${NC}"
+			fi
+		done
+	}
+
+	# 获取所有用户
+	for user in $(cut -d: -f1 /etc/passwd); do
+		echo -e "${YELLOW}[+]正在检查用户: $user 的自启动服务(.bashrc|.bash_profile|.profile):${NC}"
+		check_files "$user"
+	done
 }
-
 
 # 系统服务排查
 systemServiceCheck(){
 	# 系统服务收集  systemServiceCollect
+	systemServiceCollect
 	# 系统服务分析
 	# - 系统自启动服务分析    systemEnabledServiceCheck
+	systemEnabledServiceCheck
 	# - 系统正在运行服务分析   systemRunningServiceCheck
+	systemRunningServiceCheck
 	# 用户服务收集
 	# 用户服务分析  userServiceCheck
-	# - 用户自启动项服务分析  /etc/rc.local /etc/init.d/*
-	# - 用户正在运行服务分析
+	userServiceCheck
 }
 
 
 # 文件信息排查
 fileCheck(){
 	# 系统服务排查 systemServiceCheck
-	# 用户服务排查
 	# 敏感目录排查
 	# 新增文件排查
 	# 隐藏文件排查
