@@ -60,8 +60,13 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 	- 系统正在运行的服务分析
 	# - 用户服务分析
 #  - 敏感目录排查
+	# - /tmp目录
+	# - /root目录(隐藏文件)
 #  - 新增文件排查
 #  - 特殊文件排查
+	# - ssh相关文件排查
+	# - 环境变量排查
+	# - shadow文件排查
 #  - 隐藏文件排查
 #  - 日志文件分析
 # 后门排查
@@ -70,7 +75,6 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 其他排查
 # 基线检查
 # k8s排查
-
 
 # ------------------------
 # 基础变量定义
@@ -963,7 +967,7 @@ userServiceCheck(){
 		echo -e "${YELLOW}[+]未发现/etc/init.d/用户危险自启动服务${NC}" 
 	fi
 
-	# 有些用户自启动配置在用户的.bashrc|.bash_profile|.profile|.bash_logout 等文件中
+	# 有些用户自启动配置在用户的.bashrc|.bash_profile|.profile|.bash_logout|.viminfo 等文件中
 	# 检查给定用户的配置文件中是否存在敏感命令或脚本
 	check_files() {
 		local user=$1
@@ -973,7 +977,7 @@ userServiceCheck(){
 			home_dir="/root"
 		fi
 
-		local files=(".bashrc" ".bash_profile" ".profile" ".bash_logout" ".zshrc")  # 定义检查的配置文件列表
+		local files=(".bashrc" ".bash_profile" ".profile" ".bash_logout" ".zshrc" ".viminfo")  # 定义检查的配置文件列表
 		for file in "${files[@]}"; do
 			if [ -f "$home_dir/$file" ]; then  # $home_dir/$file
 				echo -e "${YELLOW}[+]正在检查用户: $user 的 $file 文件: ${NC}"
@@ -1024,7 +1028,7 @@ dirFileCheck(){
 	fi
 
 	# /root下隐藏文件分析
-	echo -e "${YELLOW}[+]正在检查/root下隐藏文件[cat -alt /root]:${NC}"
+	echo -e "${YELLOW}[+]正在检查/root下隐藏文件[ls -alt /root]:${NC}"
 	echo -e "${YELLOW}[说明]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
 	root_tmp=$(ls -alt /root)
 	if [ -n "$root_tmp" ];then
@@ -1051,15 +1055,42 @@ sshFileCheck(){
 
 # 特殊文件排查
 specialFileCheck(){
-	# 24小时内新增文件分析
-	# 24小时内修改文件分析
 	# 环境变量分析
+	echo -e "${YELLOW}[+]正在检查环境变量文件[.bashrc|.bash_profile|.zshrc|.viminfo等]:${NC}" 
+	echo -e "${YELLOW}[说明]环境变量文件是用于存放用户环境变量的文件,可用于后门维持留马等(需要人工检查有无权限维持痕迹)${NC}" 
+	env_file="/root/.bashrc /root/.bash_profile /root/.zshrc /root/.viminfo /etc/profile /etc/bashrc /etc/environment"
+	for file in $env_file;do
+		if [ -e $file ];then
+			echo -e "${YELLOW}[+]环境变量文件:$file${NC}"
+			more $file
+			printf "\n"
+			# 文件内容中是否包含关键字 curl http https wget 等关键字
+			if [ -n "$(more $file | grep -E "curl|wget|http|https|python")" ];then
+				echo -e "${RED}[!]发现环境变量文件[$file]中包含curl|wget|http|https|python等关键字!${NC}" 
+			fi 
+		else
+			echo -e "${YELLOW}[+]未发现环境变量文件:$file${NC}"
+		fi
+	done
+	printf "\n"
+
+	## 环境变量env命令分析
+	echo -e "${YELLOW}[+]正在检查环境变量命令[env]:${NC}"
+	env_tmp=$(env)
+	if [ -n "$env_tmp" ];then
+		echo -e "${YELLOW}[+]环境变量命令结果如下:${NC}" && echo "$env_tmp"
+	else
+		echo -e "${RED}[!]未发现环境变量命令结果${NC}"
+	fi
+
 	# shadow文件分析 【好几个 shadow】	
 	# 黑客工具检查匹配
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
 		# find / -type f -perm -2000 -ls
 	# /proc/<pid>/[cmdline|environ|fd/*]
+	# 24小时内新增文件分析
+	# 24小时内修改文件分析
 	# 其他
 }
 
@@ -1181,24 +1212,11 @@ printf "\n" | $saveCheckResult
 
 
 
-echo "[8.7]正在检查环境变量文件[.bashrc|.bash_profile|.zshrc|.viminfo等]:" | $saveCheckResult
-echo "[说明]环境变量文件是用于存放用户环境变量的文件,可用于后门维持留马等(需要人工检查有无权限维持痕迹)" | $saveCheckResult
-# 定义环境变量文件的位置列表
-envfile="/root/.bashrc /root/.bash_profile /root/.zshrc /root/.viminfo /etc/profile /etc/bashrc /etc/environment"
-for file in $envfile;do
-	if [ -e $file ];then
-		echo "[+]环境变量文件:$file" | $saveCheckResult
-		more $file | $saveCheckResult
-		printf "\n" | $saveCheckResult
-		# 文件内容中是否包含关键字 curl http https wget 等关键字
-		if [ -n "$(more $file | grep -E "curl|wget|http|https|python")" ];then
-			echo "[!]发现环境变量文件[$file]中包含curl|wget|http|https|python等关键字!" | $saveDangerResult | $saveCheckResult
-		fi 
-	else
-		echo "[+]环境变量文件:$file" | $saveCheckResult
-	fi
-done
-printf "\n" | $saveCheckResult
+
+
+
+
+
 
 
 
@@ -2182,15 +2200,9 @@ done
 printf "\n" | $saveCheckResult
 
 
-echo "==========17.环境变量==========" | $saveCheckResult
-echo "[17.1]正在检查环境变量[env]:" | $saveCheckResult
-env=$(env)
-if [ -n "$env" ];then
-	(echo "[+]环境变量:" && echo "$env") | $saveCheckResult
-else
-	echo "[+]未发现环境变量" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
+
+
+
 
 echo "==========18.性能分析==========" | $saveCheckResult
 echo "[18.1]正在检查磁盘使用情况:" | $saveCheckResult
