@@ -1211,18 +1211,6 @@ printf "\n" | $saveCheckResult
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 echo "[9.12]正在检查SSHD登陆配置:" | $saveCheckResult
 echo "[9.12.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
 sshdconfig=$(more /etc/ssh/sshd_config | egrep -v "#|^$")
@@ -2035,7 +2023,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[14.4]正在分析ron日志:" | $saveCheckResult
+echo "[14.4]正在分析cron日志:" | $saveCheckResult
 echo "[14.4.1]正在分析定时下载[/var/log/cron*]:" | $saveCheckResult
 cron_download=$(more /var/log/cron* | grep "wget|curl")
 if [ -n "$cron_download" ];then
@@ -2053,6 +2041,9 @@ else
 	echo "[+]未发现定时下载脚本" | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
+
+
+
 
 
 # ubuntu 是 more /var/log/apt/* 【后续补充】
