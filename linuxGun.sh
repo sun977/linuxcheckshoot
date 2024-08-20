@@ -153,7 +153,7 @@ echoBanner() {
 	echo -e "${YELLOW}================================================================${NC}"
 }
 
-# 采集系统基础信息
+# 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     echo -e "${GREEN}==========${YELLOW}1.Get System Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[1.0]Get System Basic Info${NC}"  
@@ -195,7 +195,7 @@ baseInfo(){
     printf "\n"  
 }
 
-# 网络信息
+# 网络信息【完成】
 networkInfo(){
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
@@ -428,7 +428,7 @@ networkInfo(){
     printf "\n"  
 }
 
-# 进程信息分析
+# 进程信息分析【完成】
 processInfo(){
 	echo -e "${YELLOW}[+]输出所有系统进程[ps -auxww]:${NC}" && ps -auxww
 	echo -e "${YELLOW}[+]检查内存占用top5的进程[ps -aux | sort -nr -k 4 | head -5]:${NC}" && ps -aux | sort -nr -k 4 | head -5
@@ -463,7 +463,7 @@ processInfo(){
 	printf "\n" 
 }
 
-# 计划任务排查
+# 计划任务排查【归档 -- systemCheck】
 crontabCheck(){
 	# 系统计划任务收集
 	echo -e "${YELLOW}输出系统计划任务[/etc/crontab | /etc/cron*/* ]:${NC}" 
@@ -510,7 +510,7 @@ crontabCheck(){
 	printf "\n"
 }
 
-# 历史命令排查
+# 历史命令排查【归档 -- systemCheck】
 historyCheck(){
 	# history 和 cat /[user]/.bash_history 的区别
 	# history:
@@ -623,7 +623,7 @@ historyCheck(){
 
 }
 
-# 用户信息排查
+# 用户信息排查【归档 -- systemCheck】
 userInfoCheck(){
 	echo -e "${YELLOW}[+]输出正在登录的用户:${NC}" && w  # 正在登录的用户 或者 who 都行
 	echo -e "${YELLOW}[+]输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
@@ -753,7 +753,7 @@ userInfoCheck(){
 	printf "\n" 
 }
 
-# 系统信息排查
+# 系统信息排查【完成】
 systemCheck(){
 	# 基础信息排查 baseInfo
 	baseInfo
@@ -765,7 +765,7 @@ systemCheck(){
 	historyCheck
 }
 
-# 系统自启动服务分析
+# 系统自启动服务分析【归档 -- systemServiceCheck】
 systemEnabledServiceCheck(){
 	# 系统自启动项服务分析
 	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
@@ -837,7 +837,7 @@ systemEnabledServiceCheck(){
 	fi
 }
 
-# 系统运行服务分析
+# 系统运行服务分析【归档 -- systemServiceCheck】
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
 	echo -e "${YELLOW}[+]正在检查正在运行中服务:${NC}"
@@ -890,7 +890,7 @@ systemRunningServiceCheck(){
 	fi
 }
 
-# 系统服务收集
+# 系统服务收集【归档 -- systemServiceCheck】
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
 	echo -e "${YELLOW}[+]正在收集系统服务信息(不含威胁分析):${NC}"
@@ -926,7 +926,7 @@ systemServiceCollect(){
 	fi
 }
 
-# 用户服务分析
+# 用户服务分析【归档 -- systemServiceCheck】
 userServiceCheck(){
 	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
 	## 输出 /etc/rc.d/rc.local
@@ -1011,7 +1011,7 @@ systemServiceCheck(){
 }
 
 
-# 敏感目录排查
+# 敏感目录排查【归档 -- 】
 dirFileCheck(){
 	# /tmp/下
 	echo -e "${YELLOW}[+]正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
