@@ -1031,6 +1031,10 @@ specialFileCheck(){
 	# 24小时内修改文件分析
 	# 环境变量分析
 	# 黑客工具检查匹配
+	# SUID/SGID Files 可用于提权
+		# find / -type f -perm -4000 -ls
+		# find / -type f -perm -2000 -ls
+	# /proc/<pid>/[cmdline|environ|fd/*]
 	# 其他
 }
 
@@ -1041,7 +1045,7 @@ systemLogCheck(){
 	# secure日志分析
 	# message日志分析
 	# cron日志分析
-	# yum日志分析 
+	# yum/apt日志分析 
 	# dmesg日志分析
 	# btmp日志分析
 	# lastlog日志分析
