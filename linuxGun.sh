@@ -7,6 +7,11 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 模块化：linuxgun.sh --[option] 的方式调用各个模块
 # 根据参数执行不同的功能 
 # 输出 放在最后的处理函数上,内部函数不在单独设置输出
+# [INFO] 提示输出 -- 提示
+# [NOTE] 注意输出 -- 需要注意
+# [WARN] 警告输出 -- 重点关注
+# [KNOW] 知识点
+# [ERRO] 错误输出
 
 # if [[ "$1" == "--ps" ]] || [[ "$1" == "-p" ]]; then
 #     check_nginx_ps
@@ -1009,8 +1014,27 @@ systemServiceCheck(){
 # 敏感目录排查
 dirFileCheck(){
 	# /tmp/下
+	echo -e "${YELLOW}[+]正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
+	echo -e "${YELLOW}[[说明]tmp目录是用于存放临时文件的目录,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"
+	tmp_tmp=$(ls -alt /tmp)
+	if [ -n "$tmp_tmp" ];then
+		echo -e "${YELLOW}[+]/tmp/下文件如下:${NC}" && echo "$tmp"
+	else
+		echo -e "${RED}[!]未发现/tmp/下文件${NC}"
+	fi
+
 	# /root下隐藏文件分析
+	echo -e "${YELLOW}[+]正在检查/root下隐藏文件[cat -alt /root]:${NC}"
+	echo -e "${YELLOW}[说明]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
+	root_tmp=$(ls -alt /root)
+	if [ -n "$root_tmp" ];then
+		echo -e "${YELLOW}[+]/root下隐藏文件如下:${NC}" && echo "$root_tmp"
+	else
+		echo -e "${RED}[!]未发现/root下隐藏文件${NC}"
+	fi
+
 	# 其他
+	
 }
 
 # SSH登录配置排查
@@ -1030,6 +1054,7 @@ specialFileCheck(){
 	# 24小时内新增文件分析
 	# 24小时内修改文件分析
 	# 环境变量分析
+	# shadow文件分析 【好几个 shadow】	
 	# 黑客工具检查匹配
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
@@ -1154,10 +1179,6 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[8.6]正在检查tmp目录[/tmp]:" | $saveCheckResult
-echo "[说明]tmp目录是用于存放临时文件的目录,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件" | $saveCheckResult
-(ls -alt /tmp) | $saveCheckResult
-printf "\n" | $saveCheckResult
 
 
 echo "[8.7]正在检查环境变量文件[.bashrc|.bash_profile|.zshrc|.viminfo等]:" | $saveCheckResult
@@ -1180,10 +1201,8 @@ done
 printf "\n" | $saveCheckResult
 
 
-echo "[8.8]正在检查/root的隐藏文件[cat -alt /root]" | $saveCheckResult
-echo "[说明]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"  | $saveCheckResult
-(ls -alt /root) | $saveCheckResult
-printf "\n" | $saveCheckResult
+
+
 
 
 echo "[9.12]正在检查SSHD登陆配置:" | $saveCheckResult
