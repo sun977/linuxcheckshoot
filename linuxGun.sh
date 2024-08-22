@@ -1028,7 +1028,7 @@ dirFileCheck(){
 	fi
 
 	# /root下隐藏文件分析
-	echo -e "${YELLOW}[+]正在检查/root下隐藏文件[ls -alt /root]:${NC}"
+	echo -e "${YELLOW}[+]正在检查/root/下隐藏文件[ls -alt /root]:${NC}"
 	echo -e "${YELLOW}[说明]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
 	root_tmp=$(ls -alt /root)
 	if [ -n "$root_tmp" ];then
@@ -1084,9 +1084,12 @@ specialFileCheck(){
 
 	# hosts文件分析
 	echo -e "${YELLOW}[+]正在检查hosts文件[/etc/hosts]:${NC}"
-
-
-
+	hosts_tmp=$(cat /etc/hosts)
+	if [ -n "$hosts_tmp" ];then
+		echo -e "${YELLOW}[+]hosts文件如下:${NC}" && echo "$hosts_tmp"
+	else
+		echo -e "${RED}[!]未发现hosts文件${NC}"
+	fi
 	# shadow文件分析 【好几个 shadow】	
 		# shadow
 		# gshadow
@@ -1164,16 +1167,6 @@ attackAngleCheck(){
 
 
 
-
-echo "==========8.关键文件检查==========" | $saveCheckResult
-echo "[8.1]正在检查hosts文件[/etc/hosts](未检查.bash_history|.zsh_history文件):" | $saveCheckResult
-hosts=$(more /etc/hosts)
-if [ -n "$hosts" ];then
-	(echo "[+]hosts文件如下:" && echo "$hosts") | $saveCheckResult
-else
-	echo "[+]未发现hosts文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
