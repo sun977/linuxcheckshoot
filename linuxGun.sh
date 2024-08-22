@@ -1048,7 +1048,6 @@ sshFileCheck(){
 	# root远程登录
 	# 公钥私钥文件分析
 	# authorized_keys 文件分析
-	# /etc/hosts 文件分析
 	# known_hosts 文件分析
 	# 其他
 }
@@ -1083,7 +1082,14 @@ specialFileCheck(){
 		echo -e "${RED}[!]未发现环境变量命令结果${NC}"
 	fi
 
+	# hosts文件分析
+	echo -e "${YELLOW}[+]正在检查hosts文件[/etc/hosts]:${NC}"
+
+
+
 	# shadow文件分析 【好几个 shadow】	
+		# shadow
+		# gshadow
 	# 黑客工具检查匹配
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
@@ -1168,6 +1174,9 @@ else
 	echo "[+]未发现hosts文件" | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
+
+
+
 
 
 echo "[8.2]正在检查公钥文件[/root/.ssh/*.pub]:" | $saveCheckResult
