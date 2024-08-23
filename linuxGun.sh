@@ -1090,9 +1090,56 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现hosts文件${NC}"
 	fi
+
 	# shadow文件分析 【好几个 shadow】	
-		# shadow
-		# gshadow
+	## shadow 内容 权限 属性
+	echo -e "${YELLOW}[+]正在检查shadow文件[/etc/shadow]:${NC}"
+	shadow_tmp=$(cat /etc/shadow)
+	if [ -n "$shadow_tmp" ];then
+		# 输出 shadow 文件内容
+		echo -e "${YELLOW}[+]shadow文件如下:${NC}" && echo "$shadow_tmp"
+		
+		# 文件权限检查
+		echo -e "${YELLOW}[+]shadow文件权限如下:${NC}"
+		shadow_au=$(ls -l /etc/shadow | awk '{print $1}')
+		if [ "${shadow_au:1:9}" = "rw-------" ]; then
+			echo -e "${YELLOW}[+]/etc/shadow文件权限为600,权限符合规范${NC}" 
+		else
+			echo -e "${YELLOW}[!]/etc/shadow文件权限为:""${shadow_au:1:9}"",不符合规范,权限应改为600${NC}" 
+		fi
+		
+		# 文件属性检查
+		# 当一个文件或目录具有 "a" 属性时，只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
+		# 其他普通用户在写入文件时只能进行数据的追加操作，而无法对现有数据进行修改或删除。
+		# 属性 "i" 表示文件被设置为不可修改（immutable）的权限。这意味着文件不能被更改、重命名、删除或链接。
+		# 具有 "i" 属性的文件对于任何用户或进程都是只读的，并且不能进行写入操作
+		echo -e "${YELLOW}[+]正在检查shadow文件属性:${NC}"
+		flag=0
+		for ((x=1;x<=15;x++))
+		do
+			apend=$(lsattr /etc/shadow | cut -c $x)
+			if [ $apend = "i" ];then
+				echo "/etc/shadow文件存在i安全属性,符合要求" 
+				flag=1
+			fi
+			if [ $apend = "a" ];then
+				echo "/etc/shadow文件存在a安全属性" 
+				flag=1
+			fi
+		done
+		if [ $flag = 0 ];then
+			echo "/etc/shadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/shadow被删除或修改" 
+		fi
+		printf "\n" 
+
+	else
+		echo -e "${RED}[!]未发现shadow文件${NC}"
+	fi
+
+	## gshadow
+
+
+	
 	# 黑客工具检查匹配
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
@@ -1271,14 +1318,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[9.13.2]正在检查shadow文件权限[/etc/shadow ]:" | $saveCheckResult
-shadow=$(ls -l /etc/shadow | awk '{print $1}')
-if [ "${shadow:1:9}" = "rw-------" ]; then
-    echo "[+]/etc/shadow文件权限为600,权限符合规范" | $saveCheckResult
-else
-    echo "[!]/etc/shadow文件权限为:""${shadow:1:9}"",不符合规范,权限应改为600" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
+
 
 
 echo "[9.13.3]正在检查passwd文件权限[/etc/passwd]:" | $saveCheckResult
@@ -1418,6 +1458,9 @@ if [ $flag = 0 ];then
 	echo "/etc/shadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/shadow被删除或修改" |  $saveDangerResult | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
+
+
+
 
 
 echo "[9.14.3]正在检查gshadow文件属性:" | $saveCheckResult

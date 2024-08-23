@@ -300,6 +300,10 @@ linuxGun.sh 概要
 		- 环境变量排查
 		- hosts文件排查
 		- shadow文件排查
+			- shadow文件权限
+			- shadow文件属性
+			- gshadow文件权限
+			- gshadow文件属性
 	- 隐藏文件排查
 	- 日志文件分析
 	后门排查
