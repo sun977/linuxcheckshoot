@@ -1139,7 +1139,7 @@ specialFileCheck(){
 	## gshadow
 
 
-	
+
 	# 黑客工具检查匹配
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
@@ -1434,30 +1434,6 @@ if [ $flag = 0 ];then
 fi
 printf "\n" | $saveCheckResult
 
-
-# 当一个文件或目录具有 "a" 属性时，只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
-# 其他普通用户在写入文件时只能进行数据的追加操作，而无法对现有数据进行修改或删除。
-# 属性 "i" 表示文件被设置为不可修改（immutable）的权限。这意味着文件不能被更改、重命名、删除或链接。
-# 具有 "i" 属性的文件对于任何用户或进程都是只读的，并且不能进行写入操作
-
-echo "[9.14.2]正在检查shadow文件属性:" | $saveCheckResult
-flag=0
-for ((x=1;x<=15;x++))
-do
-	apend=`lsattr /etc/shadow | cut -c $x`
-	if [ $apend = "i" ];then
-		echo "/etc/shadow文件存在i安全属性,符合要求" | $saveCheckResult
-		flag=1
-	fi
-	if [ $apend = "a" ];then
-		echo "/etc/shadow文件存在a安全属性" | $saveCheckResult
-		flag=1
-	fi
-done
-if [ $flag = 0 ];then
-	echo "/etc/shadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/shadow被删除或修改" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
