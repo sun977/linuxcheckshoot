@@ -1136,7 +1136,23 @@ specialFileCheck(){
 		echo -e "${RED}[!]未发现shadow文件${NC}"
 	fi
 
-	## gshadow
+	## gshadow 内容 权限 属性
+	echo -e "${YELLOW}[+]正在检查gshadow文件[/etc/gshadow]:${NC}"
+	gshadow_tmp=$(cat /etc/gshadow)
+	if [ -n "$gshadow_tmp" ];then
+		# 输出 gshadow 文件内容
+		echo -e "${YELLOW}[+]gshadow文件如下:${NC}" && echo "$gshadow_tmp"
+		
+		# 文件权限检查
+		echo -e "${YELLOW}[+]gshadow文件权限如下:${NC}"
+
+
+		# 文件属性检查
+		echo -e "${YELLOW}[+]正在检查gshadow文件属性:${NC}"
+
+	else
+		echo -e "${RED}[!]未发现gshadow文件${NC}"
+	fi
 
 
 
