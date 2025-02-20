@@ -1156,7 +1156,7 @@ specialFileCheck(){
 
 
 
-	# 黑客工具检查匹配
+	# 黑客工具检查匹配【迁移出去】
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
 		# find / -type f -perm -2000 -ls
@@ -1206,6 +1206,12 @@ webshellCheck(){
 virusCheck(){
 	# 基础排查
 	# 病毒特有行为排查
+}
+
+# 黑客工具排查
+hackerToolsCheck(){
+	# 黑客工具排查
+	# 常见黑客痕迹排查
 }
 
 # 其他排查
