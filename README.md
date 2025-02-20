@@ -305,6 +305,7 @@ linuxGun.sh 概要
 			- gshadow文件权限
 			- gshadow文件属性
 		- 24小时变动文件排查
+		— SUID/SGID文件排查	
 	- 隐藏文件排查
 	- 日志文件分析
 	后门排查
