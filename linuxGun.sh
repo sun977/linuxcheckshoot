@@ -1164,7 +1164,7 @@ specialFileCheck(){
 	# 24小时内修改文件分析
 	echo -e "${YELLOW}正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:${NC}" 
 	echo -e "${YELLOW}[说明] find / -mtime -1 -type f ${NC}" 
-	find_tmp=$(find / -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$")
+	find_tmp=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$")
 	if [ -n "$find_tmp" ];then
 		echo -e "${YELLOW}[+]最近24小时内变动的敏感文件如下:${NC}" && echo "$find_tmp"
 	else
