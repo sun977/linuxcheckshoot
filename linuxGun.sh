@@ -1154,15 +1154,34 @@ specialFileCheck(){
 		echo -e "${RED}[!]未发现gshadow文件${NC}"
 	fi
 
-
-
 	# 黑客工具检查匹配【迁移出去】
 	# SUID/SGID Files 可用于提权
 		# find / -type f -perm -4000 -ls
 		# find / -type f -perm -2000 -ls
-	# /proc/<pid>/[cmdline|environ|fd/*]
+	# /proc/<pid>/[cmdline|environ|fd/*] 【迁移出去】
+	
 	# 24小时内新增文件分析
 	# 24小时内修改文件分析
+	echo -e "${YELLOW}正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:${NC}" 
+	echo -e "${YELLOW}[说明] find / -mtime -1 -type f ${NC}" 
+	find_tmp=$(find / -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$")
+	if [ -n "$find_tmp" ];then
+		echo -e "${YELLOW}[+]最近24小时内变动的敏感文件如下:${NC}" && echo "$find_tmp"
+	else
+		echo -e "${RED}[!]未发现最近24小时内变动的敏感文件${NC}"
+	fi
+	printf "\n" 
+
+	echo -e "${YELLOW}正在检查最近24小时内变动的所有文件:${NC}" 
+	#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
+	echo -e "${YELLOW}[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害 ${NC}" 
+	find_tmp2=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) 
+	if [ -n "$find_tmp2" ];then
+		echo -e "${YELLOW}[+]最近24小时内变动的所有文件如下:${NC}" && echo "$find_tmp2"
+	else
+		echo -e "${RED}[!]未发现最近24小时内变动的所有文件${NC}"
+	fi
+
 	# 其他
 }
 
@@ -1206,6 +1225,11 @@ webshellCheck(){
 virusCheck(){
 	# 基础排查
 	# 病毒特有行为排查
+}
+
+# 内存和VFS排查
+memInfoCheck(){
+	# /proc/<pid>/[cmdline|environ|fd/*]
 }
 
 # 黑客工具排查
@@ -1768,16 +1792,6 @@ echo "webshell这一块因为技术难度相对较高,并且已有专业的工�
 echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
 printf "\n" | $saveCheckResult
 
-echo "[12.3]正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:" | $saveCheckResult
-echo "[说明]find / -mtime -1 -type f " | $saveCheckResult
-(find / -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$") |  $saveDangerResult | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-echo "[12.4]正在检查最近24小时内变动的所有文件:" | $saveCheckResult
-#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
-echo "[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
-(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) | $saveDangerResult | $saveCheckResult
-printf "\n" | $saveCheckResult
 
 
 echo "[12.5]正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
