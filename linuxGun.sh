@@ -1041,6 +1041,17 @@ dirFileCheck(){
 	
 }
 
+# SSH登录配置排查
+sshFileCheck(){
+	# sshd 配置文件分析
+	# 空口令登录
+	# root远程登录
+	# 公钥私钥文件分析
+	# authorized_keys 文件分析
+	# known_hosts 文件分析
+	# 其他
+}
+
 # 特殊文件排查【归档 -- 】
 specialFileCheck(){
 	# 环境变量分析
@@ -1185,17 +1196,6 @@ specialFileCheck(){
 	fi
 
 
-	# 其他
-}
-
-# SSH登录配置排查
-sshFileCheck(){
-	# sshd 配置文件分析
-	# 空口令登录
-	# root远程登录
-	# 公钥私钥文件分析
-	# authorized_keys 文件分析
-	# known_hosts 文件分析
 	# 其他
 }
 
