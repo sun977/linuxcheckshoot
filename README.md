@@ -263,7 +263,7 @@ linuxGun.sh 更新日志
 		1、完善systemCheck检查函数
 
 linuxGun.sh 概要
-	系统信息排查
+	- 系统信息排查
 	- 系统基础信息
 	- 用户信息分析
 	- 计划任务分析
