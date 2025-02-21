@@ -1319,12 +1319,12 @@ specialFileCheck(){
 	## SGID(Set Group ID) 文件是一种特殊权限文件,任何用户运行该文件时都会以文件所属组的权限执行,对于目录,SGID目录下创建的文件会继承该组的权限。
 	echo -e "${YELLOW}[+]正在检查SUID/SGID文件:${NC}"
 	echo -e "${YELLOW}[注意]如果SUID/SGID文件同时出现在最近24H变换检测中,说明机器有极大概率已经中招${NC}"
-	find_suid=$(find / -type f -perm -4000 -ls)
+	find_suid=$(find / -type f -perm -4000)
 	if [ -n "$find_suid" ];then
 		echo -e "${YELLOW}[+]SUID文件如下:${NC}" && echo "$find_suid"
 	fi
 
-	find_sgid=$(find / -type f -perm -2000 -ls)
+	find_sgid=$(find / -type f -perm -2000)
 	if [ -n "$find_sgid" ];then
 		echo -e "${YELLOW}[+]SGID文件如下:${NC}" && echo "$find_sgid"
 	fi
