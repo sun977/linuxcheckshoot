@@ -1293,7 +1293,11 @@ specialFileCheck(){
 	echo -e "${YELLOW}正在检查最近24小时内变动的所有文件:${NC}" 
 	#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
 	echo -e "${YELLOW}[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害 ${NC}" 
-	find_tmp2=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) 
+	#find_tmp2=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) 
+	find_tmp2=$(find / \
+ 	 -not $ -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" $ \
+  	-type f -mtime -1 )
+
 	if [ -n "$find_tmp2" ];then
 		echo -e "${YELLOW}[+]最近24小时内变动的所有文件如下:${NC}" && echo "$find_tmp2"
 	else
