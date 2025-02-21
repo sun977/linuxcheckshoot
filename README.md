@@ -296,7 +296,19 @@ linuxGun.sh 概要
 		- /root目录(隐藏文件)
 	- 特殊文件排查
 		- ssh相关文件排查
+			- .ssh目录排查
+			- 公钥私钥排查
+			- authrized_keys文件排查
+			- known_hosts文件排查
+			- sshd_config文件分析
+				- 所有开启的配置(不带#号)
+				- 检测是否允许空口令登录
+				- 检测是否允许root远程登录
+				- 检测ssh协议版本
+				- 检测ssh版本
 		- 环境变量排查
+			- 环境变量文件分析
+			- env命令分析
 		- hosts文件排查
 		- shadow文件排查
 			- shadow文件权限

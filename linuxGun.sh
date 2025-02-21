@@ -1155,13 +1155,16 @@ sshFileCheck(){
 	sshver=$(ssh -V)
 	echo -e "${YELLOW}[+]ssh版本信息如下:${NC}" && echo "$sshver"
 
-
 	# 其他
 }
 
 
 # 特殊文件排查【归档 -- 】
 specialFileCheck(){
+	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
+	echo -e "${YELLOW}[+]正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
+	sshFileCheck
+	
 	# 环境变量分析
 	echo -e "${YELLOW}[+]正在检查环境变量文件[.bashrc|.bash_profile|.zshrc|.viminfo等]:${NC}" 
 	echo -e "${YELLOW}[说明]环境变量文件是用于存放用户环境变量的文件,可用于后门维持留马等(需要人工检查有无权限维持痕迹)${NC}" 
@@ -1307,7 +1310,6 @@ specialFileCheck(){
 	if [ -n "$find_sgid" ];then
 		echo -e "${YELLOW}[+]SGID文件如下:${NC}" && echo "$find_sgid"
 	fi
-
 
 	# 其他
 }
