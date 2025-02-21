@@ -1043,14 +1043,122 @@ dirFileCheck(){
 
 # SSH登录配置排查
 sshFileCheck(){
-	# sshd 配置文件分析
-	# 空口令登录
-	# root远程登录
-	# 公钥私钥文件分析
-	# authorized_keys 文件分析
-	# known_hosts 文件分析
+	# 输出/root/.ssh/下文件
+	echo -e "${YELLOW}[+]正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
+	ls_ssh=$(ls -alt /root/.ssh)
+	if [ -n "$ls_ssh" ];then
+		echo -e "${YELLOW}[+]/root/.ssh/下文件如下:${NC}" && echo "$ls_ssh"
+	else
+		echo -e "${RED}[!]未发现/root/.ssh/存在文件${NC}"
+	fi
+	printf "\n"
+
+	# 公钥文件分析
+	echo -e "${YELLOW}正在检查公钥文件[/root/.ssh/*.pub]:${NC}"
+	pubkey=$(cat /root/.ssh/*.pub)
+	if [ -n "$pubkey" ];then
+		echo -e "${RED}[!]发现公钥文件如下,请注意!${NC}" && echo "$pubkey"
+	else
+		echo -e "${YELLOW}[+]未发现公钥文件${NC}"
+	fi
+	printf "\n"
+
+	# 私钥文件分析
+	echo -e "${YELLOW}正在检查私钥文件[/root/.ssh/id_rsa]:${NC}" 
+	echo -e "${YELLOW}[说明]私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]${NC}"
+	privatekey=$(cat /root/.ssh/id_rsa)
+	if [ -n "$privatekey" ];then
+		echo -e "${RED}[!]发现私钥文件,请注意!${NC}" && echo "$privatekey"
+	else
+		echo -e "${YELLOW}[+]未发现私钥文件${NC}"
+	fi
+	printf "\n" 
+
+	# authorized_keys文件分析
+	echo -e "${YELLOW}正在检查被授权登录公钥信息[/root/.ssh/authorized_keys]:${NC}" 
+	echo -e "${YELLOW}[说明]authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机" 
+	echo -e "${YELLOW}[说明]免密登录配置中需要将用户公钥内容追加到authorized_keys文件中[cat id_rsa.pub >> authorized_keys]"
+	authkey=$(cat /root/.ssh/authorized_keys)
+	if [ -n "$authkey" ];then
+		echo -e "${RED}[!]发现被授权登录的用户公钥信息如下${NC}" && echo "$authkey"
+	else
+		echo -e "${YELLOW}[+]未发现被授权登录的用户公钥信息${NC}" 
+	fi
+	printf "\n" 
+
+	# known_hosts文件分析
+	echo -e "${YELLOW}正在检查当前设备可登录主机信息[/root/.ssh/known_hosts]:${NC}" 
+	echo -e "${YELLOW}[说明]known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机${NC}" 
+	knownhosts=$(cat /root/.ssh/known_hosts | awk '{print $1}')
+	if [ -n "$knownhosts" ];then
+		echo -e "${RED}[!]发现可横向远程主机信息如下:${NC}" && echo "$knownhosts"
+	else
+		echo -e "${YELLOW}[+]未发现可横向远程主机信息${NC}" 
+	fi
+	printf "\n" 
+
+
+	# sshd_config 配置文件分析
+	echo -e "${YELLOW}正在检查SSHD配置文件[/etc/ssh/sshd_config]:${NC}" 
+	echo -e "${YELLOW}正在输出SSHD文件所有开启配置(不带#号的配置)[/etc/ssh/sshd_config]:"
+	sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
+	if [ -n "$sshdconfig" ];then
+		echo -e "${YELLOW}[+]sshd_config所有开启的配置如下:${NC}" && echo "$sshdconfig" 
+	else
+		echo -e "${YELLOW}[!]未发现sshd_config开启任何配置!请留意这是异常现象!${NC}" 
+	fi
+	printf "\n" 
+
+	## sshd_config 配置文件分析 -- 允许空口令登录分析
+	echo -e "${YELLOW}正在检查sshd_config配置--允许SSH空口令登录[/etc/ssh/sshd_config]:${NC}" 
+	emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
+	nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
+	if [ -n "$emptypasswd" ];then
+		echo -e "${RED}[!]发现允许空口令登录,请注意!${NC}"
+		if [ -n "$nopasswd" ];then
+			echo -e "${RED}[!]以下用户空口令:${NC}" && echo "$nopasswd"
+		else
+			echo -e "${RED}[+]但未发现空口令用户${NC}" 
+		fi
+	else
+		echo -e "${YELLOW}[+]不允许空口令用户登录${NC}" 
+	fi
+	printf "\n" 
+
+	## sshd_config 配置文件分析 -- root远程登录分析
+	echo -e "${YELLOW}正在检查sshd_config配置--允许SSH远程root登录[/etc/ssh/sshd_config]:${NC}" 
+	rootRemote=$(cat /etc/ssh/sshd_config | grep -v ^# | grep "PermitRootLogin yes")
+	if [ -n "$rootRemote" ];then
+		echo -e "${RED}[!]发现允许root远程登录,请注意!${NC}"
+		echo -e "${RED}[!]请修改/etc/ssh/sshd_config配置文件,添加PermitRootLogin no${NC}"
+	else
+		echo -e "${YELLOW}[+]不允许root远程登录${NC}" 
+	fi
+	printf "\n" 
+
+	## sshd_config 配置文件分析 -- ssh协议版本分析
+	echo -e "${YELLOW}正在检查sshd_config配置--检查SSH协议版本[/etc/ssh/sshd_config]:${NC}" 
+	echo -e "${YELLOW}[说明]需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
+	echo -e "${YELLOW}[说明]从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
+	protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
+	if [ "$protocolver" -eq "2" ];then
+		echo -e "${YELLOW}[+]openssh使用ssh2协议${NC}" 
+	else
+		echo -e "${YELLOW}[!]openssh未ssh2协议,版本过低${NC}"
+	fi
+
+	# ssh版本分析 -- 罗列几个有漏洞的ssh版本
+	echo -e "${YELLOW}正在检查SSH版本[ssh -V]:${NC}"
+	sshver=$(ssh -V)
+	if [ -n "$sshver" ];then
+		echo -e "${YELLOW}[+]ssh版本信息如下:${NC}" && echo "$sshver"
+	else
+		echo -e "${RED}[+]未发现ssh版本信息,请注意这是异常现象!${NC}"
+	fi
+
 	# 其他
 }
+
 
 # 特殊文件排查【归档 -- 】
 specialFileCheck(){
@@ -1081,6 +1189,7 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现环境变量命令结果${NC}"
 	fi
+	printf "\n"
 
 	# hosts文件分析
 	echo -e "${YELLOW}[+]正在检查hosts文件[/etc/hosts]:${NC}"
@@ -1090,6 +1199,7 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现hosts文件${NC}"
 	fi
+	printf "\n"
 
 	# shadow文件分析 【好几个 shadow】	
 	## shadow 内容 权限 属性
@@ -1135,6 +1245,7 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现shadow文件${NC}"
 	fi
+	printf "\n"
 
 	## gshadow 内容 权限 属性
 	echo -e "${YELLOW}[+]正在检查gshadow文件[/etc/gshadow]:${NC}"
@@ -1153,6 +1264,7 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现gshadow文件${NC}"
 	fi
+	printf "\n"
 
 	# 黑客工具检查匹配【迁移出去】
 	# /proc/<pid>/[cmdline|environ|fd/*] 【迁移出去】
@@ -1179,6 +1291,7 @@ specialFileCheck(){
 	else
 		echo -e "${RED}[!]未发现最近24小时内变动的所有文件${NC}"
 	fi
+	printf "\n"
 
 	# SUID/SGID Files 可用于提权 
 	## SUID(Set User ID) 文件是一种特殊权限文件,它允许文件拥有者以root权限运行,而不需要root权限。
@@ -1279,92 +1392,10 @@ attackAngleCheck(){
 
 
 
-echo "[8.2]正在检查公钥文件[/root/.ssh/*.pub]:" | $saveCheckResult
-if [  -e /root/.ssh/*.pub ];then
-	echo "[!]发现公钥文件,请注意!"  |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现公钥文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[8.3]正在检查私钥文件[/root/.ssh/id_rsa]:" | $saveCheckResult
-if [ -e /root/.ssh/id_rsa ];then
-	echo "[!]发现私钥文件,请注意!" |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现私钥文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[8.4]正在检查authorized_keys文件[/root/.ssh/authorized_keys]:" | $saveCheckResult
-echo "[说明]authorized_keys文件是用于SSH密钥认证的文件,它用于存储用户在远程登录时所允许的公钥,可定位谁可以免密登陆该主机" | $saveCheckResult
-authkey=$(more /root/.ssh/authorized_keys)
-if [ -n "$authkey" ];then
-	(echo "[!]发现被授权登录的用户公钥信息如下" && echo "$authkey") | $saveCheckResult
-else
-	echo "[+]未发现被授权登录的用户公钥信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[8.5]正在检查known_hosts文件[/root/.ssh/known_hosts]:" | $saveCheckResult
-echo "[说明]known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机" | $saveCheckResult
-knownhosts=$(more /root/.ssh/known_hosts | awk '{print $1}')
-if [ -n "$knownhosts" ];then
-	(echo "[!]发现已知远程主机公钥信息如下:" && echo "$knownhosts") | $saveCheckResult
-else
-	echo "[+]未发现已知远程主机公钥信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
-echo "[9.12]正在检查SSHD登陆配置:" | $saveCheckResult
-echo "[9.12.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
-sshdconfig=$(more /etc/ssh/sshd_config | egrep -v "#|^$")
-if [ -n "$sshdconfig" ];then
-	(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
-else
-	echo "[!]未发现sshd配置文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
-
-echo "[9.12.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-nopasswd=`gawk -F: '($2=="") {print $1}' /etc/shadow`
-if [ -n "$emptypasswd" ];then
-	echo "[!]允许空口令登录,请注意!"
-	if [ -n "$nopasswd" ];then
-		(echo "[!]以下用户空口令:" && echo "$nopasswd") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]但未发现空口令用户" | $saveCheckResult
-	fi
-else
-	echo "[+]不允许空口令用户登录" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[9.12.3]正在检查是否允许SSH远程root登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no"
-if [ $? -eq 0 ];then
-	echo "[+]root不允许登陆,符合要求" | $saveCheckResult
-else
-	echo "[!]允许root远程登陆,不符合要求,建议/etc/ssh/sshd_config添加PermitRootLogin no" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[9.12.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
-echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
-protocolver=$(more /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-if [ "$protocolver" -eq "2" ];then
-	echo "[+]openssh使用ssh2协议,符合要求" 
-else
-	echo "[!]openssh未ssh2协议,不符合要求"
-fi
 
 
 echo "[9.13]正在检查登陆相关文件权限:" | $saveCheckResult

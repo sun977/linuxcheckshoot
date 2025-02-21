@@ -167,6 +167,7 @@ Date:2024.08.07
 			10.4.2 空口令登录
 			10.4.3 root远程登录
 			10.4.4 ssh协议版本
+			10.4.5 ssh版本
 		10.5 NIS配置策略
 		10.6 Nginx配置策略
 			10.6.1 原始配置
@@ -1448,6 +1449,13 @@ if [ "$protocolver" -eq "2" ];then
 else
 	echo "[!]openssh未ssh2协议,不符合要求"
 fi
+
+echo "[10.4.5]正在检查SSH版本[ssh -V]:" | $saveCheckResult
+sshver=$(ssh -V)
+if [ -n "$sshver" ];then
+	(echo "[+]ssh版本信息如下:" && echo "$sshver") | $saveCheckResult
+else
+	echo "[!]未发现ssh版本信息,请注意这是异常现象!" | $saveCheckResult
 
 
 echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
