@@ -1141,20 +1141,20 @@ sshFileCheck(){
 	echo -e "${YELLOW}[说明]需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
 	echo -e "${YELLOW}[说明]从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
 	protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-	if [ "$protocolver" -eq "2" ];then
-		echo -e "${YELLOW}[+]openssh使用ssh2协议${NC}" 
+	if [ -n "$protocolver" ];then
+		echo -e "${YELLOW}[+]openssh协议版本如下:${NC}" && echo "$protocolver"
+		if [ "$protocolver" -eq "2" ];then
+			echo -e "${RED}[+]openssh使用ssh2协议,版本过低!${NC}" 
+		fi
 	else
-		echo -e "${YELLOW}[!]openssh未ssh2协议,版本过低${NC}"
+		echo -e "${YELLOW}[!]未发现openssh协议版本(未发现并非代表异常)${NC}"
 	fi
 
 	# ssh版本分析 -- 罗列几个有漏洞的ssh版本
 	echo -e "${YELLOW}正在检查SSH版本[ssh -V]:${NC}"
 	sshver=$(ssh -V)
-	if [ -n "$sshver" ];then
-		echo -e "${YELLOW}[+]ssh版本信息如下:${NC}" && echo "$sshver"
-	else
-		echo -e "${RED}[+]未发现ssh版本信息,请注意这是异常现象!${NC}"
-	fi
+	echo -e "${YELLOW}[+]ssh版本信息如下:${NC}" && echo "$sshver"
+
 
 	# 其他
 }
