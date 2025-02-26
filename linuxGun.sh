@@ -4,7 +4,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # 更新功能,所有系统通用【等待更新】
 # 使用函数形式优化代码
-# 模块化：linuxgun.sh --[option] 的方式调用各个模块
+# 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
 # 根据参数执行不同的功能 
 # 输出 放在最后的处理函数上,内部函数不在单独设置输出
 # [INFO] 提示输出 -- 提示
@@ -777,7 +777,7 @@ userInfoCheck(){
 	printf "\n" 
 }
 
-# 系统信息排查【完成】
+# 系统信息排查【完成】   
 systemCheck(){
 	# 基础信息排查 baseInfo
 	baseInfo
@@ -1019,7 +1019,6 @@ userServiceCheck(){
 		check_files "$user"
 	done
 }
-
 # 系统服务排查 【完成】
 systemServiceCheck(){
 	# 系统服务收集  systemServiceCollect
