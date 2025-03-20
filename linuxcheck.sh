@@ -1456,7 +1456,8 @@ if [ -n "$sshver" ];then
 	(echo "[+]ssh版本信息如下:" && echo "$sshver") | $saveCheckResult
 else
 	(echo "[!]未发现ssh版本信息,请注意这是异常现象!") | $saveCheckResult
-
+fi
+printf "\n" | $saveCheckResult
 
 echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
 echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
