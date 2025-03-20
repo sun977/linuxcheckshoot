@@ -1059,7 +1059,7 @@ printf "\n" | $saveCheckResult
 echo "[9.12.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
 echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
 protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-if [ "$protocolver" -eq "2" ];then
+if [ "$protocolver" = "2" ];then
 	echo "[+]openssh使用ssh2协议,符合要求" 
 else
 	echo "[!]openssh未ssh2协议,不符合要求"
@@ -1444,7 +1444,7 @@ printf "\n" | $saveCheckResult
 echo "[10.4.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
 echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
 protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-if [ "$protocolver" -eq "2" ];then
+if [ "$protocolver" = "2" ];then
 	echo "[+]openssh使用ssh2协议,符合要求" 
 else
 	echo "[!]openssh未ssh2协议,不符合要求"
@@ -1455,7 +1455,7 @@ sshver=$(ssh -V)
 if [ -n "$sshver" ];then
 	(echo "[+]ssh版本信息如下:" && echo "$sshver") | $saveCheckResult
 else
-	echo "[!]未发现ssh版本信息,请注意这是异常现象!" | $saveCheckResult
+	(echo "[!]未发现ssh版本信息,请注意这是异常现象!") | $saveCheckResult
 
 
 echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
@@ -1512,10 +1512,10 @@ echo "[10.7.1]正在检查SNMP配置[/etc/snmp/snmpd.conf]:." | $saveCheckResult
 if [ -f /etc/snmp/snmpd.conf ];then
 	public=$(cat /etc/snmp/snmpd.conf | grep public | grep -v ^# | awk '{print $4}')
 	private=$(cat /etc/snmp/snmpd.conf | grep private | grep -v ^# | awk '{print $4}')
-	if [ "$public" -eq "public" ];then
+	if [ "$public" = "public" ];then
 		echo "发现snmp服务存在默认团体名public,不符合要求" | $saveCheckResult
 	fi
-	if [ "$private" -eq "private" ];then
+	if [ "$private" = "private" ];then
 		echo "发现snmp服务存在默认团体名private,不符合要求" | $saveCheckResult
 	fi
 else
