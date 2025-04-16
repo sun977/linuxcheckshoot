@@ -318,6 +318,10 @@ linuxGun.sh 概要
 		- 24小时变动文件排查
 		— SUID/SGID文件排查	
 	- 日志文件分析
+		- message日志分析
+			- ZMODEM传输文件
+			- 历史使用DNS情况
+		- secure日志分析
 	后门排查
 	webshell排查
 	病毒排查

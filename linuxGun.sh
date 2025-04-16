@@ -85,8 +85,11 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 		- gshadow文件属性
 	# 	- 24小时变动文件排查
 	# 	— SUID/SGID文件排查	
-	# - 隐藏文件排查
 	# - 日志文件分析
+	#	- message日志分析
+	#		- ZMODEM传输文件
+	#		- 历史使用DNS情况
+	#	- secure日志分析
 	# 后门排查
 	# webshell排查
 	# 病毒排查
@@ -1034,7 +1037,7 @@ systemServiceCheck(){
 }
 
 
-# 敏感目录排查【归档 -- 】
+# 敏感目录排查(包含隐藏文件)【归档 -- 】
 dirFileCheck(){
 	# /tmp/下
 	echo -e "${YELLOW}[+]正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -1354,16 +1357,269 @@ specialFileCheck(){
 
 # 系统日志分析
 systemLogCheck(){
-	# 日志配置与打包
-	# secure日志分析
-	# message日志分析
-	# cron日志分析
+	# 系统有哪些日志类型 [ls /var/log/]
+	echo -e "${YELLOW}[+]正在查看系统存在哪些日志文件[ls /var/log]:${NC}"
+	# 获取 /var/log 目录下的日志文件列表
+	allLog=$(ls /var/log 2>/dev/null)
+	# 检查是否成功获取到日志文件列表
+	if [ -n "$allLog" ]; then
+		echo -e "${YELLOW}[+] 系统存在以下日志文件:${NC}"
+		echo "$allLog" | while read -r logFile; do
+			echo "- $logFile"
+		done
+	else
+		echo -e "${RED}[!]未找到任何日志文件或无法访问 /var/log 目录,日志目录有可能被删除! ${NC}"
+	fi
+	printf "\n"
+
+	# message日志分析 [系统消息日志] 排查第一站
+	echo -e "${YELLOW}正在分析系统消息日志[message]:${NC}"
+	## 检查传输文件情况
+	echo -e "${YELLOW}正在检查是否使用ZMODEM协议传输文件[more /var/log/message* | grep "ZMODEM:.*BPS"]:" 
+	zmodem=$(more /var/log/message* | grep "ZMODEM:.*BPS")
+	if [ -n "$zmodem" ];then
+		(echo -e "${RED}[!]传输文件情况:${NC}" && echo "$zmodem") 
+	else
+		echo -e "${YELLOW}[+]日志中未发现传输文件${NC}" 
+	fi
+	printf "\n" 
+
+	## 检查DNS服务器使用情况
+	echo -e "${YELLOW}正在检查日志中该机器使用DNS服务器的情况[/var/log/message* |grep "using nameserver"]:" 
+	dns_history=$(more /var/log/messages* | grep "using nameserver" | awk '{print $NF}' | awk -F# '{print $1}' | sort | uniq)
+	if [ -n "$dns_history" ];then
+		(echo -e "${RED}[!]该服务器曾经使用以下DNS服务器(需要人工判断DNS服务器是否涉黑,不涉黑可以忽略):${NC}" && echo "$dns_history") 
+	else
+		echo -e "${YELLOW}[+]未发现该服务器使用DNS服务器${NC}" 
+	fi
+	printf "\n"
+
+	## 检查SSHD
+
+
+
+
+	# secure日志分析 [安全认证和授权日志]
+	# cron日志分析 [cron作业调度器日志]
 	# yum/apt日志分析 
-	# dmesg日志分析
-	# btmp日志分析
-	# lastlog日志分析
-	# wtmp日志分析
-	# journalctl日志分析
+	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
+	# btmp日志分析 [记录失败的登录尝试，包括日期、时间和用户名]
+	# lastlog日志分析 
+	# wtmp日志分析 [记录系统关闭、重启和登录/注销事件]
+	# journalctl日志分析 [用于管理和分析 systemd 日志的命令行实用程序]
+	# audit日志分析(如果开启audit) [用于审计系统事件和用户行为]
+	# 日志配置与打包
+
+
+
+echo "==========14.系统日志分析==========" | $saveCheckResult
+echo "[14.1]日志配置与打包:" | $saveCheckResult
+echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
+logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
+if [ -n "$logconf" ];then
+	(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
+else
+	echo "[!]未发现日志配置文件" |  $saveDangerResult | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+
+
+echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
+service auditd status | grep running
+if [ $? -eq 0 ];then
+	echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
+else
+	echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
+
+
+echo "[14.2]正在分析secure日志:" | $saveCheckResult
+echo "[14.2.1]正在检查日志中登录成功记录[/var/log/secure*]:" | $saveCheckResult
+loginsuccess=$(more /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
+if [ -n "$loginsuccess" ];then
+	(echo "[+]日志中分析到以下用户登录成功记录:" && echo "$loginsuccess")  | $saveCheckResult
+	(echo "[+]登录成功的IP及次数如下:" && grep "Accepted " /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c )  | $saveCheckResult
+	(echo "[+]登录成功的用户及次数如下:" && grep "Accepted" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c )  | $saveCheckResult
+else
+	echo "[+]日志中未发现成功登录的情况" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.2]检查日志中登录失败记录(SSH爆破)[/var/log/secure*]:" | $saveCheckResult
+loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
+if [ -n "$loginfailed" ];then
+	(echo "[!]日志中发现以下登录失败记录:" && echo "$loginfailed") | $saveDangerResult  | $saveCheckResult
+	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
+	(echo "[!]登录失败的用户及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
+	(echo "[!]SSH爆破用户名的字典信息如下:" && grep "Failed password" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'|uniq -c|sort -nr) | $saveDangerResult  | $saveCheckResult
+else
+	echo "[+]日志中未发现登录失败的情况" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
+systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
+if [ -n "$systemlogin" ];then
+	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
+	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
+else
+	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
+newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+if [ -n "$newusers" ];then
+	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
+	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+else
+	echo "[+]日志中未发现新增加用户" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
+newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+if [ -n "$newgoup" ];then
+	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
+	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+else
+	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+
+
+echo "[14.4]正在分析cron日志:" | $saveCheckResult
+echo "[14.4.1]正在分析定时下载[/var/log/cron*]:" | $saveCheckResult
+cron_download=$(more /var/log/cron* | grep "wget|curl")
+if [ -n "$cron_download" ];then
+	(echo "[!]定时下载情况:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
+else
+	echo "[+]未发现定时下载情况" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+echo "[14.4.2]正在分析定时执行脚本[/var/log/cron*]:" | $saveCheckResult
+cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
+if [ -n "$cron_shell" ];then
+	(echo "[!]发现定时执行脚本:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
+else
+	echo "[+]未发现定时下载脚本" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+
+# ubuntu 是 more /var/log/apt/* 【后续补充】
+echo "[14.5]正在分析yum日志:" | $saveCheckResult
+echo "[14.5.1]正在分析使用yum下载软件情况[/var/log/yum*]:" | $saveCheckResult
+yum_install=$(more /var/log/yum* | grep Installed | awk '{print $NF}' | sort | uniq)
+if [ -n "$yum_install" ];then
+	(echo "[+]曾使用yum下载以下软件:"  && echo "$yum_install") | $saveCheckResult
+else
+	echo "[+]未使用yum下载过软件" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
+yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
+if [ -n "$yum_installscripts" ];then
+	(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
+else
+	echo "[+]未使用yum下载过脚本文件" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
+yum_erased=$(more /var/log/yum* | grep Erased)
+if [ -n "$yum_erased" ];then
+	(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
+else
+	echo "[+]未使用yum卸载过软件" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
+# 从文件中取出一个工具名然后匹配
+hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+for hacker_tools in $hacker_tools_list;do
+	hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
+	if [ -n "$hacker_tools" ];then
+		(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
+	fi
+done
+printf "\n" | $saveCheckResult
+
+
+echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
+echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
+dmesg=$(dmesg)
+if [ $? -eq 0 ];then
+	(echo "[+]日志自检日志如下：" && "$dmesg" ) | $saveCheckResult
+else
+	echo "[+]未发现内核自检日志" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
+echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
+lastb=$(lastb)
+if [ -n "$lastb" ];then
+	(echo "[+]错误登录日志如下:" && echo "$lastb") | $saveCheckResult
+else
+	echo "[+]未发现错误登录日志" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
+echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
+lastlog=$(lastlog)
+if [ -n "$lastlog" ];then
+	(echo "[+]所有用户最后一次登录日志如下:" && echo "$lastlog") | $saveCheckResult
+else
+	echo "[+]未发现所有用户最后一次登录日志" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
+echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
+lasts=$(last | grep pts | grep -vw :0)
+if [ -n "$lasts" ];then
+	(echo "[+]历史上登录到本机的用户如下:" && echo "$lasts") | $saveCheckResult
+else
+	echo "[+]未发现历史上登录到本机的用户信息" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
+# 检查最近24小时内的journalctl日志
+echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
+journalctl=$(journalctl --since "24 hours ago")
+if [ -n "$journalctl" ];then
+	echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
+	echo "$journalctl" >> $log_file/journalctl.txt
+else
+	echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
 }
 
 # 文件信息排查
@@ -1747,51 +2003,10 @@ echo "[10.3.1]正在检查selinux策略:" | $saveCheckResult
 printf "\n" | $saveCheckResult
 
 
-echo "[10.4]正在检查SSHD配置策略:" | $saveCheckResult
-echo "[10.4.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
-sshdconfig=$(more /etc/ssh/sshd_config | egrep -v "#|^$")
-if [ -n "$sshdconfig" ];then
-	(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
-else
-	echo "[!]未发现sshd配置文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[10.4.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-nopasswd=`gawk -F: '($2=="") {print $1}' /etc/shadow`
-if [ -n "$emptypasswd" ];then
-	echo "[!]允许空口令登录,请注意!"
-	if [ -n "$nopasswd" ];then
-		(echo "[!]以下用户空口令:" && echo "$nopasswd") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]但未发现空口令用户" | $saveCheckResult
-	fi
-else
-	echo "[+]不允许空口令用户登录" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[10.4.3]正在检查是否允许SSH远程root登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no"
-if [ $? -eq 0 ];then
-	echo "[+]root不允许登陆,符合要求" | $saveCheckResult
-else
-	echo "[!]允许root远程登陆,不符合要求,建议/etc/ssh/sshd_config添加PermitRootLogin no" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.4.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
-echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
-protocolver=$(more /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-if [ "$protocolver" -eq "2" ];then
-	echo "[+]openssh使用ssh2协议,符合要求" 
-else
-	echo "[!]openssh未ssh2协议,不符合要求"
-fi
 
 
 echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
@@ -2048,245 +2263,9 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "==========14.系统日志分析==========" | $saveCheckResult
-echo "[14.1]日志配置与打包:" | $saveCheckResult
-echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
-logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
-if [ -n "$logconf" ];then
-	(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
-else
-	echo "[!]未发现日志配置文件" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.1.2]正在分析日志文件是否存在:[/var/log/]" | $saveCheckResult
-logs=$(ls -l /var/log/)
-if [ -n "$logs" ];then
-	echo "[+]日志文件存在" | $saveCheckResult
-else
-	echo "[!]日志文件不存在,请分析是否被清除!" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
-service auditd status | grep running
-if [ $? -eq 0 ];then
-	echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
-else
-	echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
-
-
-echo "[14.2]正在分析secure日志:" | $saveCheckResult
-echo "[14.2.1]正在检查日志中登录成功记录[/var/log/secure*]:" | $saveCheckResult
-loginsuccess=$(more /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
-if [ -n "$loginsuccess" ];then
-	(echo "[+]日志中分析到以下用户登录成功记录:" && echo "$loginsuccess")  | $saveCheckResult
-	(echo "[+]登录成功的IP及次数如下:" && grep "Accepted " /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c )  | $saveCheckResult
-	(echo "[+]登录成功的用户及次数如下:" && grep "Accepted" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c )  | $saveCheckResult
-else
-	echo "[+]日志中未发现成功登录的情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.2]检查日志中登录失败记录(SSH爆破)[/var/log/secure*]:" | $saveCheckResult
-loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
-if [ -n "$loginfailed" ];then
-	(echo "[!]日志中发现以下登录失败记录:" && echo "$loginfailed") | $saveDangerResult  | $saveCheckResult
-	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
-	(echo "[!]登录失败的用户及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
-	(echo "[!]SSH爆破用户名的字典信息如下:" && grep "Failed password" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'|uniq -c|sort -nr) | $saveDangerResult  | $saveCheckResult
-else
-	echo "[+]日志中未发现登录失败的情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
-systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
-if [ -n "$systemlogin" ];then
-	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
-	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
-else
-	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
-newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newusers" ];then
-	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
-newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newgoup" ];then
-	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.3]正在分析message日志:" | $saveCheckResult
-#下面命令仅显示传输的文件名,并会将相同文件名的去重
-#more /var/log/message* | grep "ZMODEM:.*BPS" | awk -F '[]/]' '{print $0}' | sort | uniq
-echo "[14.3.1]正在检查传输文件[/var/log/message*]:" | $saveCheckResult
-zmodem=$(more /var/log/message* | grep "ZMODEM:.*BPS")
-if [ -n "$zmodem" ];then
-	(echo "[!]传输文件情况:" && echo "$zmodem") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]日志中未发现传输文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.3.2]正在检查日志中使用DNS服务器的情况[/var/log/message*]:" | $saveCheckResult
-dns_history=$(more /var/log/messages* | grep "using nameserver" | awk '{print $NF}' | awk -F# '{print $1}' | sort | uniq)
-if [ -n "$dns_history" ];then
-	(echo "[!]该服务器曾经使用以下DNS:" && echo "$dns_history") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现使用DNS服务器" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.4]正在分析cron日志:" | $saveCheckResult
-echo "[14.4.1]正在分析定时下载[/var/log/cron*]:" | $saveCheckResult
-cron_download=$(more /var/log/cron* | grep "wget|curl")
-if [ -n "$cron_download" ];then
-	(echo "[!]定时下载情况:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现定时下载情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.4.2]正在分析定时执行脚本[/var/log/cron*]:" | $saveCheckResult
-cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
-if [ -n "$cron_shell" ];then
-	(echo "[!]发现定时执行脚本:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现定时下载脚本" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
-
-
-# ubuntu 是 more /var/log/apt/* 【后续补充】
-echo "[14.5]正在分析yum日志:" | $saveCheckResult
-echo "[14.5.1]正在分析使用yum下载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_install=$(more /var/log/yum* | grep Installed | awk '{print $NF}' | sort | uniq)
-if [ -n "$yum_install" ];then
-	(echo "[+]曾使用yum下载以下软件:"  && echo "$yum_install") | $saveCheckResult
-else
-	echo "[+]未使用yum下载过软件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
-yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
-if [ -n "$yum_installscripts" ];then
-	(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未使用yum下载过脚本文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_erased=$(more /var/log/yum* | grep Erased)
-if [ -n "$yum_erased" ];then
-	(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
-else
-	echo "[+]未使用yum卸载过软件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
-# 从文件中取出一个工具名然后匹配
-hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-for hacker_tools in $hacker_tools_list;do
-	hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
-	if [ -n "$hacker_tools" ];then
-		(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
-	fi
-done
-printf "\n" | $saveCheckResult
-
-
-echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
-echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
-dmesg=$(dmesg)
-if [ $? -eq 0 ];then
-	(echo "[+]日志自检日志如下：" && "$dmesg" ) | $saveCheckResult
-else
-	echo "[+]未发现内核自检日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
-echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
-lastb=$(lastb)
-if [ -n "$lastb" ];then
-	(echo "[+]错误登录日志如下:" && echo "$lastb") | $saveCheckResult
-else
-	echo "[+]未发现错误登录日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
-echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
-lastlog=$(lastlog)
-if [ -n "$lastlog" ];then
-	(echo "[+]所有用户最后一次登录日志如下:" && echo "$lastlog") | $saveCheckResult
-else
-	echo "[+]未发现所有用户最后一次登录日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
-echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
-lasts=$(last | grep pts | grep -vw :0)
-if [ -n "$lasts" ];then
-	(echo "[+]历史上登录到本机的用户如下:" && echo "$lasts") | $saveCheckResult
-else
-	echo "[+]未发现历史上登录到本机的用户信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
-# 检查最近24小时内的journalctl日志
-echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
-journalctl=$(journalctl --since "24 hours ago")
-if [ -n "$journalctl" ];then
-	echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
-	echo "$journalctl" >> $log_file/journalctl.txt
-else
-	echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 echo "==========15.内核分析==========" | $saveCheckResult
