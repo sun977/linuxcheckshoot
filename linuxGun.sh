@@ -1394,12 +1394,74 @@ systemLogCheck(){
 	fi
 	printf "\n"
 
-	## 检查SSHD
-
-
-
 
 	# secure日志分析 [安全认证和授权日志]
+	echo -e "${YELLOW}正在分析系统安全日志[secure]:${NC}"
+	## SSH安全日志分析
+	echo -e "${YELLOW}正在检查系统安全日志中登录成功记录[more /var/log/secure* | grep "Accepted" ]:${NC}" 
+	# loginsuccess=$(more /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
+	loginsuccess=$(more /var/log/secure* | grep "Accepted" )  # 获取日志中登录成功的记录 包括 密码认证和公钥认证
+	if [ -n "$loginsuccess" ];then
+		(echo -e "${YELLOW}[+]日志中分析到以下用户登录成功记录:${NC}" && echo "$loginsuccess")  
+		(echo -e "${YELLOW}[+]登录成功的IP及次数如下:${NC}" && grep "Accepted " /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c )  
+		(echo -e "${YELLOW}[+]登录成功的用户及次数如下:${NC}" && grep "Accepted" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c )  
+	else
+		echo "[+]日志中未发现成功登录的情况" 
+	fi
+	printf "\n" 
+
+
+	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
+	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
+	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
+	if [ -n "$loginfailed" ];then
+		(echo -e "${YELLOW}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
+		# (echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $11}' | sort | uniq -c | sort -nr)  # 问题: $11 会出现 ip 和 username
+		(echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  # 优化:只匹配ip	
+		(echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
+		(echo -e "${YELLOW}[!]SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
+	else
+		echo -e "${YELLOW}[+]日志中未发现登录失败的情况${NC}" 
+	fi
+	printf "\n" 
+
+
+echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
+systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
+if [ -n "$systemlogin" ];then
+	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
+	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
+else
+	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
+newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+if [ -n "$newusers" ];then
+	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
+	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+else
+	echo "[+]日志中未发现新增加用户" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
+newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+if [ -n "$newgoup" ];then
+	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
+	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
+else
+	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
+fi
+printf "\n" | $saveCheckResult
+
+
+
+
+
 	# cron日志分析 [cron作业调度器日志]
 	# yum/apt日志分析 
 	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
@@ -1438,63 +1500,9 @@ printf "\n" | $saveCheckResult
 echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
 
 
-echo "[14.2]正在分析secure日志:" | $saveCheckResult
-echo "[14.2.1]正在检查日志中登录成功记录[/var/log/secure*]:" | $saveCheckResult
-loginsuccess=$(more /var/log/secure* | grep "Accepted password" | awk '{print $1,$2,$3,$9,$11}')
-if [ -n "$loginsuccess" ];then
-	(echo "[+]日志中分析到以下用户登录成功记录:" && echo "$loginsuccess")  | $saveCheckResult
-	(echo "[+]登录成功的IP及次数如下:" && grep "Accepted " /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c )  | $saveCheckResult
-	(echo "[+]登录成功的用户及次数如下:" && grep "Accepted" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c )  | $saveCheckResult
-else
-	echo "[+]日志中未发现成功登录的情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[14.2.2]检查日志中登录失败记录(SSH爆破)[/var/log/secure*]:" | $saveCheckResult
-loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
-if [ -n "$loginfailed" ];then
-	(echo "[!]日志中发现以下登录失败记录:" && echo "$loginfailed") | $saveDangerResult  | $saveCheckResult
-	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
-	(echo "[!]登录失败的用户及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
-	(echo "[!]SSH爆破用户名的字典信息如下:" && grep "Failed password" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'|uniq -c|sort -nr) | $saveDangerResult  | $saveCheckResult
-else
-	echo "[+]日志中未发现登录失败的情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
-
-echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
-systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
-if [ -n "$systemlogin" ];then
-	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
-	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
-else
-	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
-newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newusers" ];then
-	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
-newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newgoup" ];then
-	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 

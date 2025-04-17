@@ -1876,7 +1876,8 @@ echo "[14.2.2]检查日志中登录失败记录(SSH爆破)[/var/log/secure*]:" |
 loginfailed=$(cat /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
 if [ -n "$loginfailed" ];then
 	(echo "[!]日志中发现以下登录失败记录:" && echo "$loginfailed") | $saveDangerResult  | $saveCheckResult
-	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
+	#(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $11}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult # 问题:$11 可能是 IP 或者 用户名
+	(echo "[!]登录失败的IP及次数如下(疑似SSH爆破):" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  | $saveDangerResult  | $saveCheckResult  # 优化:只匹配ip
 	(echo "[!]登录失败的用户及次数如下(疑似SSH爆破):" && grep "Failed password" /var/log/secure* | awk '{print $9}' | sort -nr | uniq -c) | $saveDangerResult  | $saveCheckResult
 	(echo "[!]SSH爆破用户名的字典信息如下:" && grep "Failed password" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'|uniq -c|sort -nr) | $saveDangerResult  | $saveCheckResult
 else
