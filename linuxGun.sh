@@ -1413,6 +1413,9 @@ systemLogCheck(){
 
 	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
 	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
+	# 如果是对root用户的爆破，$9 是 root，$11 是 IP 
+	# 如果是对非root用户的爆破，$9 是 invalid $11 才是 用户名 $13 是 IP
+	# from 前面是是用户，后面是 IP【采用这种方式】
 	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
 	if [ -n "$loginfailed" ];then
 		(echo -e "${YELLOW}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
