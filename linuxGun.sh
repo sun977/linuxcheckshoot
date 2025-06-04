@@ -1421,7 +1421,13 @@ systemLogCheck(){
 		(echo -e "${YELLOW}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
 		# (echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $11}' | sort | uniq -c | sort -nr)  # 问题: $11 会出现 ip 和 username
 		(echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  # 优化:只匹配ip	
-		(echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
+		# (echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
+		# 根据 from 截取  用户名
+		(echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && 
+		{
+			grep "Failed" /var/log/secure* | grep -v "invalid user" | awk '/Failed/ {for_index = index($0, "for ") + 4; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "valid: " user}';
+			grep "Failed" /var/log/secure* | grep "invalid user" | awk '/Failed/ {for_index = index($0, "invalid user ") + 13; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "invalid: " user}';
+		} | sort | uniq -c | sort -nr)
 		(echo -e "${YELLOW}[!]SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
 	else
 		echo -e "${YELLOW}[+]日志中未发现登录失败的情况${NC}" 
