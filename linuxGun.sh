@@ -1410,6 +1410,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
+	## SSH爆破情况分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
 	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
 	# 如果是对root用户的爆破，$9 是 root，$11 是 IP 
@@ -1432,6 +1433,9 @@ systemLogCheck(){
 		echo -e "${YELLOW}[+]日志中未发现登录失败的情况${NC}" 
 	fi
 	printf "\n" 
+
+	## 本机登录用户分析
+
 
 
 
