@@ -1410,12 +1410,11 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-
 	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
 	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
 	# 如果是对root用户的爆破，$9 是 root，$11 是 IP 
 	# 如果是对非root用户的爆破，$9 是 invalid $11 才是 用户名 $13 是 IP
-	# from 前面是是用户，后面是 IP【采用这种方式】
+	# from 前面是是用户,后面是 IP
 	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
 	if [ -n "$loginfailed" ];then
 		(echo -e "${YELLOW}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
@@ -1428,12 +1427,15 @@ systemLogCheck(){
 			grep "Failed" /var/log/secure* | grep -v "invalid user" | awk '/Failed/ {for_index = index($0, "for ") + 4; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "valid: " user}';
 			grep "Failed" /var/log/secure* | grep "invalid user" | awk '/Failed/ {for_index = index($0, "invalid user ") + 13; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "invalid: " user}';
 		} | sort | uniq -c | sort -nr)
-		(echo -e "${YELLOW}[!]SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
+		# (echo -e "${YELLOW}[!]SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
 	else
 		echo -e "${YELLOW}[+]日志中未发现登录失败的情况${NC}" 
 	fi
 	printf "\n" 
 
+
+
+}
 
 echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
 systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
