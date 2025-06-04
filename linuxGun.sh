@@ -1395,7 +1395,7 @@ systemLogCheck(){
 	printf "\n"
 
 
-	# secure日志分析 [安全认证和授权日志]
+	# secure日志分析 [安全认证和授权日志] [ubuntu等是auth.log]
 	echo -e "${YELLOW}正在分析系统安全日志[secure]:${NC}"
 	## SSH安全日志分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录成功记录[more /var/log/secure* | grep "Accepted" ]:${NC}" 
@@ -1435,21 +1435,20 @@ systemLogCheck(){
 	printf "\n" 
 
 	## 本机登录用户分析
-
-
+	echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" 
+	systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
+	if [ -n "$systemlogin" ];then
+		(echo "[+]本机登录情况:" && echo "$systemlogin") 
+		(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) 
+	else
+		echo "[!]未发现在本机登录退出情况,请注意!" 
+	fi
+	printf "\n" 
 
 
 }
 
-echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" | $saveCheckResult
-systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
-if [ -n "$systemlogin" ];then
-	(echo "[+]本机登录情况:" && echo "$systemlogin") | $saveCheckResult
-	(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) | $saveCheckResult
-else
-	echo "[!]未发现在本机登录退出情况,请注意!" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
+
 
 
 echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
