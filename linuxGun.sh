@@ -1022,6 +1022,7 @@ userServiceCheck(){
 		check_files "$user"
 	done
 }
+
 # 系统服务排查 【完成】
 systemServiceCheck(){
 	# 系统服务收集  systemServiceCollect
@@ -1418,12 +1419,12 @@ systemLogCheck(){
 	# from 前面是是用户,后面是 IP
 	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
 	if [ -n "$loginfailed" ];then
-		(echo -e "${YELLOW}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
+		(echo -e "${RED}[!]日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
 		# (echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $11}' | sort | uniq -c | sort -nr)  # 问题: $11 会出现 ip 和 username
-		(echo -e "${YELLOW}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  # 优化:只匹配ip	
+		(echo -e "${RED}[!]登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  # 优化:只匹配ip	
 		# (echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
 		# 根据 from 截取  用户名
-		(echo -e "${YELLOW}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && 
+		(echo -e "${RED}[!]登录失败的用户及次数如下(疑似SSH爆破):${NC}" && 
 		{
 			grep "Failed" /var/log/secure* | grep -v "invalid user" | awk '/Failed/ {for_index = index($0, "for ") + 4; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "valid: " user}';
 			grep "Failed" /var/log/secure* | grep "invalid user" | awk '/Failed/ {for_index = index($0, "invalid user ") + 13; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "invalid: " user}';
@@ -1434,43 +1435,62 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## 本机登录用户分析
-	echo "[14.2.3]正在检查本机窗口登录情况[/var/log/secure*]:" 
+	## 本机SSH登录成功并建立会话的日志记录
+	echo -e "${YELLOW}正在检查本机SSH成功登录记录[more /var/log/secure* | grep -E "sshd:session.*session opened" ]:${NC}" 
 	systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
 	if [ -n "$systemlogin" ];then
-		(echo "[+]本机登录情况:" && echo "$systemlogin") 
-		(echo "[+]本机登录账号及次数如下:" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) 
+		(echo -e "${YELLOW}[+]本机SSH成功登录情况:${NC}" && echo "$systemlogin") 
+		(echo -e "${YELLOW}[+]本机SSH成功登录账号及次数如下:${NC}" && more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $11}' | sort -nr | uniq -c) 
 	else
-		echo "[!]未发现在本机登录退出情况,请注意!" 
+		echo -e "${RED}[!]未发现在本机登录退出情况,请注意!${NC}" 
+	fi
+	printf "\n" 
+
+	## 检查新增用户
+	echo -e "${YELLOW}正在检查新增用户[more /var/log/secure* | grep "new user"]:${NC}"
+	newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+	if [ -n "$newusers" ];then
+		(echo -e "${RED}[!]日志中发现新增用户:${NC}" && echo "$newusers") 
+		(echo -e "${YELLOW}[+]新增用户账号及次数如下:${NC}" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) 
+	else
+		echo -e "${YELLOW}[+]日志中未发现新增加用户${NC}" 
+	fi
+	printf "\n" 
+
+	## 检查新增用户组
+	echo -e "${YELLOW}正在检查新增用户组[/more /var/log/secure* | grep "new group"]:${NC}" 
+	newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
+	if [ -n "$newgoup" ];then
+		(echo -e "${RED}[!]日志中发现新增用户组:${NC}" && echo "$newgoup") 
+		(echo -e "${YELLOW}[+]新增用户组及次数如下:${NC}" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) 
+	else
+		echo -e "${YELLOW}[+]日志中未发现新增加用户组${NC}" 
 	fi
 	printf "\n" 
 
 
+	# 计划任务日志分析
+	echo -e "${YELLOW}正在分析cron日志:${NC}" 
+	echo -e "${YELLOW}正在分析定时下载[/var/log/cron*]:${NC}" 
+	cron_download=$(more /var/log/cron* | grep "wget|curl")
+	if [ -n "$cron_download" ];then
+		(echo -e "${RED}[!]定时下载情况:${NC}" && echo "$cron_download") 
+	else
+		echo -e "${YELLOW}[+]未发现定时下载情况${NC}" 
+	fi
+	printf "\n" 
+
+	echo -e "${YELLOW}正在分析定时执行脚本[/var/log/cron*]:${NC}" 
+	cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
+	if [ -n "$cron_shell" ];then
+		(echo -e "${RED}[!]发现定时执行脚本:${NC}" && echo "$cron_download") 
+		echo -e "${YELLOW}[+]未发现定时下载脚本${NC}" 
+	fi
+	printf "\n" 
+
 }
 
 
-
-
-echo "[14.2.4]正在检查新增用户[/var/log/secure*]:" | $saveCheckResult
-newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newusers" ];then
-	(echo "[!]日志中发现新增用户:" && echo "$newusers") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户账号及次数如下:" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.2.5]正在检查新增用户组[/var/log/secure*]:" | $saveCheckResult
-newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
-if [ -n "$newgoup" ];then
-	(echo "[!]日志中发现新增用户组:" && echo "$newgoup") |  $saveDangerResult | $saveCheckResult
-	(echo "[+]新增用户组及次数如下:" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) | $saveCheckResult
-else
-	echo "[+]日志中未发现新增加用户组" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
@@ -1485,6 +1505,9 @@ printf "\n" | $saveCheckResult
 	# journalctl日志分析 [用于管理和分析 systemd 日志的命令行实用程序]
 	# audit日志分析(如果开启audit) [用于审计系统事件和用户行为]
 	# 日志配置与打包
+
+
+
 
 
 
@@ -1518,27 +1541,6 @@ echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
 
 
 
-
-
-
-echo "[14.4]正在分析cron日志:" | $saveCheckResult
-echo "[14.4.1]正在分析定时下载[/var/log/cron*]:" | $saveCheckResult
-cron_download=$(more /var/log/cron* | grep "wget|curl")
-if [ -n "$cron_download" ];then
-	(echo "[!]定时下载情况:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现定时下载情况" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.4.2]正在分析定时执行脚本[/var/log/cron*]:" | $saveCheckResult
-cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
-if [ -n "$cron_shell" ];then
-	(echo "[!]发现定时执行脚本:" && echo "$cron_download") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现定时下载脚本" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
 
