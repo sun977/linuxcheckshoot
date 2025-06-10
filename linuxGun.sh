@@ -1358,7 +1358,7 @@ specialFileCheck(){
 
 # 系统日志分析
 systemLogCheck(){
-	# 系统有哪些日志类型 [ls /var/log/]
+	# 1 系统有哪些日志类型 [ls /var/log/]
 	echo -e "${YELLOW}[+]正在查看系统存在哪些日志文件[ls /var/log]:${NC}"
 	# 获取 /var/log 目录下的日志文件列表
 	allLog=$(ls /var/log 2>/dev/null)
@@ -1373,7 +1373,7 @@ systemLogCheck(){
 	fi
 	printf "\n"
 
-	# message日志分析 [系统消息日志] 排查第一站
+	# 2 message日志分析 [系统消息日志] 排查第一站
 	echo -e "${YELLOW}正在分析系统消息日志[message]:${NC}"
 	## 检查传输文件情况
 	echo -e "${YELLOW}正在检查是否使用ZMODEM协议传输文件[more /var/log/message* | grep "ZMODEM:.*BPS"]:" 
@@ -1385,7 +1385,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## 检查DNS服务器使用情况
+	## 2.1 检查DNS服务器使用情况
 	echo -e "${YELLOW}正在检查日志中该机器使用DNS服务器的情况[/var/log/message* |grep "using nameserver"]:" 
 	dns_history=$(more /var/log/messages* | grep "using nameserver" | awk '{print $NF}' | awk -F# '{print $1}' | sort | uniq)
 	if [ -n "$dns_history" ];then
@@ -1396,7 +1396,7 @@ systemLogCheck(){
 	printf "\n"
 
 
-	# secure日志分析 [安全认证和授权日志] [ubuntu等是auth.log]
+	# 3 secure日志分析 [安全认证和授权日志] [ubuntu等是auth.log]
 	echo -e "${YELLOW}正在分析系统安全日志[secure]:${NC}"
 	## SSH安全日志分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录成功记录[more /var/log/secure* | grep "Accepted" ]:${NC}" 
@@ -1411,7 +1411,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## SSH爆破情况分析
+	## 3.1 SSH爆破情况分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
 	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
 	# 如果是对root用户的爆破，$9 是 root，$11 是 IP 
@@ -1435,7 +1435,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## 本机SSH登录成功并建立会话的日志记录
+	## 3.2 本机SSH登录成功并建立会话的日志记录
 	echo -e "${YELLOW}正在检查本机SSH成功登录记录[more /var/log/secure* | grep -E "sshd:session.*session opened" ]:${NC}" 
 	systemlogin=$(more /var/log/secure* | grep -E "sshd:session.*session opened" | awk '{print $1,$2,$3,$11}')
 	if [ -n "$systemlogin" ];then
@@ -1446,7 +1446,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## 检查新增用户
+	## 3.3 检查新增用户
 	echo -e "${YELLOW}正在检查新增用户[more /var/log/secure* | grep "new user"]:${NC}"
 	newusers=$(more /var/log/secure* | grep "new user"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
 	if [ -n "$newusers" ];then
@@ -1457,7 +1457,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	## 检查新增用户组
+	## 3.4 检查新增用户组
 	echo -e "${YELLOW}正在检查新增用户组[/more /var/log/secure* | grep "new group"]:${NC}" 
 	newgoup=$(more /var/log/secure* | grep "new group"  | awk -F '[=,]' '{print $1,$2}' | awk '{print $1,$2,$3,$9}')
 	if [ -n "$newgoup" ];then
@@ -1469,7 +1469,7 @@ systemLogCheck(){
 	printf "\n" 
 
 
-	# 计划任务日志分析
+	# 4 计划任务日志分析 cron日志分析 [cron作业调度器日志]
 	echo -e "${YELLOW}正在分析cron日志:${NC}" 
 	echo -e "${YELLOW}正在分析定时下载[/var/log/cron*]:${NC}" 
 	cron_download=$(more /var/log/cron* | grep "wget|curl")
@@ -1488,15 +1488,50 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
+	# 5 yum/apt日志分析
+	echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
+	yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
+	if [ -n "$yum_installscripts" ];then
+		(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]未使用yum下载过脚本文件" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
+	yum_erased=$(more /var/log/yum* | grep Erased)
+	if [ -n "$yum_erased" ];then
+		(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
+	else
+		echo "[+]未使用yum卸载过软件" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
+	# 从文件中取出一个工具名然后匹配
+	hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+	for hacker_tools in $hacker_tools_list;do
+		hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
+		if [ -n "$hacker_tools" ];then
+			(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
+		else
+			echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
+		fi
+	done
+	printf "\n" | $saveCheckResult
+
+
+
+
+
 }
 
 
 
 
 
-
-
-	# cron日志分析 [cron作业调度器日志]
+	
 	# yum/apt日志分析 
 	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
 	# btmp日志分析 [记录失败的登录尝试，包括日期、时间和用户名]
@@ -1541,9 +1576,6 @@ echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
 
 
 
-
-
-
 # ubuntu 是 more /var/log/apt/* 【后续补充】
 echo "[14.5]正在分析yum日志:" | $saveCheckResult
 echo "[14.5.1]正在分析使用yum下载软件情况[/var/log/yum*]:" | $saveCheckResult
@@ -1556,37 +1588,7 @@ fi
 printf "\n" | $saveCheckResult
 
 
-echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
-yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
-if [ -n "$yum_installscripts" ];then
-	(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未使用yum下载过脚本文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
-
-echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_erased=$(more /var/log/yum* | grep Erased)
-if [ -n "$yum_erased" ];then
-	(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
-else
-	echo "[+]未使用yum卸载过软件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
-# 从文件中取出一个工具名然后匹配
-hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-for hacker_tools in $hacker_tools_list;do
-	hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
-	if [ -n "$hacker_tools" ];then
-		(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
-	fi
-done
-printf "\n" | $saveCheckResult
 
 
 echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
