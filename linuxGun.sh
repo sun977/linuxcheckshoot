@@ -1521,24 +1521,114 @@ systemLogCheck(){
 	done
 	printf "\n"  
 
+	# 6 btmp 日志分析 [记录失败的登录尝试，包括日期、时间和用户名] 【二进制日志文件,不能直接 cat 查看】
+
+
+	echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
+	echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
+	dmesg=$(dmesg)
+	if [ $? -eq 0 ];then
+		(echo "[+]日志自检日志如下：" && "$dmesg" ) | $saveCheckResult
+	else
+		echo "[+]未发现内核自检日志" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
+	echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
+	lastb=$(lastb)
+	if [ -n "$lastb" ];then
+		(echo "[+]错误登录日志如下:" && echo "$lastb") | $saveCheckResult
+	else
+		echo "[+]未发现错误登录日志" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
+	echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
+	lastlog=$(lastlog)
+	if [ -n "$lastlog" ];then
+		(echo "[+]所有用户最后一次登录日志如下:" && echo "$lastlog") | $saveCheckResult
+	else
+		echo "[+]未发现所有用户最后一次登录日志" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
+	echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
+	lasts=$(last | grep pts | grep -vw :0)
+	if [ -n "$lasts" ];then
+		(echo "[+]历史上登录到本机的用户如下:" && echo "$lasts") | $saveCheckResult
+	else
+		echo "[+]未发现历史上登录到本机的用户信息" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
+	# 检查最近24小时内的journalctl日志
+	echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
+	journalctl=$(journalctl --since "24 hours ago")
+	if [ -n "$journalctl" ];then
+		echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
+		echo "$journalctl" >> $log_file/journalctl.txt
+	else
+		echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
 
 
 
+	echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
+	service auditd status | grep running
+	if [ $? -eq 0 ];then
+		echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
+	else
+		echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
+
+
+	echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
+	service auditd status | grep running
+	if [ $? -eq 0 ];then
+		echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
+	else
+		echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
+
+
+
+	echo "==========14.系统日志分析==========" | $saveCheckResult
+	echo "[14.1]日志配置与打包:" | $saveCheckResult
+	echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
+	logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
+	if [ -n "$logconf" ];then
+		(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
+	else
+		echo "[!]未发现日志配置文件" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
 
 }
 
 
 
-
-
 	
-	# yum/apt日志分析 
-	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
 	# btmp日志分析 [记录失败的登录尝试，包括日期、时间和用户名]
 	# lastlog日志分析 
 	# wtmp日志分析 [记录系统关闭、重启和登录/注销事件]
-	# journalctl日志分析 [用于管理和分析 systemd 日志的命令行实用程序]
 	# audit日志分析(如果开启audit) [用于审计系统事件和用户行为]
+	# journalctl日志分析 [用于管理和分析 systemd 日志的命令行实用程序]
+	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
 	# 日志配置与打包
 
 
@@ -1546,107 +1636,6 @@ systemLogCheck(){
 
 
 
-echo "==========14.系统日志分析==========" | $saveCheckResult
-echo "[14.1]日志配置与打包:" | $saveCheckResult
-echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
-logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
-if [ -n "$logconf" ];then
-	(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
-else
-	echo "[!]未发现日志配置文件" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-
-
-echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
-service auditd status | grep running
-if [ $? -eq 0 ];then
-	echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
-else
-	echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
-
-
-
-
-
-
-# ubuntu 是 more /var/log/apt/* 【后续补充】
-echo "[14.5]正在分析yum日志:" | $saveCheckResult
-echo "[14.5.1]正在分析使用yum下载软件情况[/var/log/yum*]:" | $saveCheckResult
-yum_install=$(more /var/log/yum* | grep Installed | awk '{print $NF}' | sort | uniq)
-if [ -n "$yum_install" ];then
-	(echo "[+]曾使用yum下载以下软件:"  && echo "$yum_install") | $saveCheckResult
-else
-	echo "[+]未使用yum下载过软件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-
-
-
-echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
-echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
-dmesg=$(dmesg)
-if [ $? -eq 0 ];then
-	(echo "[+]日志自检日志如下：" && "$dmesg" ) | $saveCheckResult
-else
-	echo "[+]未发现内核自检日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
-echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
-lastb=$(lastb)
-if [ -n "$lastb" ];then
-	(echo "[+]错误登录日志如下:" && echo "$lastb") | $saveCheckResult
-else
-	echo "[+]未发现错误登录日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
-echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
-lastlog=$(lastlog)
-if [ -n "$lastlog" ];then
-	(echo "[+]所有用户最后一次登录日志如下:" && echo "$lastlog") | $saveCheckResult
-else
-	echo "[+]未发现所有用户最后一次登录日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
-echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
-lasts=$(last | grep pts | grep -vw :0)
-if [ -n "$lasts" ];then
-	(echo "[+]历史上登录到本机的用户如下:" && echo "$lasts") | $saveCheckResult
-else
-	echo "[+]未发现历史上登录到本机的用户信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
-# 检查最近24小时内的journalctl日志
-echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
-journalctl=$(journalctl --since "24 hours ago")
-if [ -n "$journalctl" ];then
-	echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
-	echo "$journalctl" >> $log_file/journalctl.txt
-else
-	echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-}
 
 # 文件信息排查
 fileCheck(){
