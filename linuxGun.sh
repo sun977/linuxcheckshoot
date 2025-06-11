@@ -1373,7 +1373,7 @@ systemLogCheck(){
 	fi
 	printf "\n"
 
-	# 2 message日志分析 [系统消息日志] 排查第一站
+	# 2 message日志分析 [系统消息日志] 排查第一站 【ubuntu系统是/var/log/syslog】
 	echo -e "${YELLOW}正在分析系统消息日志[message]:${NC}"
 	## 检查传输文件情况
 	echo -e "${YELLOW}正在检查是否使用ZMODEM协议传输文件[more /var/log/message* | grep "ZMODEM:.*BPS"]:" 
@@ -1488,38 +1488,38 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	# 5 yum/apt日志分析
-	echo "[14.5.2]正在分析使用yum下载脚本文件[/var/log/yum*]:" | $saveCheckResult
+	# 5 yum 日志分析 【只适配使用 yum 的系统，apt/history.log 的格式和yum 的格式差距较大，还有 dnf 包管理工具也另说】
+	echo -e "${YELLOW}正在分析使用yum下载安装过的脚本文件[/var/log/yum*|grep Installed]:${NC}"  
 	yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
 	if [ -n "$yum_installscripts" ];then
-		(echo "[!]曾使用yum下载以下脚本文件:"  && echo "$yum_installscripts") | $saveDangerResult | $saveCheckResult
+		(echo -e "${RED}[!]曾使用yum下载安装过以下脚本文件:${NC}"  && echo "$yum_installscripts")  
 	else
-		echo "[+]未使用yum下载过脚本文件" | $saveCheckResult
+		echo -e "${YELLOW}[+]未发现使用yum下载安装过脚本文件${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 
-	echo "[14.5.3]正在检查使用yum卸载软件情况[/var/log/yum*]:" | $saveCheckResult
+	echo -e "${YELLOW}正在检查使用yum卸载软件情况[/var/log/yum*|grep Erased]:${NC}" 
 	yum_erased=$(more /var/log/yum* | grep Erased)
 	if [ -n "$yum_erased" ];then
-		(echo "[+]使用yum曾卸载以下软件:" && echo "$yum_erased")  | $saveCheckResult
+		(echo -e "${YELLOW}[+]使用yum曾卸载以下软件:${NC}" && echo "$yum_erased")  
 	else
-		echo "[+]未使用yum卸载过软件" | $saveCheckResult
+		echo -e "${YELLOW}[+]未使用yum卸载过软件${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
-	echo "[14.5.4]正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
+	echo -e "${YELLOW}正在检查使用yum安装的可疑工具[./checkrules/hackertoolslist.txt]:"  
 	# 从文件中取出一个工具名然后匹配
 	hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 	for hacker_tools in $hacker_tools_list;do
 		hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
 		if [ -n "$hacker_tools" ];then
-			(echo "[!]发现使用yum下载过以下可疑软件:"&& echo "$hacker_tools") |  $saveDangerResult | $saveCheckResult
+			(echo -e "${YELLOW}[!]发现使用yum下载过以下可疑软件:${NC}"&& echo "$hacker_tools")  
 		else
-			echo "[+]未发现使用yum下载过可疑软件" | $saveCheckResult
+			echo -e "${YELLOW}[+]未发现使用yum下载过可疑软件${NC}"  
 		fi
 	done
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 
 
