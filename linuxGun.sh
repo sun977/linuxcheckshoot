@@ -1043,7 +1043,7 @@ userServiceCheck(){
 	done
 }
 
-# 系统服务排查 【完成】
+# 系统服务排查 【归档 -- fileCheck】
 systemServiceCheck(){
 	# 系统服务收集  systemServiceCollect
 	systemServiceCollect
@@ -1058,7 +1058,7 @@ systemServiceCheck(){
 }
 
 
-# 敏感目录排查(包含隐藏文件)【归档 -- 】
+# 敏感目录排查(包含隐藏文件)【归档 -- fileCheck】
 dirFileCheck(){
 	# /tmp/下
 	echo -e "${YELLOW}[+]正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -1084,7 +1084,7 @@ dirFileCheck(){
 	
 }
 
-# SSH登录配置排查
+# SSH登录配置排查 【归档 -- specialFileCheck】
 sshFileCheck(){
 	# 输出/root/.ssh/下文件
 	echo -e "${YELLOW}[+]正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
@@ -1202,7 +1202,7 @@ sshFileCheck(){
 }
 
 
-# 特殊文件排查【归档 -- 】
+# 特殊文件排查【归档 -- fileCheck】
 specialFileCheck(){
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
 	echo -e "${YELLOW}[+]正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
@@ -1376,7 +1376,7 @@ specialFileCheck(){
 }
 
 
-# 系统日志分析
+# 系统日志分析【归档 -- fileCheck】
 systemLogCheck(){
 	# 1 系统有哪些日志类型 [ls /var/log/]
 	echo -e "${YELLOW}[+]正在查看系统存在哪些日志文件[ls /var/log]:${NC}"
@@ -1641,14 +1641,18 @@ systemLogCheck(){
 
 
 
-# 文件信息排查
+# 文件信息排查【完成】
 fileCheck(){
-	# 系统服务排查 systemServiceCheck
-	# 敏感目录排查 dirFileCheck
-	# 新增文件排查 specialFileCheck
-	# 隐藏文件排查 dirFileCheck
+	# 系统服务排查 
+	systemServiceCheck
+	# 敏感目录排查 | 隐藏文件排查 dirFileCheck
+	dirFileCheck
+	# 新增文件排查 
+	specialFileCheck
 	# 特殊文件排查 sshCheck | specialFileCheck
+	specialFileCheck
 	# 日志文件分析 systemLogCheck 【重点】
+	systemLogCheck
 }
 
 # 后门排查
