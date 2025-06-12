@@ -86,10 +86,30 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 	- 24小时变动文件排查
 	# 	— SUID/SGID文件排查	
 	# - 日志文件分析
-	#	- message日志分析
+	# 	- message日志分析
 	#		- ZMODEM传输文件
 	#		- 历史使用DNS情况
 	#	- secure日志分析
+	#		- 登录成功记录分析
+	#		- 登录失败记录分析(SSH爆破)
+	#		- SSH登录成功记录分析
+	#		- 新增用户分析
+	#		- 新增用户组分析
+	#	- 计划任务日志分析(cron)
+	#	    - 定时下载文件
+	#		- 定时执行脚本
+	#	- yum日志分析
+	#	    - yum下载记录
+	#		- yum卸载记录
+	#		- yum安装可疑工具
+	#	- dmesg日志分析[内核自检日志]
+	#	- btmp日志分析[错误登录日志]
+	#	- lastlog日志分析[所有用户最后一次登录日志]
+	#	- wtmp日志分析[所有用户登录日志]
+	#	- journalctl工具日志分析
+	#	   	- 最近24小时日志
+	#	- auditd 服务状态
+	#	- rsyslog 配置文件
 	# 后门排查
 	# webshell排查
 	# 病毒排查
@@ -166,7 +186,7 @@ echoBanner() {
     echo -e "${BLUE}                                                                ${NC}" 
     echo -e "${BLUE}                                                Version:5.0     ${NC}"
     echo -e "${BLUE}                                                Author:sun977   ${NC}"
-    echo -e "${BLUE}                                                Date:2024.7.29  ${NC}"
+    echo -e "${BLUE}                                                Date:2025.6.12  ${NC}"
 	echo -e "${YELLOW}****************************************************************${NC}"
     echo -e "${GREEN}检查内容:${NC}"
     echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
@@ -1521,119 +1541,103 @@ systemLogCheck(){
 	done
 	printf "\n"  
 
-	# 6 btmp 日志分析 [记录失败的登录尝试，包括日期、时间和用户名] 【二进制日志文件,不能直接 cat 查看】
-
-
-	echo "[14.6]正在分析dmesg日志[dmesg]:" | $saveCheckResult
-	echo "[14.6.1]正在查看内核自检日志:" | $saveCheckResult
+	
+	# 6 dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
+	echo -e "${YELLOW}正在分析dmesg内核自检日志[dmesg]:${NC}" 
 	dmesg=$(dmesg)
 	if [ $? -eq 0 ];then
-		(echo "[+]日志自检日志如下：" && "$dmesg" ) | $saveCheckResult
+		(echo -e "${YELLOW}[+]日志自检日志如下:${NC}" && echo "$dmesg" ) 
 	else
-		echo "[+]未发现内核自检日志" | $saveCheckResult
+		echo -e "${RED}[!]未发现内核自检日志${NC}" 
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n" 
 
 
-	echo "[14.7]正在分析btmp日志[lastb]:" | $saveCheckResult
-	echo "[16.7.1]正在分析错误登录日志:" | $saveCheckResult
+	# 7 btmp 日志分析 [记录失败的登录尝试，包括日期、时间和用户名] 【二进制日志文件,不能直接 cat 查看】
+	echo -e "正在分析btmp错误登录日志[lastb]:"  
 	lastb=$(lastb)
 	if [ -n "$lastb" ];then
-		(echo "[+]错误登录日志如下:" && echo "$lastb") | $saveCheckResult
+		(echo -e "${YELLOW}[+]错误登录日志如下:${NC}" && echo "$lastb") 
 	else
-		echo "[+]未发现错误登录日志" | $saveCheckResult
+		echo -e "${RED}[!]未发现错误登录日志${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
-
-	echo "[14.8]正在分析lastlog日志[lastlog]:" | $saveCheckResult
-	echo "[14.8.1]正在分析所有用户最后一次登录日志:" | $saveCheckResult
+	# 8 lastlog 日志分析 [记录最后一次登录的日志，包括日期、时间和用户名]
+	echo -e "[14.8]正在分析lastlog最后一次登录日志[lastlog]:"  
 	lastlog=$(lastlog)
 	if [ -n "$lastlog" ];then
-		(echo "[+]所有用户最后一次登录日志如下:" && echo "$lastlog") | $saveCheckResult
+		(echo -e "${YELLOW}[+]所有用户最后一次登录日志如下:${NC}" && echo "$lastlog")  
 	else
-		echo "[+]未发现所有用户最后一次登录日志" | $saveCheckResult
+		echo -e "${RED}[!]未发现所有用户最后一次登录日志${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 
-	echo "[14.9]正在分析wtmp日志[last]:" | $saveCheckResult
-	echo "[14.9.1]正在检查历史上登录到本机的用户:" | $saveCheckResult
+	# 9 wtmp日志分析 [记录系统关闭、重启和登录/注销事件]
+	# 【grep 排除 :0 登录,这个是图形化登录】
+	echo -e "${YELLOW}正在分析wtmp日志[last | grep pts | grep -vw :0]:${NC}"  
+	echo -e "${YELLOW}正在检查历史上登录到本机的用户(非图形化UI登录):${NC}"  
 	lasts=$(last | grep pts | grep -vw :0)
 	if [ -n "$lasts" ];then
-		(echo "[+]历史上登录到本机的用户如下:" && echo "$lasts") | $saveCheckResult
+		(echo -e "${YELLOW}[+]历史上登录到本机的用户如下:${NC}" && echo "$lasts")  
 	else
-		echo "[+]未发现历史上登录到本机的用户信息" | $saveCheckResult
+		echo -e "${RED}[!]未发现历史上登录到本机的用户信息${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 
-	echo "[14.10]正在分析journalctl日志:" | $saveCheckResult
+	# 10 journalctl 日志分析
+	# journalctl 的使用方法
+	# -u 显示指定服务日志 journalctl -u sshd.service
+	# -f 显示实时日志 journalctl -f
+	# -k 显示内核环缓冲区中的消息 journalctl -k 
+	# -p 显示指定优先级日志 journalctl -p err [emerg、alert、crit、err、warning、notice、info、debug]
+	# -o  指定输出格式 journalctl -o json-pretty > logs.json
+	echo -e "${YELLOW}正在使用journalctl分析日志:${NC}"  
 	# 检查最近24小时内的journalctl日志
-	echo "[14.10.1]正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:" | $saveCheckResult
+	echo -e "${YELLOW}正在检查最近24小时内的日志[journalctl --since "24 hours ago"]:${NC}"  
 	journalctl=$(journalctl --since "24 hours ago")
 	if [ -n "$journalctl" ];then
-		echo "[+]journalctl最近24小时内的日志输出到[$log_file/journalctl.txt]:" | $saveCheckResult
-		echo "$journalctl" >> $log_file/journalctl.txt
+		echo -e "${YELLOW}[+]journalctl最近24小时内的日志输出到[$log_file/journalctl_24h.txt]:${NC}"  
+		echo "$journalctl" >> $log_file/journalctl_24H.txt
 	else
-		echo "[+]journalctl未发现最近24小时内的日志" | $saveCheckResult
+		echo -e "${YELLOW}[!]journalctl未发现最近24小时内的日志${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"
+	echo -e "${YELLOW}journalctl 其他使用参数:${NC}"
+	echo -e "${YELLOW} -u 显示指定服务日志[journalctl -u sshd.service]${NC}"
+	echo -e "${YELLOW} -f 显示实时日志[journalctl -f]${NC}"
+	echo -e "${YELLOW} -k 显示内核环缓冲区中的消息[journalctl -k]${NC}"
+	echo -e "${YELLOW} -p 显示指定优先级日志[journalctl -p err] [emerg、alert、crit、err、warning、notice、info、debug]${NC}"
+	echo -e "${YELLOW} -o 指定输出格式[journalctl -o json-pretty > logs.json]${NC}"
+	printf "\n"  
 
-
-
-	echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
-	service auditd status | grep running
-	if [ $? -eq 0 ];then
-		echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
-	else
-		echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
+	# 11 auditd 服务状态分析
+	echo -e "正在分析日志审核服务是否开启[systemctl status auditd.service]:" 
+	# auditd=$(systemctl status auditd.service | grep running)
+	auditd=$(systemctl status auditd.service | head  -n 12)
+	# if [ $? -eq 0 ];then
+	# 	echo "[+]系统日志审核功能已开启,符合要求" 
+	# else
+	# 	echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" 
+	# fi
+	if [ -n "$auditd" ];then
+		(echo -e "${YELLOW}[+]auditd服务信息如下:${NC}" && echo "$auditd")  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n" 
 
-	echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
-
-
-	echo "[14.1.3]正在分析日志审核是否开启[service auditd status]:" | $saveCheckResult
-	service auditd status | grep running
-	if [ $? -eq 0 ];then
-		echo "[+]系统日志审核功能已开启,符合要求" | $saveCheckResult
-	else
-		echo "[!]系统日志审核功能已关闭,不符合要求,建议开启日志审核。可使用以下命令开启:service auditd start" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-	echo "[14.1.4]打包/var/log日志[脚本最后统一打包]" | $saveCheckResult
-
-
-
-	echo "==========14.系统日志分析==========" | $saveCheckResult
-	echo "[14.1]日志配置与打包:" | $saveCheckResult
-	echo "[14.1.1]正在检查rsyslog日志配置[/etc/rsyslog.conf]:" | $saveCheckResult
+	# 12 rsyslog 日志主配置文件
+	echo -e "${YELLOW}正在检查rsyslog主配置文件[/etc/rsyslog.conf]:"  
 	logconf=$(more /etc/rsyslog.conf | egrep -v "#|^$")
 	if [ -n "$logconf" ];then
-		(echo "[+]日志配置如下:" && echo "$logconf") | $saveCheckResult
+		(echo -e "${YELLOW}[+]日志配置如下:${NC}" && echo "$logconf")  
 	else
-		echo "[!]未发现日志配置文件" |  $saveDangerResult | $saveCheckResult
+		echo -e "${YELLOW}[!]未发现日志配置文件${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 }
-
-
-
-	
-	# btmp日志分析 [记录失败的登录尝试，包括日期、时间和用户名]
-	# lastlog日志分析 
-	# wtmp日志分析 [记录系统关闭、重启和登录/注销事件]
-	# audit日志分析(如果开启audit) [用于审计系统事件和用户行为]
-	# journalctl日志分析 [用于管理和分析 systemd 日志的命令行实用程序]
-	# dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
-	# 日志配置与打包
-
-
-
-
 
 
 
