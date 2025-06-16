@@ -1725,60 +1725,22 @@ memInfoCheck(){
 # 黑客工具排查 【完成】
 hackerToolsCheck(){
 	# 黑客工具排查
-	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[${current_dir}/checkrules/hackertoolslist.txt]:${NC}"
-	echo -e "${YELLOW}[说明] 定义黑客工具列表文件 hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警（工具文件可自行维护）${NC}"
-
-	# 定义黑名单文件路径
-	tool_list_file="${current_dir}/checkrules/hackertoolslist.txt"
-
-	# 创建临时匹配模式文件
-	tmp_pattern=$(mktemp)
-
-	# 过滤有效行（非空、非注释），写入临时匹配文件
-	grep -vE '^[[:space:]]*$|^#' "$tool_list_file" > "$tmp_pattern"
-
-	# 如果没有有效规则，直接退出
-	if [ ! -s "$tmp_pattern" ]; then
-		echo -e "${YELLOW}[+] 黑客工具列表为空或无有效条目${NC}"
-		rm -f "$tmp_pattern"
-		printf "\n"
-		continue
-	fi
-
-	# 全盘搜索,排除系统目录,避免进入挂载点
-	found_files=$(find / -maxdepth 3 -type f -mount \
-		$EXCLUDE_PATHS \
-		-exec grep -lE "$(cat "$tmp_pattern" | paste -sd\| -)" {} \; 2>/dev/null)
-
-	# 判断是否有结果
-	if [ -n "$found_files" ]; then
-		echo -e "${RED}[!] 发现以下可疑黑客工具文件:${NC}"
-		echo "$found_files"
-	else
-		echo -e "${YELLOW}[+] 未发现可疑黑客工具文件${NC}"
-	fi
-
-	rm -f "$tmp_pattern"
-	printf "\n"
-
-
-
-
-	# echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
-	# # hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
-	# # 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
-	# # hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-	# echo -e "${YELLOW}[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"  
-	# for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
-	# do
-	# 	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
-	# 	if [ -n "$findhackertool" ];then
-	# 		(echo -e "${RED}[!]发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
-	# 	else
-	# 		echo -e "${YELLOW}[+]未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
-	# 	fi
-	# 	printf "\n"  
-	# done
+	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
+	# hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
+	# 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
+	# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+	echo -e "${YELLOW}[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"
+	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt)
+	for hacker_tool in $hacker_tools_list
+	do
+		findhackertool=$(find / -name $hacker_tool 2>/dev/null)
+		if [ -n "$findhackertool" ];then
+			(echo -e "${RED}[!]发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
+		else
+			echo -e "${YELLOW}[+]未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
+		fi
+		printf "\n"  
+	done
 	
 	# 常见黑客痕迹排查
 
@@ -1862,69 +1824,67 @@ otherCheck(){
 
 	# 安装软件排查(rpm)
 	# 获取所有已安装的 rpm 包（仅保留名称）
-	all_rpms=$(rpm -qa --queryformat "%{NAME}\n")
+	# all_rpms=$(rpm -qa --queryformat "%{NAME}\n")
 
-	# 输出第一部分：软件及版本信息
-	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"
-	software=$(echo "$all_rpms" | awk '{version[$1] = $0} END {for (name in version) print name}' | sort)
+	# # 输出第一部分：软件及版本信息
+	# echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"
+	# software=$(echo "$all_rpms" | awk '{version[$1] = $0} END {for (name in version) print name}' | sort)
 
-	if [ -n "$software" ]; then
-		echo -e "${YELLOW}[+] 系统安装与版本如下:${NC}"
-		echo "$software"
-	else
-		echo -e "${YELLOW}[+] 系统未安装软件${NC}"
-	fi
-	printf "\n"
-
-	# 加载可疑工具列表到数组中
-	mapfile -t hacker_tools_list < ./checkrules/hackertoolslist.txt
-
-	# 输出第二部分：可疑软件检查
-	echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}"
-
-	found_any=0
-
-	for tool in "${hacker_tools_list[@]}"; do
-		# 忽略空行或注释行
-		[[ -z "$tool" || "$tool" =~ ^# ]] && continue
-
-		# 检查是否安装了该可疑工具
-		if echo "$all_rpms" | grep -qE "^$tool\$"; then
-			echo -e "${RED}[!] 发现安装以下可疑软件: $tool${NC}"
-			found_any=1
-		fi
-	done
-
-	if [ $found_any -eq 0 ]; then
-		echo -e "${YELLOW}[+] 未发现安装可疑软件${NC}"
-	fi
-
-	printf "\n"
-
-
-
-
-	# echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
-	# software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
-	# if [ -n "$software" ];then
-	# 	(echo -e "${YELLOW}[+]系统安装与版本如下:${NC}" && echo "$software")  
+	# if [ -n "$software" ]; then
+	# 	echo -e "${YELLOW}[+] 系统安装与版本如下:${NC}"
+	# 	echo "$software"
 	# else
-	# 	echo -e "${YELLOW}[+]系统未安装软件${NC}" 
+	# 	echo -e "${YELLOW}[+] 系统未安装软件${NC}"
 	# fi
-	# printf "\n"  
+	# printf "\n"
 
-	# echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}" 
-	# # 从文件中取出一个工具名然后匹配
-	# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-	# for hacker_tools in $hacker_tools_list;do
-	# 	danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
-	# 	if [ -n "$danger_soft" ];then
-	# 		(echo -e "${RED}[!]发现安装以下可疑软件:${NC}" && echo "$danger_soft") 
-	# 	else
-	# 		echo -e "${YELLOW}[+]未发现安装可疑软件${NC}" 
+	# # 加载可疑工具列表到数组中
+	# mapfile -t hacker_tools_list < ./checkrules/hackertoolslist.txt
+
+	# # 输出第二部分：可疑软件检查
+	# echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}"
+
+	# found_any=0
+
+	# for tool in "${hacker_tools_list[@]}"; do
+	# 	# 忽略空行或注释行
+	# 	[[ -z "$tool" || "$tool" =~ ^# ]] && continue
+
+	# 	# 检查是否安装了该可疑工具
+	# 	if echo "$all_rpms" | grep -qE "^$tool\$"; then
+	# 		echo -e "${RED}[!] 发现安装以下可疑软件: $tool${NC}"
+	# 		found_any=1
 	# 	fi
 	# done
-	# printf "\n" 
+
+	# if [ $found_any -eq 0 ]; then
+	# 	echo -e "${YELLOW}[+] 未发现安装可疑软件${NC}"
+	# fi
+
+	# printf "\n"
+
+
+	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
+	software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
+	if [ -n "$software" ];then
+		(echo -e "${YELLOW}[+]系统安装与版本如下:${NC}" && echo "$software")  
+	else
+		echo -e "${YELLOW}[+]系统未安装软件${NC}" 
+	fi
+	printf "\n"  
+
+	echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}" 
+	# 从文件中取出一个工具名然后匹配
+	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt)
+	for hacker_tools in $hacker_tools_list;do
+		danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
+		if [ -n "$danger_soft" ];then
+			(echo -e "${RED}[!]发现安装以下可疑软件:${NC}" && echo "$danger_soft") 
+		else
+			echo -e "${YELLOW}[+]未发现安装可疑软件${NC}" 
+		fi
+	done
+	printf "\n" 
 
 }
 
