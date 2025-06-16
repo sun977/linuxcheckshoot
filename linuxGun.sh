@@ -1823,47 +1823,6 @@ otherCheck(){
 	fi
 
 	# 安装软件排查(rpm)
-	# 获取所有已安装的 rpm 包（仅保留名称）
-	# all_rpms=$(rpm -qa --queryformat "%{NAME}\n")
-
-	# # 输出第一部分：软件及版本信息
-	# echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"
-	# software=$(echo "$all_rpms" | awk '{version[$1] = $0} END {for (name in version) print name}' | sort)
-
-	# if [ -n "$software" ]; then
-	# 	echo -e "${YELLOW}[+] 系统安装与版本如下:${NC}"
-	# 	echo "$software"
-	# else
-	# 	echo -e "${YELLOW}[+] 系统未安装软件${NC}"
-	# fi
-	# printf "\n"
-
-	# # 加载可疑工具列表到数组中
-	# mapfile -t hacker_tools_list < ./checkrules/hackertoolslist.txt
-
-	# # 输出第二部分：可疑软件检查
-	# echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}"
-
-	# found_any=0
-
-	# for tool in "${hacker_tools_list[@]}"; do
-	# 	# 忽略空行或注释行
-	# 	[[ -z "$tool" || "$tool" =~ ^# ]] && continue
-
-	# 	# 检查是否安装了该可疑工具
-	# 	if echo "$all_rpms" | grep -qE "^$tool\$"; then
-	# 		echo -e "${RED}[!] 发现安装以下可疑软件: $tool${NC}"
-	# 		found_any=1
-	# 	fi
-	# done
-
-	# if [ $found_any -eq 0 ]; then
-	# 	echo -e "${YELLOW}[+] 未发现安装可疑软件${NC}"
-	# fi
-
-	# printf "\n"
-
-
 	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
 	software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
 	if [ -n "$software" ];then
