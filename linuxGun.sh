@@ -2123,12 +2123,12 @@ performanceCheck(){
 	printf "\n"  
 
 	## CPU使用情况
-	echo -e "${YELLOW}正在检查CPU用情况[more /proc/cpuinfo]:${NC}" 
-	(echo -e "${YELLOW}CPU硬件信息如下:${NC}" && more /proc/cpuinfo )  
+	echo -e "${YELLOW}正在检查CPU用情况[cat /proc/cpuinfo]:${NC}" 
+	(echo -e "${YELLOW}CPU硬件信息如下:${NC}" && cat /proc/cpuinfo )  
 
 	## 内存使用情况
 	echo -e "${YELLOW}正在分析内存情况:${NC}"  
-	(echo -e "${YELLOW}[+]内存信息如下[more /proc/meminfo]:${NC}" && more /proc/meminfo)  
+	(echo -e "${YELLOW}[+]内存信息如下[cat /proc/meminfo]:${NC}" && cat /proc/meminfo)  
 	(echo -e "${YELLOW}[+]内存使用情况如下[free -m]:${NC}" && free -m)  
 	printf "\n"  
 
