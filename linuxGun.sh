@@ -45,6 +45,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 	- 其他敏感命令
 	# 	- 检查系统中所有可能的历史文件路径[补充]
 	# 	- 输出系统中所有用户的历史文件[补充]
+	#   - 输出数据库操作历史命令
 	# 网络链接排查
 	# - ARP 攻击分析
 	# - 网络连接分析
@@ -115,7 +116,10 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 病毒排查
 	# 内存排查
 	# 黑客工具排查
+	# 内核排查
 	# 其他排查
+	# - 可疑脚本文件排查
+	# - 系统文件完整性校验(MD5)
 	# 基线检查
 	# k8s排查
 
@@ -667,6 +671,17 @@ historyCheck(){
 		}
 	}' /etc/passwd
 	printf "\n" 
+
+	# 输出数据库操作历史命令
+	echo -e "${YELLOW}正在检查数据库操作历史命令[/root/.mysql_history]:${NC}"  
+	mysql_history=$(more /root/.mysql_history)
+	if [ -n "$mysql_history" ];then
+		(echo -e "${YELLOW}[+]数据库操作历史命令如下:${NC}" && echo "$mysql_history")  
+	else
+		echo -e "${YELLOW}+]未发现数据库历史命令${NC}"  
+	fi
+	printf "\n"  
+
 
 }
 
@@ -1702,19 +1717,538 @@ memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
 }
 
-# 黑客工具排查
+# 黑客工具排查 【完成】
 hackerToolsCheck(){
 	# 黑客工具排查
+	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
+	# hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
+	# 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
+	# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+	echo -e "${YELLOW}[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"  
+	for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
+	do
+		findhackertool=$(find / -name $hacker_tool 2>/dev/null)
+		if [ -n "$findhackertool" ];then
+			(echo -e "${RED}[!]发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
+		else
+			echo -e "${YELLOW}[+]未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
+		fi
+		printf "\n"  
+	done
+	
 	# 常见黑客痕迹排查
+
+}
+
+# 内核排查 【完成】
+kernelCheck(){
+	# 内核信息排查
+	echo -e "${YELLOW}正在检查内核信息[lsmod]:${NC}"  
+	lsmod=$(lsmod)
+	if [ -n "$lsmod" ];then
+		(echo "${YELLOW}[+]内核信息如下:${NC}" && echo "$lsmod")  
+	else
+		echo "${YELLOW}[+]未发现内核信息${NC}"  
+	fi
+	printf "\n"  
+
+	echo -e "${YELLOW}正在检查异常内核[lsmod|grep -Ev mod_list]:${NC}"  
+	danger_lsmod=$(lsmod | grep -Ev "ablk_helper|ac97_bus|acpi_power_meter|aesni_intel|ahci|ata_generic|ata_piix|auth_rpcgss|binfmt_misc|bluetooth|bnep|bnx2|bridge|cdrom|cirrus|coretemp|crc_t10dif|crc32_pclmul|crc32c_intel|crct10dif_common|crct10dif_generic|crct10dif_pclmul|cryptd|dca|dcdbas|dm_log|dm_mirror|dm_mod|dm_region_hash|drm|drm_kms_helper|drm_panel_orientation_quirks|e1000|ebtable_broute|ebtable_filter|ebtable_nat|ebtables|edac_core|ext4|fb_sys_fops|floppy|fuse|gf128mul|ghash_clmulni_intel|glue_helper|grace|i2c_algo_bit|i2c_core|i2c_piix4|i7core_edac|intel_powerclamp|ioatdma|ip_set|ip_tables|ip6_tables|ip6t_REJECT|ip6t_rpfilter|ip6table_filter|ip6table_mangle|ip6table_nat|ip6table_raw|ip6table_security|ipmi_devintf|ipmi_msghandler|ipmi_si|ipmi_ssif|ipt_MASQUERADE|ipt_REJECT|iptable_filter|iptable_mangle|iptable_nat|iptable_raw|iptable_security|iTCO_vendor_support|iTCO_wdt|jbd2|joydev|kvm|kvm_intel|libahci|libata|libcrc32c|llc|lockd|lpc_ich|lrw|mbcache|megaraid_sas|mfd_core|mgag200|Module|mptbase|mptscsih|mptspi|nf_conntrack|nf_conntrack_ipv4|nf_conntrack_ipv6|nf_defrag_ipv4|nf_defrag_ipv6|nf_nat|nf_nat_ipv4|nf_nat_ipv6|nf_nat_masquerade_ipv4|nfnetlink|nfnetlink_log|nfnetlink_queue|nfs_acl|nfsd|parport|parport_pc|pata_acpi|pcspkr|ppdev|rfkill|sch_fq_codel|scsi_transport_spi|sd_mod|serio_raw|sg|shpchp|snd|snd_ac97_codec|snd_ens1371|snd_page_alloc|snd_pcm|snd_rawmidi|snd_seq|snd_seq_device|snd_seq_midi|snd_seq_midi_event|snd_timer|soundcore|sr_mod|stp|sunrpc|syscopyarea|sysfillrect|sysimgblt|tcp_lp|ttm|tun|uvcvideo|videobuf2_core|videobuf2_memops|videobuf2_vmalloc|videodev|virtio|virtio_balloon|virtio_console|virtio_net|virtio_pci|virtio_ring|virtio_scsi|vmhgfs|vmw_balloon|vmw_vmci|vmw_vsock_vmci_transport|vmware_balloon|vmwgfx|vsock|xfs|xt_CHECKSUM|xt_conntrack|xt_state")
+	if [ -n "$danger_lsmod" ];then
+		(echo -e "${RED}!]发现可疑内核模块:${NC}" && echo "$danger_lsmod")  
+	else
+		echo -e "${YELLOW}[+]未发现可疑内核模块${NC}"  
+	fi
+	printf "\n"  
 }
 
 # 其他排查
 otherCheck(){
+	# 可疑脚本文件排查
+	echo "==========12.可疑文件检查==========" | $saveCheckResult
+	echo "[12.1]正在检查脚本文件[py|sh|per|pl|exe]:" | $saveCheckResult
+	echo "[注意]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
+	scripts=$(find / *.* | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
+	if [ -n "scripts" ];then
+		(echo "[!]发现以下脚本文件,请注意!" && echo "$scripts") |  $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]未发现脚本文件" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	# 可以放一个rkhunter的tar包,解压后直接运行即可
+	echo "[12.2]正在检查webshell文件:" | $saveCheckResult
+	echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
+	echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+	# 系统文件完整性校验
+	# 输出说明信息
+	echo "[说明] md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)"  
+	echo "[注] MD5值文件导出位置: ${check_file}/sysfile_md5.txt"  
+
+	file="${check_file}/sysfile_md5.txt"
+
+	# 要检查的目录列表
+	dirs_to_check=(
+		/bin
+		/usr/bin
+		/sbin
+		/usr/sbin
+		/usr/lib/systemd
+		/usr/local/bin
+	)
+
+	if [ -e "$file" ]; then 
+		md5sum -c "$file" 2>&1  
+	else
+		# 清空或创建文件
+		> "$file"
+
+		# 遍历每个目录，查找可执行文件
+		for dir in "${dirs_to_check[@]}"; do
+			if [ -d "$dir" ]; then
+				echo "[INFO] 正在扫描目录: $dir"  
+
+				# 查找当前目录下所有具有可执行权限的普通文件
+				find "$dir" -maxdepth 1 -type f -executable | while read -r f; do
+					md5sum "$f" >> "$file"
+				done
+			else
+				echo "[警告] 目录不存在: $dir"  
+		done
+	fi
+
+
+
+	echo "==========13.系统文件完整性校验==========" | $saveCheckResult
+	# 通过取出系统关键文件的MD5值,一方面可以直接将这些关键文件的MD5值通过威胁情报平台进行查询
+	# 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
+	# 用来验证文件是否被篡改
+	echo "[13.1]正在采集系统关键文件MD5:" | $saveCheckResult
+	echo "[说明]md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)" | $saveCheckResult
+	echo "[注]MD5值文件导出位置:${check_file}/sysfile_md5.txt" | $saveCheckResult
+	file="${check_file}/sysfile_md5.txt"
+	if [ -e "$file" ]; then 
+		md5sum -c "$file" 2>&1; 
+	else
+		md5sum /usr/bin/awk >> $file
+		md5sum /usr/bin/basename >> $file
+		md5sum /usr/bin/bash >> $file
+		md5sum /usr/bin/cat >> $file
+		md5sum /usr/bin/chattr >> $file
+		md5sum /usr/bin/chmod >> $file
+		md5sum /usr/bin/chown >> $file
+		md5sum /usr/bin/cp >> $file
+		md5sum /usr/bin/csh >> $file
+		md5sum /usr/bin/curl >> $file
+		md5sum /usr/bin/cut >> $file
+		md5sum /usr/bin/date >> $file
+		md5sum /usr/bin/df >> $file
+		md5sum /usr/bin/diff >> $file
+		md5sum /usr/bin/dirname >> $file
+		md5sum /usr/bin/dmesg >> $file
+		md5sum /usr/bin/du >> $file
+		md5sum /usr/bin/echo >> $file
+		md5sum /usr/bin/ed >> $file
+		md5sum /usr/bin/egrep >> $file
+		md5sum /usr/bin/env >> $file
+		md5sum /usr/bin/fgrep >> $file
+		md5sum /usr/bin/file >> $file
+		md5sum /usr/bin/find >> $file
+		md5sum /usr/bin/gawk >> $file
+		md5sum /usr/bin/GET >> $file
+		md5sum /usr/bin/grep >> $file
+		md5sum /usr/bin/groups >> $file
+		md5sum /usr/bin/head >> $file
+		md5sum /usr/bin/id >> $file
+		md5sum /usr/bin/ipcs >> $file
+		md5sum /usr/bin/kill >> $file
+		md5sum /usr/bin/killall >> $file
+		md5sum /usr/bin/kmod >> $file
+		md5sum /usr/bin/last >> $file
+		md5sum /usr/bin/lastlog >> $file
+		md5sum /usr/bin/ldd >> $file
+		md5sum /usr/bin/less >> $file
+		md5sum /usr/bin/locate >> $file
+		md5sum /usr/bin/logger >> $file
+		md5sum /usr/bin/login >> $file
+		md5sum /usr/bin/ls >> $file
+		md5sum /usr/bin/lsattr >> $file
+		md5sum /usr/bin/lynx >> $file
+		md5sum /usr/bin/mail >> $file
+		md5sum /usr/bin/mailx >> $file
+		md5sum /usr/bin/md5sum >> $file
+		md5sum /usr/bin/mktemp >> $file
+		md5sum /usr/bin/more >> $file
+		md5sum /usr/bin/mount >> $file
+		md5sum /usr/bin/mv >> $file
+		md5sum /usr/bin/netstat >> $file
+		md5sum /usr/bin/newgrp >> $file
+		md5sum /usr/bin/numfmt >> $file
+		md5sum /usr/bin/passwd >> $file
+		md5sum /usr/bin/perl >> $file
+		md5sum /usr/bin/pgrep >> $file
+		md5sum /usr/bin/ping >> $file
+		md5sum /usr/bin/pkill >> $file
+		md5sum /usr/bin/ps >> $file
+		md5sum /usr/bin/pstree >> $file
+		md5sum /usr/bin/pwd >> $file
+		md5sum /usr/bin/readlink >> $file
+		md5sum /usr/bin/rpm >> $file
+		md5sum /usr/bin/runcon >> $file
+		md5sum /usr/bin/sed >> $file
+		md5sum /usr/bin/sh >> $file
+		md5sum /usr/bin/sha1sum >> $file
+		md5sum /usr/bin/sha224sum >> $file
+		md5sum /usr/bin/sha256sum >> $file
+		md5sum /usr/bin/sha384sum >> $file
+		md5sum /usr/bin/sha512sum >> $file
+		md5sum /usr/bin/size >> $file
+		md5sum /usr/bin/sort >> $file
+		md5sum /usr/bin/ssh >> $file
+		md5sum /usr/bin/stat >> $file
+		md5sum /usr/bin/strace >> $file
+		md5sum /usr/bin/strings >> $file
+		md5sum /usr/bin/su >> $file
+		md5sum /usr/bin/sudo >> $file
+		md5sum /usr/bin/systemctl >> $file
+		md5sum /usr/bin/tail >> $file
+		md5sum /usr/bin/tcsh >> $file
+		md5sum /usr/bin/telnet >> $file
+		md5sum /usr/bin/test >> $file
+		md5sum /usr/bin/top >> $file
+		md5sum /usr/bin/touch >> $file
+		md5sum /usr/bin/tr >> $file
+		md5sum /usr/bin/uname >> $file
+		md5sum /usr/bin/uniq >> $file
+		md5sum /usr/bin/users >> $file
+		md5sum /usr/bin/vmstat >> $file
+		md5sum /usr/bin/w >> $file
+		md5sum /usr/bin/watch >> $file
+		md5sum /usr/bin/wc >> $file
+		md5sum /usr/bin/wget >> $file
+		md5sum /usr/bin/whatis >> $file
+		md5sum /usr/bin/whereis >> $file
+		md5sum /usr/bin/which >> $file
+		md5sum /usr/bin/who >> $file
+		md5sum /usr/bin/whoami >> $file
+		md5sum /usr/lib/systemd/s >> $file
+		md5sum /usr/local/bin/rkh >> $file
+		md5sum /usr/sbin/adduser >> $file
+		md5sum /usr/sbin/chkconfi >> $file
+		md5sum /usr/sbin/chroot >> $file
+		md5sum /usr/sbin/depmod >> $file
+		md5sum /usr/sbin/fsck >> $file
+		md5sum /usr/sbin/fuser >> $file
+		md5sum /usr/sbin/groupadd >> $file
+		md5sum /usr/sbin/groupdel >> $file
+		md5sum /usr/sbin/groupmod >> $file
+		md5sum /usr/sbin/grpck >> $file
+		md5sum /usr/sbin/ifconfig >> $file
+		md5sum /usr/sbin/ifdown >> $file
+		md5sum /usr/sbin/ifup >> $file
+		md5sum /usr/sbin/init >> $file
+		md5sum /usr/sbin/insmod >> $file
+		md5sum /usr/sbin/ip >> $file
+		md5sum /usr/sbin/lsmod >> $file
+		md5sum /usr/sbin/lsof >> $file
+		md5sum /usr/sbin/modinfo >> $file
+		md5sum /usr/sbin/modprobe >> $file
+		md5sum /usr/sbin/nologin >> $file
+		md5sum /usr/sbin/pwck >> $file
+		md5sum /usr/sbin/rmmod >> $file
+		md5sum /usr/sbin/route >> $file
+		md5sum /usr/sbin/rsyslogd >> $file
+		md5sum /usr/sbin/runlevel >> $file
+		md5sum /usr/sbin/sestatus >> $file
+		md5sum /usr/sbin/sshd >> $file
+		md5sum /usr/sbin/sulogin >> $file
+		md5sum /usr/sbin/sysctl >> $file
+		md5sum /usr/sbin/tcpd >> $file
+		md5sum /usr/sbin/useradd >> $file
+		md5sum /usr/sbin/userdel >> $file
+		md5sum /usr/sbin/usermod >> $file
+		md5sum /usr/sbin/vipw >> $file
+	fi
+	printf "\n" | $saveCheckResult
+
+	# 安装软件排查(rpm)
+	echo "==========16.安装软件(rpm)==========" | $saveCheckResult
+	echo "[16.1]正在检查rpm安装软件及版本情况[rpm -qa]:" | $saveCheckResult
+	software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
+	if [ -n "$software" ];then
+		(echo "[+]系统安装与版本如下:" && echo "$software") | $saveCheckResult
+	else
+		echo "[+]系统未安装软件" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "[16.2]正在检查rpm安装的可疑软件:" | $saveCheckResult
+	# 从文件中取出一个工具名然后匹配
+	hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
+	for hacker_tools in $hacker_tools_list;do
+		danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
+		if [ -n "$danger_soft" ];then
+			(echo "[!]发现安装以下可疑软件:" && echo "$danger_soft") |  $saveDangerResult | $saveCheckResult
+		else
+			echo "[+]未发现安装可疑软件" | $saveCheckResult
+		fi
+	done
+	printf "\n" | $saveCheckResult
+
 }
 
-# 基线检查
+# 基线检查【未完成】
 baselineCheck(){
 	# 基线检查
+	echo "|----------------------------------------------------------------|" | $saveCheckResult
+	echo "==========10.策略配置检查(基线检查)==========" | $saveCheckResult
+	echo "[10.1]正在检查远程允许策略:" | $saveCheckResult
+	echo "[10.1.1]正在检查远程允许策略[/etc/hosts.allow]:" | $saveCheckResult
+	hostsallow=$(cat /etc/hosts.allow | grep -v '#')
+	if [ -n "$hostsallow" ];then
+		(echo "[!]允许以下IP远程访问:" && echo "$hostsallow") |  $saveDangerResult | $saveCheckResult
+	else
+		echo "[+]hosts.allow文件未发现允许远程访问地址" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:" | $saveCheckResult
+	hostsdeny=$(cat /etc/hosts.deny | grep -v '#')
+	if [ -n "$hostsdeny" ];then
+		(echo "[!]拒绝以下IP远程访问:" && echo "$hostsdeny") | $saveCheckResult
+	else
+		echo "[+]hosts.deny文件未发现拒绝远程访问地址" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2]正在检查密码有效期策略:" | $saveCheckResult
+	echo "[10.2.1]正在检查密码有效期策略[/etc/login.defs ]:" | $saveCheckResult
+	(echo "[+]密码有效期策略如下:" && cat /etc/login.defs | grep -v "#" | grep PASS ) | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+	echo "[10.2.1.1]正在进行口令生存周期检查:" | $saveCheckResult
+	passmax=$(cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}')
+	if [ $passmax -le 90 -a $passmax -gt 0 ];then
+		echo "[+]口令生存周期为${passmax}天,符合要求" | $saveCheckResult
+	else
+		echo "[!]口令生存周期为${passmax}天,不符合要求,建议设置为0-90天" | $saveCheckResult
+	fi
+
+	echo "[10.2.1.2]正在进行口令更改最小时间间隔检查:" | $saveCheckResult
+	passmin=$(cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}')
+	if [ $passmin -ge 6 ];then
+		echo "[+]口令更改最小时间间隔为${passmin}天,符合要求" | $saveCheckResult
+	else
+		echo "[!]口令更改最小时间间隔为${passmin}天,不符合要求,建议设置不小于6天" | $saveCheckResult
+	fi
+
+	echo "[10.2.1.3]正在进行口令最小长度检查:" | $saveCheckResult
+	passlen=$(cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}')
+	if [ $passlen -ge 8 ];then
+		echo "[+]口令最小长度为${passlen},符合要求" | $saveCheckResult
+	else
+		echo "[!]口令最小长度为${passlen},不符合要求,建议设置最小长度大于等于8" | $saveCheckResult
+	fi
+
+	echo "[10.2.1.4]正在进行口令过期警告时间天数检查:" | $saveCheckResult
+	passage=$(cat /etc/login.defs | grep PASS_WARN_AGE | grep -v ^# | awk '{print $2}')
+	if [ $passage -ge 30 -a $passage -lt $passmax ];then
+		echo "[+]口令过期警告时间天数为${passage},符合要求" | $saveCheckResult
+	else
+		echo "[!]口令过期警告时间天数为${passage},不符合要求,建议设置大于等于30并小于口令生存周期" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2.2]正在检查密码复杂度策略[/etc/pam.d/system-auth]:" | $saveCheckResult
+	(echo "[+]密码复杂度策略如下:" && cat /etc/pam.d/system-auth | grep -v "#") | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2.3]正在检查密码已过期用户[/etc/shadow]:" | $saveCheckResult
+	NOW=$(date "+%s")
+	day=$((${NOW}/86400))
+	passwdexpired=$(grep -v ":[\!\*x]([\*\!])?:" /etc/shadow | awk -v today=${day} -F: '{ if (($5!="") && (today>$3+$5)) { print $1 }}')
+	if [ -n "$passwdexpired" ];then
+		(echo "[+]以下用户的密码已过期:" && echo "$passwdexpired")  | $saveCheckResult
+	else
+		echo "[+]未发现密码已过期用户" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2.4]正在检查账号超时锁定策略[/etc/profile]:" | $saveCheckResult
+	account_timeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
+	if [ "$account_timeout" != ""  ];then
+		TMOUT=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
+		if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
+			echo "[+]账号超时时间为${TMOUT}秒,符合要求" | $saveCheckResult
+		else
+			echo "[!]账号超时时间为${TMOUT}秒,不符合要求,建议设置小于600秒" | $saveCheckResult
+	fi
+	else
+		echo "[!]账号超时未锁定,不符合要求,建议设置小于600秒" | $saveCheckResult 
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2.5]正在检查grub密码策略[/etc/grub.conf]:" | $saveCheckResult
+	grubpass=$(cat /etc/grub.conf | grep password)
+	if [ $? -eq 0 ];then
+		echo "[+]已设置grub密码,符合要求" | $saveCheckResult 
+	else
+		echo "[!]未设置grub密码,不符合要求,建议设置grub密码" | $saveCheckResult 
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.2.6]正在检查lilo密码策略[/etc/lilo.conf]:" | $saveCheckResult
+	if [ -f  /etc/lilo.conf ];then
+		lilopass=$(cat /etc/lilo.conf | grep password 2> /dev/null)
+		if [ $? -eq 0 ];then
+			echo "[+]已设置lilo密码,符合要求" | $saveCheckResult
+		else
+			echo "[!]未设置lilo密码,不符合要求,建议设置lilo密码" | $saveCheckResult
+		fi
+	else
+		echo "[+]未发现/etc/lilo.conf文件" | $saveCheckResult
+	fi
+
+
+	echo "[10.3]正在检查selinux策略:" | $saveCheckResult
+	echo "[10.3.1]正在检查selinux策略:" | $saveCheckResult
+	(echo "selinux策略如下:" && egrep -v '#|^$' /etc/sysconfig/selinux ) | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.4]正在检查SSHD配置策略:" | $saveCheckResult
+	echo "[10.4.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
+	sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
+	if [ -n "$sshdconfig" ];then
+		(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
+	else
+		echo "[!]未发现sshd配置文件" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.4.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
+	emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
+	nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
+	if [ -n "$emptypasswd" ];then
+		echo "[!]允许空口令登录,请注意!"
+		if [ -n "$nopasswd" ];then
+			(echo "[!]以下用户空口令:" && echo "$nopasswd") |  $saveDangerResult | $saveCheckResult
+		else
+			echo "[+]但未发现空口令用户" | $saveCheckResult
+		fi
+	else
+		echo "[+]不允许空口令用户登录" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.4.3]正在检查是否允许SSH远程root登录[/etc/ssh/sshd_config]:" | $saveCheckResult
+	cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no"
+	if [ $? -eq 0 ];then
+		echo "[+]root不允许登陆,符合要求" | $saveCheckResult
+	else
+		echo "[!]允许root远程登陆,不符合要求,建议/etc/ssh/sshd_config添加PermitRootLogin no" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.4.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
+	echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
+	protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
+	if [ "$protocolver" = "2" ];then
+		echo "[+]openssh使用ssh2协议,符合要求" 
+	else
+		echo "[!]openssh未ssh2协议,不符合要求"
+	fi
+
+	echo "[10.4.5]正在检查SSH版本[ssh -V]:" | $saveCheckResult
+	sshver=$(ssh -V)
+	if [ -n "$sshver" ];then
+		(echo "[+]ssh版本信息如下:" && echo "$sshver") | $saveCheckResult
+	else
+		(echo "[!]未发现ssh版本信息,请注意这是异常现象!") | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
+	echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
+	nisconfig=$(cat /etc/nsswitch.conf | egrep -v '#|^$')
+	if [ -n "$nisconfig" ];then
+		(echo "[+]NIS服务配置如下:" && echo "$nisconfig") | $saveCheckResult
+	else
+		echo "[+]未发现NIS服务配置" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.6]正在检查nginx配置策略:" | $saveCheckResult
+	echo "[10.6.1]正在检查Nginx配置文件[nginx/conf/nginx.conf]:" | $saveCheckResult
+	# nginx=$(whereis nginx | awk -F: '{print $2}')
+	nginx_bin=$(which nginx) 
+	if [ -n "$nginx_bin" ];then
+		echo "[+]发现主机存在Nginx服务" | $saveCheckResult
+		echo "[+]Nginx服务二进制文件路径为:$nginx_bin" | $saveCheckResult
+		# 获取 nginx 配置文件位置，如果 nginx -V 获取不到，则默认为/etc/nginx/nginx.conf
+		config_output="$($nginx_bin -V 2>&1)"
+		config_path=$(echo "$config_output" | awk '/configure arguments:/ {split($0,a,"--conf-path="); if (length(a[2])>0) print a[2]}')  # 获取 nginx 配置文件路径
+
+		# 如果 awk 命令成功返回了配置文件路径，则使用它，否则使用默认路径
+		if [ -n "$config_path" ] && [ -f "$config_path" ]; then
+			ngin_conf="$config_path"
+		else
+			ngin_conf="/etc/nginx/nginx.conf"
+		fi
+
+		if [ -f "$ngin_conf" ];then
+			(echo "[+]Nginx配置文件可能的路径为:$ngin_conf") | $saveCheckResult  # 输出变量值
+			echo "[注意]这里只检测nginx.conf主配置文件,其他导入配置文件在主文件同级目录下,请人工排查" | $saveCheckResult
+			(echo "[+]Nginx配置文件内容为:" && cat $ngin_conf | grep -v "^$") | $saveCheckResult   # 查看值文件内容
+			echo "[10.6.2]正在检查Nginx端口转发配置[$ngin_conf]:" | $saveCheckResult
+			nginxportconf=$(cat $ngin_conf | grep -E "listen|server|server_name|upstream|proxy_pass|location"| grep -v "^$")
+			if [ -n "$nginxportconf" ];then
+				(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult | $saveDangerResult
+			else
+				echo "[+]未发现端口转发配置" | $saveCheckResult
+			fi
+		else
+			echo "[!]未发现Nginx配置文件" | $saveCheckResult
+		fi
+	else
+		echo "[+]未发现Nginx服务" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[10.7]正在检查SNMP配置策略:" | $saveCheckResult
+	echo "[10.7.1]正在检查SNMP配置[/etc/snmp/snmpd.conf]:." | $saveCheckResult
+	if [ -f /etc/snmp/snmpd.conf ];then
+		public=$(cat /etc/snmp/snmpd.conf | grep public | grep -v ^# | awk '{print $4}')
+		private=$(cat /etc/snmp/snmpd.conf | grep private | grep -v ^# | awk '{print $4}')
+		if [ "$public" = "public" ];then
+			echo "发现snmp服务存在默认团体名public,不符合要求" | $saveCheckResult
+		fi
+		if [ "$private" = "private" ];then
+			echo "发现snmp服务存在默认团体名private,不符合要求" | $saveCheckResult
+		fi
+	else
+		echo "snmp服务配置文件不存在,可能没有运行snmp服务" | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+	echo "防火墙策略基线在[2.6]节,不在赘述!" | $saveCheckResult
+	echo "配置策略检查(基线检查)结束!" | $saveCheckResult
+	echo "|^----------------------------------------------------------------^|" | $saveCheckResult
+
 }
 
 # k8s排查
@@ -1722,15 +2256,76 @@ k8sCheck(){
 }
 
 
+# 系统性能评估 【未完成】
+performanceCheck(){
+	# 系统性能评估
+	## 磁盘使用情况
+	echo -e "${YELLOW}正在检查磁盘使用情况:${NC}"  
+	echo -e "${YELLOW}[+]磁盘使用情况如下:${NC}" && df -h   
+	printf "\n"  
+
+	echo -e "${YELLOW}正在检查磁盘使用是否过大[df -h]:${NC}"  
+	echo -e "${YELLOW}[说明]使用超过70%告警${NC}"  
+	df=$(df -h | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
+	if [ -n "$df" ];then
+		(echo -e "${RED}[!]硬盘空间使用过高,请注意!${NC}" && echo "$df" )  
+	else
+		echo -e "${YELLOW}[+]硬盘空间足够${NC}" 
+	fi
+	printf "\n"  
+
+	## CPU使用情况
+	echo -e "${YELLOW}正在检查CPU用情况[more /proc/cpuinfo]:${NC}" 
+	(echo -e "${YELLOW}CPU硬件信息如下:${NC}" && more /proc/cpuinfo )  
+
+	## 内存使用情况
+	echo -e "${YELLOW}正在分析内存情况:${NC}"  
+	(echo -e "${YELLOW}[+]内存信息如下[more /proc/meminfo]:${NC}" && more /proc/meminfo)  
+	(echo -e "${YELLOW}[+]内存使用情况如下[free -m]:${NC}" && free -m)  
+	printf "\n"  
+
+	## 系统运行及负载情况
+	echo -e "${YELLOW}系统运行及负载情况:${NC}"  
+	echo -e "${YELLOW}正在检查系统运行时间及负载情况:${NC}"  
+	(echo -e "${YELLOW}[+]系统运行时间如下[uptime]:${NC}" && uptime)  
+	printf "\n"  
+	
+	# 网络流量情况【没有第三方工具无法检测】
+	# yum install nload -y
+	# nload ens192 
+	echo -e "${YELLOW}网络流量情况:${NC}"
+	
+}
+
 # 攻击角度信息收集
 attackAngleCheck(){
 	# 
 }
 
 
+# 日志统一打包 【完成】
+checkOutlogPack(){ 
+	# 检查文件统一打包
+	echo -e "${YELLOW}正在打包系统原始日志[/var/log]:${NC}"  
+	tar -czvf ${log_file}/system_log.tar.gz /var/log/ -P
+	if [ $? -eq 0 ];then
+		echo -e "${YELLOW}[+]日志打包成功${NC}"  
+	else
+		echo -e "${RED}[!]日志打包失败,请工人导出日志${NC}"  
+	fi
+	printf "\n"  
 
 
-
+	echo -e "${YELLOW}正在打包脚本检查日志到/output/目录下:${NC}"  
+	# zip -r /tmp/linuxcheck_${ipadd}_${date}.zip /tmp/linuxcheck_${ipadd}_${date}/*
+	tar -zcvf ${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxcheck_${ipadd}_${date}/* -P
+	if [ $? -eq 0 ];then
+		echo -e "${YELLOW}[+]检查文件打包成功${NC}"  
+	else
+		echo -e "${RED}[!]检查文件打包失败,请工人导出日志${NC}"  
+	fi
+	
+}
 
 
 
@@ -1928,499 +2523,13 @@ stat /usr/sbin/userdel | egrep "Access|Modify|Change" | grep -v '(' | $saveCheck
 printf "\n" | $saveCheckResult
 
 
-echo "|----------------------------------------------------------------|" | $saveCheckResult
-echo "==========10.策略配置检查(基线检查)==========" | $saveCheckResult
-echo "[10.1]正在检查远程允许策略:" | $saveCheckResult
-echo "[10.1.1]正在检查远程允许策略[/etc/hosts.allow]:" | $saveCheckResult
-hostsallow=$(more /etc/hosts.allow | grep -v '#')
-if [ -n "$hostsallow" ];then
-	(echo "[!]允许以下IP远程访问:" && echo "$hostsallow") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]hosts.allow文件未发现允许远程访问地址" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[10.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:" | $saveCheckResult
-hostsdeny=$(more /etc/hosts.deny | grep -v '#')
-if [ -n "$hostsdeny" ];then
-	(echo "[!]拒绝以下IP远程访问:" && echo "$hostsdeny") | $saveCheckResult
-else
-	echo "[+]hosts.deny文件未发现拒绝远程访问地址" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[10.2]正在检查密码有效期策略:" | $saveCheckResult
-echo "[10.2.1]正在检查密码有效期策略[/etc/login.defs ]:" | $saveCheckResult
-(echo "[+]密码有效期策略如下:" && more /etc/login.defs | grep -v "#" | grep PASS ) | $saveCheckResult
-printf "\n" | $saveCheckResult
 
-echo "[10.2.1.1]正在进行口令生存周期检查:" | $saveCheckResult
-passmax=$(cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}')
-if [ $passmax -le 90 -a $passmax -gt 0 ];then
-	echo "[+]口令生存周期为${passmax}天,符合要求" | $saveCheckResult
-else
-	echo "[!]口令生存周期为${passmax}天,不符合要求,建议设置为0-90天" | $saveCheckResult
-fi
 
-echo "[10.2.1.2]正在进行口令更改最小时间间隔检查:" | $saveCheckResult
-passmin=$(cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}')
-if [ $passmin -ge 6 ];then
-	echo "[+]口令更改最小时间间隔为${passmin}天,符合要求" | $saveCheckResult
-else
-	echo "[!]口令更改最小时间间隔为${passmin}天,不符合要求,建议设置不小于6天" | $saveCheckResult
-fi
 
-echo "[10.2.1.3]正在进行口令最小长度检查:" | $saveCheckResult
-passlen=$(cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}')
-if [ $passlen -ge 8 ];then
-	echo "[+]口令最小长度为${passlen},符合要求" | $saveCheckResult
-else
-	echo "[!]口令最小长度为${passlen},不符合要求,建议设置最小长度大于等于8" | $saveCheckResult
-fi
 
-echo "[10.2.1.4]正在进行口令过期警告时间天数检查:" | $saveCheckResult
-passage=$(cat /etc/login.defs | grep PASS_WARN_AGE | grep -v ^# | awk '{print $2}')
-if [ $passage -ge 30 -a $passage -lt $passmax ];then
-	echo "[+]口令过期警告时间天数为${passage},符合要求" | $saveCheckResult
-else
-	echo "[!]口令过期警告时间天数为${passage},不符合要求,建议设置大于等于30并小于口令生存周期" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
 
 
-echo "[10.2.2]正在检查密码复杂度策略[/etc/pam.d/system-auth]:" | $saveCheckResult
-(echo "[+]密码复杂度策略如下:" && more /etc/pam.d/system-auth | grep -v "#") | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "[10.2.3]正在检查密码已过期用户[/etc/shadow]:" | $saveCheckResult
-NOW=$(date "+%s")
-day=$((${NOW}/86400))
-passwdexpired=$(grep -v ":[\!\*x]([\*\!])?:" /etc/shadow | awk -v today=${day} -F: '{ if (($5!="") && (today>$3+$5)) { print $1 }}')
-if [ -n "$passwdexpired" ];then
-	(echo "[+]以下用户的密码已过期:" && echo "$passwdexpired")  | $saveCheckResult
-else
-	echo "[+]未发现密码已过期用户" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.2.4]正在检查账号超时锁定策略[/etc/profile]:" | $saveCheckResult
-account_timeout=`cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}'` 
-if [ "$account_timeout" != ""  ];then
-	TMOUT=`cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}'`
-	if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
-		echo "[+]账号超时时间为${TMOUT}秒,符合要求" | $saveCheckResult
-	else
-		echo "[!]账号超时时间为${TMOUT}秒,不符合要求,建议设置小于600秒" | $saveCheckResult
-fi
-else
-	echo "[!]账号超时未锁定,不符合要求,建议设置小于600秒" | $saveCheckResult 
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.2.5]正在检查grub密码策略[/etc/grub.conf]:" | $saveCheckResult
-grubpass=$(cat /etc/grub.conf | grep password)
-if [ $? -eq 0 ];then
-	echo "[+]已设置grub密码,符合要求" | $saveCheckResult 
-else
-	echo "[!]未设置grub密码,不符合要求,建议设置grub密码" | $saveCheckResult 
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.2.6]正在检查lilo密码策略[/etc/lilo.conf]:" | $saveCheckResult
-if [ -f  /etc/lilo.conf ];then
-	lilopass=$(cat /etc/lilo.conf | grep password 2> /dev/null)
-	if [ $? -eq 0 ];then
-		echo "[+]已设置lilo密码,符合要求" | $saveCheckResult
-	else
-		echo "[!]未设置lilo密码,不符合要求,建议设置lilo密码" | $saveCheckResult
-	fi
-else
-	echo "[+]未发现/etc/lilo.conf文件" | $saveCheckResult
-fi
-
-
-echo "[10.3]正在检查selinux策略:" | $saveCheckResult
-echo "[10.3.1]正在检查selinux策略:" | $saveCheckResult
-(echo "selinux策略如下:" && egrep -v '#|^$' /etc/sysconfig/selinux ) | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-
-
-
-
-
-
-echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
-echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
-nisconfig=$(more /etc/nsswitch.conf | egrep -v '#|^$')
-if [ -n "$nisconfig" ];then
-	(echo "[+]NIS服务配置如下:" && echo "$nisconfig") | $saveCheckResult
-else
-	echo "[+]未发现NIS服务配置" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.6]正在检查nginx配置策略:" | $saveCheckResult
-echo "[10.6.1]正在检查Nginx配置文件[nginx/conf/nginx.conf]:" | $saveCheckResult
-nginx=$(whereis nginx | awk -F: '{print $2}')
-if [ -n "$nginx" ];then
-	(echo "[+]Nginx配置文件如下:" && more $nginx/conf/nginx.conf) | $saveCheckResult
-else
-	echo "[+]未发现Nginx服务" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.6.2]正在检查Nginx端口转发配置[nginx/conf/nginx.conf]:" | $saveCheckResult
-nginx=$(whereis nginx | awk -F: '{print $2}')
-nginxportconf=$(more $nginx/conf/nginx.conf | egrep "listen|server |server_name |upstream|proxy_pass|location"| grep -v \#)
-if [ -n "$nginxportconf" ];then
-	(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult
-else
-	echo "[+]未发现端口转发配置" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[10.7]正在检查SNMP配置策略:" | $saveCheckResult
-echo "[10.7.1]正在检查SNMP配置[/etc/snmp/snmpd.conf]:." | $saveCheckResult
-if [ -f /etc/snmp/snmpd.conf ];then
-	public=$(cat /etc/snmp/snmpd.conf | grep public | grep -v ^# | awk '{print $4}')
-	private=$(cat /etc/snmp/snmpd.conf | grep private | grep -v ^# | awk '{print $4}')
-	if [ "$public" -eq "public" ];then
-		echo "发现snmp服务存在默认团体名public,不符合要求" | $saveCheckResult
-	fi
-	if [ "$private" -eq "private" ];then
-		echo "发现snmp服务存在默认团体名private,不符合要求" | $saveCheckResult
-	fi
-else
-	echo "snmp服务配置文件不存在,可能没有运行snmp服务" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "防火墙策略基线在[2.6]节,不在赘述!" | $saveCheckResult
-echo "配置策略检查(基线检查)结束!" | $saveCheckResult
-echo "|^----------------------------------------------------------------^|" | $saveCheckResult
-
-
-
-echo "[11.2]正在检查数据库操作历史命令[/root/.mysql_history]:" | $saveCheckResult
-mysql_history=$(more /root/.mysql_history)
-if [ -n "$mysql_history" ];then
-	(echo "[+]数据库操作历史命令如下:" && echo "$mysql_history") | $saveCheckResult
-else
-	echo "[+]未发现数据库历史命令" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "==========12.可疑文件检查==========" | $saveCheckResult
-echo "[12.1]正在检查脚本文件[py|sh|per|pl|exe]:" | $saveCheckResult
-echo "[注意]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
-scripts=$(find / *.* | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
-if [ -n "scripts" ];then
-	(echo "[!]发现以下脚本文件,请注意!" && echo "$scripts") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现脚本文件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-# 可以放一个rkhunter的tar包,解压后直接运行即可
-echo "[12.2]正在检查webshell文件:" | $saveCheckResult
-echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
-echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-
-echo "[12.5]正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:" | $saveCheckResult
-# hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
-# 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
-# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-echo "[说明]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)" | $saveCheckResult
-for hacker_tool in `cat ${current_dir}/checkrules/hackertoolslist.txt`
-do
-	findhackertool=$(find / -name $hacker_tool 2>/dev/null)
-	if [ -n "$findhackertool" ];then
-		(echo "[!]发现全盘存在可疑黑客工具:$hacker_tool" && echo "$findhackertool") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]未发现全盘存在可疑黑可工具:$hacker_tool" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-done
-
-
-echo "==========13.系统文件完整性校验==========" | $saveCheckResult
-# 通过取出系统关键文件的MD5值,一方面可以直接将这些关键文件的MD5值通过威胁情报平台进行查询
-# 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
-# 用来验证文件是否被篡改
-echo "[13.1]正在采集系统关键文件MD5:" | $saveCheckResult
-echo "[说明]md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)" | $saveCheckResult
-echo "[注]MD5值文件导出位置:${check_file}/sysfile_md5.txt" | $saveCheckResult
-file="${check_file}/sysfile_md5.txt"
-if [ -e "$file" ]; then 
-	md5sum -c "$file" 2>&1; 
-else
-	md5sum /usr/bin/awk >> $file
-	md5sum /usr/bin/basename >> $file
-	md5sum /usr/bin/bash >> $file
-	md5sum /usr/bin/cat >> $file
-	md5sum /usr/bin/chattr >> $file
-	md5sum /usr/bin/chmod >> $file
-	md5sum /usr/bin/chown >> $file
-	md5sum /usr/bin/cp >> $file
-	md5sum /usr/bin/csh >> $file
-	md5sum /usr/bin/curl >> $file
-	md5sum /usr/bin/cut >> $file
-	md5sum /usr/bin/date >> $file
-	md5sum /usr/bin/df >> $file
-	md5sum /usr/bin/diff >> $file
-	md5sum /usr/bin/dirname >> $file
-	md5sum /usr/bin/dmesg >> $file
-	md5sum /usr/bin/du >> $file
-	md5sum /usr/bin/echo >> $file
-	md5sum /usr/bin/ed >> $file
-	md5sum /usr/bin/egrep >> $file
-	md5sum /usr/bin/env >> $file
-	md5sum /usr/bin/fgrep >> $file
-	md5sum /usr/bin/file >> $file
-	md5sum /usr/bin/find >> $file
-	md5sum /usr/bin/gawk >> $file
-	md5sum /usr/bin/GET >> $file
-	md5sum /usr/bin/grep >> $file
-	md5sum /usr/bin/groups >> $file
-	md5sum /usr/bin/head >> $file
-	md5sum /usr/bin/id >> $file
-	md5sum /usr/bin/ipcs >> $file
-	md5sum /usr/bin/kill >> $file
-	md5sum /usr/bin/killall >> $file
-	md5sum /usr/bin/kmod >> $file
-	md5sum /usr/bin/last >> $file
-	md5sum /usr/bin/lastlog >> $file
-	md5sum /usr/bin/ldd >> $file
-	md5sum /usr/bin/less >> $file
-	md5sum /usr/bin/locate >> $file
-	md5sum /usr/bin/logger >> $file
-	md5sum /usr/bin/login >> $file
-	md5sum /usr/bin/ls >> $file
-	md5sum /usr/bin/lsattr >> $file
-	md5sum /usr/bin/lynx >> $file
-	md5sum /usr/bin/mail >> $file
-	md5sum /usr/bin/mailx >> $file
-	md5sum /usr/bin/md5sum >> $file
-	md5sum /usr/bin/mktemp >> $file
-	md5sum /usr/bin/more >> $file
-	md5sum /usr/bin/mount >> $file
-	md5sum /usr/bin/mv >> $file
-	md5sum /usr/bin/netstat >> $file
-	md5sum /usr/bin/newgrp >> $file
-	md5sum /usr/bin/numfmt >> $file
-	md5sum /usr/bin/passwd >> $file
-	md5sum /usr/bin/perl >> $file
-	md5sum /usr/bin/pgrep >> $file
-	md5sum /usr/bin/ping >> $file
-	md5sum /usr/bin/pkill >> $file
-	md5sum /usr/bin/ps >> $file
-	md5sum /usr/bin/pstree >> $file
-	md5sum /usr/bin/pwd >> $file
-	md5sum /usr/bin/readlink >> $file
-	md5sum /usr/bin/rpm >> $file
-	md5sum /usr/bin/runcon >> $file
-	md5sum /usr/bin/sed >> $file
-	md5sum /usr/bin/sh >> $file
-	md5sum /usr/bin/sha1sum >> $file
-	md5sum /usr/bin/sha224sum >> $file
-	md5sum /usr/bin/sha256sum >> $file
-	md5sum /usr/bin/sha384sum >> $file
-	md5sum /usr/bin/sha512sum >> $file
-	md5sum /usr/bin/size >> $file
-	md5sum /usr/bin/sort >> $file
-	md5sum /usr/bin/ssh >> $file
-	md5sum /usr/bin/stat >> $file
-	md5sum /usr/bin/strace >> $file
-	md5sum /usr/bin/strings >> $file
-	md5sum /usr/bin/su >> $file
-	md5sum /usr/bin/sudo >> $file
-	md5sum /usr/bin/systemctl >> $file
-	md5sum /usr/bin/tail >> $file
-	md5sum /usr/bin/tcsh >> $file
-	md5sum /usr/bin/telnet >> $file
-	md5sum /usr/bin/test >> $file
-	md5sum /usr/bin/top >> $file
-	md5sum /usr/bin/touch >> $file
-	md5sum /usr/bin/tr >> $file
-	md5sum /usr/bin/uname >> $file
-	md5sum /usr/bin/uniq >> $file
-	md5sum /usr/bin/users >> $file
-	md5sum /usr/bin/vmstat >> $file
-	md5sum /usr/bin/w >> $file
-	md5sum /usr/bin/watch >> $file
-	md5sum /usr/bin/wc >> $file
-	md5sum /usr/bin/wget >> $file
-	md5sum /usr/bin/whatis >> $file
-	md5sum /usr/bin/whereis >> $file
-	md5sum /usr/bin/which >> $file
-	md5sum /usr/bin/who >> $file
-	md5sum /usr/bin/whoami >> $file
-	md5sum /usr/lib/systemd/s >> $file
-	md5sum /usr/local/bin/rkh >> $file
-	md5sum /usr/sbin/adduser >> $file
-	md5sum /usr/sbin/chkconfi >> $file
-	md5sum /usr/sbin/chroot >> $file
-	md5sum /usr/sbin/depmod >> $file
-	md5sum /usr/sbin/fsck >> $file
-	md5sum /usr/sbin/fuser >> $file
-	md5sum /usr/sbin/groupadd >> $file
-	md5sum /usr/sbin/groupdel >> $file
-	md5sum /usr/sbin/groupmod >> $file
-	md5sum /usr/sbin/grpck >> $file
-	md5sum /usr/sbin/ifconfig >> $file
-	md5sum /usr/sbin/ifdown >> $file
-	md5sum /usr/sbin/ifup >> $file
-	md5sum /usr/sbin/init >> $file
-	md5sum /usr/sbin/insmod >> $file
-	md5sum /usr/sbin/ip >> $file
-	md5sum /usr/sbin/lsmod >> $file
-	md5sum /usr/sbin/lsof >> $file
-	md5sum /usr/sbin/modinfo >> $file
-	md5sum /usr/sbin/modprobe >> $file
-	md5sum /usr/sbin/nologin >> $file
-	md5sum /usr/sbin/pwck >> $file
-	md5sum /usr/sbin/rmmod >> $file
-	md5sum /usr/sbin/route >> $file
-	md5sum /usr/sbin/rsyslogd >> $file
-	md5sum /usr/sbin/runlevel >> $file
-	md5sum /usr/sbin/sestatus >> $file
-	md5sum /usr/sbin/sshd >> $file
-	md5sum /usr/sbin/sulogin >> $file
-	md5sum /usr/sbin/sysctl >> $file
-	md5sum /usr/sbin/tcpd >> $file
-	md5sum /usr/sbin/useradd >> $file
-	md5sum /usr/sbin/userdel >> $file
-	md5sum /usr/sbin/usermod >> $file
-	md5sum /usr/sbin/vipw >> $file
-fi
-printf "\n" | $saveCheckResult
-
-
-
-
-
-
-
-echo "==========15.内核分析==========" | $saveCheckResult
-echo "[15.1]正在检查内核信息:." | $saveCheckResult
-lsmod=$(lsmod)
-if [ -n "$lsmod" ];then
-	(echo "[+]内核信息如下:" && echo "$lsmod") | $saveCheckResult
-else
-	echo "[+]未发现内核信息" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[15.2]正在检查异常内核[lsmod]:" | $saveCheckResult
-danger_lsmod=$(lsmod | grep -Ev "ablk_helper|ac97_bus|acpi_power_meter|aesni_intel|ahci|ata_generic|ata_piix|auth_rpcgss|binfmt_misc|bluetooth|bnep|bnx2|bridge|cdrom|cirrus|coretemp|crc_t10dif|crc32_pclmul|crc32c_intel|crct10dif_common|crct10dif_generic|crct10dif_pclmul|cryptd|dca|dcdbas|dm_log|dm_mirror|dm_mod|dm_region_hash|drm|drm_kms_helper|drm_panel_orientation_quirks|e1000|ebtable_broute|ebtable_filter|ebtable_nat|ebtables|edac_core|ext4|fb_sys_fops|floppy|fuse|gf128mul|ghash_clmulni_intel|glue_helper|grace|i2c_algo_bit|i2c_core|i2c_piix4|i7core_edac|intel_powerclamp|ioatdma|ip_set|ip_tables|ip6_tables|ip6t_REJECT|ip6t_rpfilter|ip6table_filter|ip6table_mangle|ip6table_nat|ip6table_raw|ip6table_security|ipmi_devintf|ipmi_msghandler|ipmi_si|ipmi_ssif|ipt_MASQUERADE|ipt_REJECT|iptable_filter|iptable_mangle|iptable_nat|iptable_raw|iptable_security|iTCO_vendor_support|iTCO_wdt|jbd2|joydev|kvm|kvm_intel|libahci|libata|libcrc32c|llc|lockd|lpc_ich|lrw|mbcache|megaraid_sas|mfd_core|mgag200|Module|mptbase|mptscsih|mptspi|nf_conntrack|nf_conntrack_ipv4|nf_conntrack_ipv6|nf_defrag_ipv4|nf_defrag_ipv6|nf_nat|nf_nat_ipv4|nf_nat_ipv6|nf_nat_masquerade_ipv4|nfnetlink|nfnetlink_log|nfnetlink_queue|nfs_acl|nfsd|parport|parport_pc|pata_acpi|pcspkr|ppdev|rfkill|sch_fq_codel|scsi_transport_spi|sd_mod|serio_raw|sg|shpchp|snd|snd_ac97_codec|snd_ens1371|snd_page_alloc|snd_pcm|snd_rawmidi|snd_seq|snd_seq_device|snd_seq_midi|snd_seq_midi_event|snd_timer|soundcore|sr_mod|stp|sunrpc|syscopyarea|sysfillrect|sysimgblt|tcp_lp|ttm|tun|uvcvideo|videobuf2_core|videobuf2_memops|videobuf2_vmalloc|videodev|virtio|virtio_balloon|virtio_console|virtio_net|virtio_pci|virtio_ring|virtio_scsi|vmhgfs|vmw_balloon|vmw_vmci|vmw_vsock_vmci_transport|vmware_balloon|vmwgfx|vsock|xfs|xt_CHECKSUM|xt_conntrack|xt_state")
-if [ -n "$danger_lsmod" ];then
-	(echo "[!]发现可疑内核模块:" && echo "$danger_lsmod") |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]未发现可疑内核模块" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "==========16.安装软件(rpm)==========" | $saveCheckResult
-echo "[16.1]正在检查rpm安装软件及版本情况[rpm -qa]:" | $saveCheckResult
-software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
-if [ -n "$software" ];then
-	(echo "[+]系统安装与版本如下:" && echo "$software") | $saveCheckResult
-else
-	echo "[+]系统未安装软件" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[16.2]正在检查rpm安装的可疑软件:" | $saveCheckResult
-# 从文件中取出一个工具名然后匹配
-hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-for hacker_tools in $hacker_tools_list;do
-	danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
-	if [ -n "$danger_soft" ];then
-		(echo "[!]发现安装以下可疑软件:" && echo "$danger_soft") |  $saveDangerResult | $saveCheckResult
-	else
-		echo "[+]未发现安装可疑软件" | $saveCheckResult
-	fi
-done
-printf "\n" | $saveCheckResult
-
-
-
-
-
-
-echo "==========18.性能分析==========" | $saveCheckResult
-echo "[18.1]正在检查磁盘使用情况:" | $saveCheckResult
-echo "[18.1.1]正在检查磁盘使用:" | $saveCheckResult
-echo "[+]磁盘使用情况如下:" && df -h  | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "[18.1.2]正在检查磁盘使用是否过大[df -h]:" | $saveCheckResult
-echo "[说明]使用超过70%告警" | $saveCheckResult
-df=$(df -h | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
-if [ -n "$df" ];then
-	(echo "[!]硬盘空间使用过高,请注意!" && echo "$df" ) |  $saveDangerResult | $saveCheckResult
-else
-	echo "[+]硬盘空间足够" | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-echo "[18.2]正在检查CPU用情况[more /proc/cpuinfo]:" | $saveCheckResult
-echo "[18.2.1]正在检查CPU相关信息:" | $saveCheckResult
-(echo "CPU硬件信息如下:" && more /proc/cpuinfo ) | $saveCheckResult
-
-
-echo "[18.3]正在分析内存情况:" | $saveCheckResult
-echo "[18.3.1]正在检查内存相关信息:" | $saveCheckResult
-(echo "[+]内存信息如下[more /proc/meminfo]:" && more /proc/meminfo) | $saveCheckResult
-(echo "[+]内存使用情况如下[free -m]:" && free -m) | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "[18.4]系统运行及负载情况:" | $saveCheckResult
-echo "[18.4.1]正在检查系统运行时间及负载情况:." | $saveCheckResult
-(echo "[+]系统运行时间如下[uptime]:" && uptime) | $saveCheckResult
-printf "\n" | $saveCheckResult
-
-
-echo "==========19.检查日志统一打包==========" | $saveCheckResult
-echo "[19.1]正在打包系统原始日志[/var/log]:" | $saveCheckResult
-tar -czvf ${log_file}/system_log.tar.gz /var/log/ -P
-if [ $? -eq 0 ];then
-	echo "[+]日志打包成功" | $saveCheckResult
-else
-	echo "[!]日志打包失败,请工人导出日志" |  $saveDangerResult | $saveCheckResult
-fi
-printf "\n" | $saveCheckResult
-
-
-echo "[19.2]正在打包脚本检查日志到/output/目录下:" | $saveCheckResult
-# zip -r /tmp/linuxcheck_${ipadd}_${date}.zip /tmp/linuxcheck_${ipadd}_${date}/*
-tar -zcvf ${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxcheck_${ipadd}_${date}/* -P
-if [ $? -eq 0 ];then
-	echo "[+]检查文件打包成功" | $saveCheckResult
-else
-	echo "[!]检查文件打包失败,请工人导出日志" |  $saveDangerResult | $saveCheckResult
-fi
-
-
-echo "检查结束!" | $saveCheckResult
-echo "Version:3.0" | $saveCheckResult
-echo "Author:sun977" | $saveCheckResult
-echo "Mail:jiuwei977@foxmail.com" |	$saveCheckResult
-echo "Date:2024.6.16" | $saveCheckResult
