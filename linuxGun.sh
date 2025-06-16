@@ -1417,6 +1417,34 @@ systemLogCheck(){
 
 
 	# 3 secure日志分析 [安全认证和授权日志] [ubuntu等是auth.log]
+	## 兼容 centOS 和 ubuntu 系统的代码片段 --- 后期优化
+	# # 判断系统类型并选择正确的日志文件
+	# if [ -f /var/log/auth.log ]; then
+	# 	AUTH_LOG="/var/log/auth.log"
+	# elif [ -f /var/log/secure ]; then
+	# 	AUTH_LOG="/var/log/secure"
+	# else
+	# 	echo -e "${RED}[!] 无法找到系统安全日志文件（auth.log 或 secure）${NC}"
+	# 	AUTH_LOG=""
+	# fi
+
+	# if [ -n "$AUTH_LOG" ]; then
+	# 	echo -e "${YELLOW}正在检查系统安全日志中登录成功记录[grep 'Accepted' ${AUTH_LOG}* ]:${NC}"
+
+	# 	loginsuccess=$(grep "Accepted" "${AUTH_LOG}" 2>/dev/null)
+
+	# 	if [ -n "$loginsuccess" ]; then
+	# 		(echo -e "${YELLOW}[+] 日志中分析到以下用户登录成功记录:${NC}" && echo "$loginsuccess")
+	# 		(echo -e "${YELLOW}[+] 登录成功的IP及次数如下:${NC}" && grep "Accepted" "${AUTH_LOG}" | awk '{print $11}' | sort -nr | uniq -c)
+	# 		(echo -e "${YELLOW}[+] 登录成功的用户及次数如下:${NC}" && grep "Accepted" "${AUTH_LOG}" | awk '{print $9}' | sort -nr | uniq -c)
+	# 	else
+	# 		echo "[+] 日志中未发现成功登录的情况"
+	# 	fi
+	# else
+	# 	echo "[!] 跳过安全日志分析：未找到可用的日志文件"
+	# fi
+
+
 	echo -e "${YELLOW}正在分析系统安全日志[secure]:${NC}"
 	## SSH安全日志分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录成功记录[more /var/log/secure* | grep "Accepted" ]:${NC}" 
@@ -1640,18 +1668,15 @@ systemLogCheck(){
 }
 
 
-
 # 文件信息排查【完成】
 fileCheck(){
 	# 系统服务排查 
 	systemServiceCheck
 	# 敏感目录排查 | 隐藏文件排查 dirFileCheck
 	dirFileCheck
-	# 新增文件排查 
+	# 特殊文件排查 [SSH相关文件|环境变量相关|hosts文件|shadow文件|24H变动文件|特权文件] sshCheck | specialFileCheck
 	specialFileCheck
-	# 特殊文件排查 sshCheck | specialFileCheck
-	specialFileCheck
-	# 日志文件分析 systemLogCheck 【重点】
+	# 日志文件分析 [message日志|secure日志分析|计划任务日志分析|yum日志分析 等日志] systemLogCheck 【重点】
 	systemLogCheck
 }
 
