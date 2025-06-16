@@ -1879,9 +1879,9 @@ otherCheck(){
 	for hacker_tools in $hacker_tools_list;do
 		danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
 		if [ -n "$danger_soft" ];then
-			(echo -e "${RED}[!]发现安装以下可疑软件:${NC}" && echo "$danger_soft") 
+			(echo -e "${RED}[!]发现安装以下可疑软件:$hacker_tools${NC}" && echo "$danger_soft") 
 		else
-			echo -e "${YELLOW}[+]未发现安装可疑软件${NC}" 
+			echo -e "${YELLOW}[+]未发现安装可疑软件:$hacker_tools${NC}" 
 		fi
 	done
 	printf "\n" 
