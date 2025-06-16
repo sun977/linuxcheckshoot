@@ -1816,6 +1816,7 @@ otherCheck(){
 				done
 			else
 				echo "[警告] 目录不存在: $dir"  
+			fi
 		done
 	fi
 
