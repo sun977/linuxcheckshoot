@@ -1703,6 +1703,11 @@ backdoorCheck(){
 # webshell 排查
 webshellCheck(){
 	# 检查网站常见的目录
+	# 可以放一个rkhunter的tar包,解压后直接运行即可
+	echo "[12.2]正在检查webshell文件:" | $saveCheckResult
+	echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
+	echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
+	printf "\n" | $saveCheckResult
 	# 访问日志
 }
 
@@ -1765,27 +1770,23 @@ kernelCheck(){
 # 其他排查
 otherCheck(){
 	# 可疑脚本文件排查
-	echo "==========12.可疑文件检查==========" | $saveCheckResult
-	echo "[12.1]正在检查脚本文件[py|sh|per|pl|exe]:" | $saveCheckResult
-	echo "[注意]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害" | $saveCheckResult
+	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
+	echo -e "${YELLOW}[注意]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害${NC}"  
 	scripts=$(find / *.* | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
 	if [ -n "scripts" ];then
-		(echo "[!]发现以下脚本文件,请注意!" && echo "$scripts") |  $saveDangerResult | $saveCheckResult
+		(echo -e "${RED}[!]发现以下脚本文件,请注意!${NC}" && echo "$scripts")  
 	else
-		echo "[+]未发现脚本文件" | $saveCheckResult
+		echo -e "${YELLOW}[+]未发现脚本文件${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
-	# 可以放一个rkhunter的tar包,解压后直接运行即可
-	echo "[12.2]正在检查webshell文件:" | $saveCheckResult
-	echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
-	echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
-	printf "\n" | $saveCheckResult
 
 	# 系统文件完整性校验
-	# 输出说明信息
-	echo "[说明] md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)"  
-	echo "[注] MD5值文件导出位置: ${check_file}/sysfile_md5.txt"  
+	# 通过取出系统关键文件的MD5值,一方面可以直接将这些关键文件的MD5值通过威胁情报平台进行查询
+	# 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
+	# 用来验证文件是否被篡改
+	echo -e "${YELLOW}[INFO] md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)${NC}"  
+	echo -e "${YELLOW}[INFO] MD5值文件导出位置: ${check_file}/sysfile_md5.txt${NC}"  
 
 	file="${check_file}/sysfile_md5.txt"
 
@@ -1808,195 +1809,40 @@ otherCheck(){
 		# 遍历每个目录，查找可执行文件
 		for dir in "${dirs_to_check[@]}"; do
 			if [ -d "$dir" ]; then
-				echo "[INFO] 正在扫描目录: $dir"  
+				echo -e "${YELLOW}[INFO] 正在扫描目录${NC}: $dir"  
 
 				# 查找当前目录下所有具有可执行权限的普通文件
 				find "$dir" -maxdepth 1 -type f -executable | while read -r f; do
 					md5sum "$f" >> "$file"
 				done
 			else
-				echo "[警告] 目录不存在: $dir"  
+				echo -e "${YELLOW}[WARN] 目录不存在${NC}: $dir"  
 			fi
 		done
 	fi
 
-
-
-	echo "==========13.系统文件完整性校验==========" | $saveCheckResult
-	# 通过取出系统关键文件的MD5值,一方面可以直接将这些关键文件的MD5值通过威胁情报平台进行查询
-	# 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
-	# 用来验证文件是否被篡改
-	echo "[13.1]正在采集系统关键文件MD5:" | $saveCheckResult
-	echo "[说明]md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)" | $saveCheckResult
-	echo "[注]MD5值文件导出位置:${check_file}/sysfile_md5.txt" | $saveCheckResult
-	file="${check_file}/sysfile_md5.txt"
-	if [ -e "$file" ]; then 
-		md5sum -c "$file" 2>&1; 
-	else
-		md5sum /usr/bin/awk >> $file
-		md5sum /usr/bin/basename >> $file
-		md5sum /usr/bin/bash >> $file
-		md5sum /usr/bin/cat >> $file
-		md5sum /usr/bin/chattr >> $file
-		md5sum /usr/bin/chmod >> $file
-		md5sum /usr/bin/chown >> $file
-		md5sum /usr/bin/cp >> $file
-		md5sum /usr/bin/csh >> $file
-		md5sum /usr/bin/curl >> $file
-		md5sum /usr/bin/cut >> $file
-		md5sum /usr/bin/date >> $file
-		md5sum /usr/bin/df >> $file
-		md5sum /usr/bin/diff >> $file
-		md5sum /usr/bin/dirname >> $file
-		md5sum /usr/bin/dmesg >> $file
-		md5sum /usr/bin/du >> $file
-		md5sum /usr/bin/echo >> $file
-		md5sum /usr/bin/ed >> $file
-		md5sum /usr/bin/egrep >> $file
-		md5sum /usr/bin/env >> $file
-		md5sum /usr/bin/fgrep >> $file
-		md5sum /usr/bin/file >> $file
-		md5sum /usr/bin/find >> $file
-		md5sum /usr/bin/gawk >> $file
-		md5sum /usr/bin/GET >> $file
-		md5sum /usr/bin/grep >> $file
-		md5sum /usr/bin/groups >> $file
-		md5sum /usr/bin/head >> $file
-		md5sum /usr/bin/id >> $file
-		md5sum /usr/bin/ipcs >> $file
-		md5sum /usr/bin/kill >> $file
-		md5sum /usr/bin/killall >> $file
-		md5sum /usr/bin/kmod >> $file
-		md5sum /usr/bin/last >> $file
-		md5sum /usr/bin/lastlog >> $file
-		md5sum /usr/bin/ldd >> $file
-		md5sum /usr/bin/less >> $file
-		md5sum /usr/bin/locate >> $file
-		md5sum /usr/bin/logger >> $file
-		md5sum /usr/bin/login >> $file
-		md5sum /usr/bin/ls >> $file
-		md5sum /usr/bin/lsattr >> $file
-		md5sum /usr/bin/lynx >> $file
-		md5sum /usr/bin/mail >> $file
-		md5sum /usr/bin/mailx >> $file
-		md5sum /usr/bin/md5sum >> $file
-		md5sum /usr/bin/mktemp >> $file
-		md5sum /usr/bin/more >> $file
-		md5sum /usr/bin/mount >> $file
-		md5sum /usr/bin/mv >> $file
-		md5sum /usr/bin/netstat >> $file
-		md5sum /usr/bin/newgrp >> $file
-		md5sum /usr/bin/numfmt >> $file
-		md5sum /usr/bin/passwd >> $file
-		md5sum /usr/bin/perl >> $file
-		md5sum /usr/bin/pgrep >> $file
-		md5sum /usr/bin/ping >> $file
-		md5sum /usr/bin/pkill >> $file
-		md5sum /usr/bin/ps >> $file
-		md5sum /usr/bin/pstree >> $file
-		md5sum /usr/bin/pwd >> $file
-		md5sum /usr/bin/readlink >> $file
-		md5sum /usr/bin/rpm >> $file
-		md5sum /usr/bin/runcon >> $file
-		md5sum /usr/bin/sed >> $file
-		md5sum /usr/bin/sh >> $file
-		md5sum /usr/bin/sha1sum >> $file
-		md5sum /usr/bin/sha224sum >> $file
-		md5sum /usr/bin/sha256sum >> $file
-		md5sum /usr/bin/sha384sum >> $file
-		md5sum /usr/bin/sha512sum >> $file
-		md5sum /usr/bin/size >> $file
-		md5sum /usr/bin/sort >> $file
-		md5sum /usr/bin/ssh >> $file
-		md5sum /usr/bin/stat >> $file
-		md5sum /usr/bin/strace >> $file
-		md5sum /usr/bin/strings >> $file
-		md5sum /usr/bin/su >> $file
-		md5sum /usr/bin/sudo >> $file
-		md5sum /usr/bin/systemctl >> $file
-		md5sum /usr/bin/tail >> $file
-		md5sum /usr/bin/tcsh >> $file
-		md5sum /usr/bin/telnet >> $file
-		md5sum /usr/bin/test >> $file
-		md5sum /usr/bin/top >> $file
-		md5sum /usr/bin/touch >> $file
-		md5sum /usr/bin/tr >> $file
-		md5sum /usr/bin/uname >> $file
-		md5sum /usr/bin/uniq >> $file
-		md5sum /usr/bin/users >> $file
-		md5sum /usr/bin/vmstat >> $file
-		md5sum /usr/bin/w >> $file
-		md5sum /usr/bin/watch >> $file
-		md5sum /usr/bin/wc >> $file
-		md5sum /usr/bin/wget >> $file
-		md5sum /usr/bin/whatis >> $file
-		md5sum /usr/bin/whereis >> $file
-		md5sum /usr/bin/which >> $file
-		md5sum /usr/bin/who >> $file
-		md5sum /usr/bin/whoami >> $file
-		md5sum /usr/lib/systemd/s >> $file
-		md5sum /usr/local/bin/rkh >> $file
-		md5sum /usr/sbin/adduser >> $file
-		md5sum /usr/sbin/chkconfi >> $file
-		md5sum /usr/sbin/chroot >> $file
-		md5sum /usr/sbin/depmod >> $file
-		md5sum /usr/sbin/fsck >> $file
-		md5sum /usr/sbin/fuser >> $file
-		md5sum /usr/sbin/groupadd >> $file
-		md5sum /usr/sbin/groupdel >> $file
-		md5sum /usr/sbin/groupmod >> $file
-		md5sum /usr/sbin/grpck >> $file
-		md5sum /usr/sbin/ifconfig >> $file
-		md5sum /usr/sbin/ifdown >> $file
-		md5sum /usr/sbin/ifup >> $file
-		md5sum /usr/sbin/init >> $file
-		md5sum /usr/sbin/insmod >> $file
-		md5sum /usr/sbin/ip >> $file
-		md5sum /usr/sbin/lsmod >> $file
-		md5sum /usr/sbin/lsof >> $file
-		md5sum /usr/sbin/modinfo >> $file
-		md5sum /usr/sbin/modprobe >> $file
-		md5sum /usr/sbin/nologin >> $file
-		md5sum /usr/sbin/pwck >> $file
-		md5sum /usr/sbin/rmmod >> $file
-		md5sum /usr/sbin/route >> $file
-		md5sum /usr/sbin/rsyslogd >> $file
-		md5sum /usr/sbin/runlevel >> $file
-		md5sum /usr/sbin/sestatus >> $file
-		md5sum /usr/sbin/sshd >> $file
-		md5sum /usr/sbin/sulogin >> $file
-		md5sum /usr/sbin/sysctl >> $file
-		md5sum /usr/sbin/tcpd >> $file
-		md5sum /usr/sbin/useradd >> $file
-		md5sum /usr/sbin/userdel >> $file
-		md5sum /usr/sbin/usermod >> $file
-		md5sum /usr/sbin/vipw >> $file
-	fi
-	printf "\n" | $saveCheckResult
-
 	# 安装软件排查(rpm)
-	echo "==========16.安装软件(rpm)==========" | $saveCheckResult
-	echo "[16.1]正在检查rpm安装软件及版本情况[rpm -qa]:" | $saveCheckResult
+	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
 	software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
 	if [ -n "$software" ];then
-		(echo "[+]系统安装与版本如下:" && echo "$software") | $saveCheckResult
+		(echo -e "${YELLOW}[+]系统安装与版本如下:${NC}" && echo "$software")  
 	else
-		echo "[+]系统未安装软件" | $saveCheckResult
+		echo -e "${YELLOW}[+]系统未安装软件${NC}" 
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
-	echo "[16.2]正在检查rpm安装的可疑软件:" | $saveCheckResult
+	echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}" 
 	# 从文件中取出一个工具名然后匹配
 	hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 	for hacker_tools in $hacker_tools_list;do
 		danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
 		if [ -n "$danger_soft" ];then
-			(echo "[!]发现安装以下可疑软件:" && echo "$danger_soft") |  $saveDangerResult | $saveCheckResult
+			(echo -e "${RED}[!]发现安装以下可疑软件:${NC}" && echo "$danger_soft") 
 		else
-			echo "[+]未发现安装可疑软件" | $saveCheckResult
+			echo -e "${YELLOW}[+]未发现安装可疑软件${NC}" 
 		fi
 	done
-	printf "\n" | $saveCheckResult
+	printf "\n" 
 
 }
 
