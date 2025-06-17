@@ -1825,7 +1825,9 @@ otherCheck(){
 
 				# 查找当前目录下所有具有可执行权限的普通文件
 				find "$dir" -maxdepth 1 -type f -executable | while read -r f; do
-					md5sum "$f" >> "$file"
+					# 输出文件名和MD5值(输出屏幕同时保存到文件中)
+					md5sum "$f" | tee -a "$file"  
+					# md5sum "$f" >> "$file"
 				done
 			else
 				echo -e "${YELLOW}[WARN] 目录不存在${NC}: $dir"  
