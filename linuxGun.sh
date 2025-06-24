@@ -186,8 +186,9 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 		- 密码复杂度策略
 	# 		- 密码已过期用户
 	# 		- 账号超时锁定策略
-	# 		- grub密码策略检查
-	# 		- lilo密码策略检查
+	#		- grub2密码策略检查
+	#		- grub密码策略检查(存在版本久远-弃用)
+	#		- lilo密码策略检查(存在版本久远-弃用)
 	# 	- 远程登录限制
 	#     	- 远程访问策略
 	# 	    	- 远程允许策略
@@ -1967,84 +1968,107 @@ otherCheck(){
 # 基线检查【未完成】
 baselineCheck(){
 	# 基线检查项
-	# 账户管理
-	# - 账户审查(用户和组策略) -- userInfoCheck() 需要修改成通过不通过
-	# 	- 系统最后登录用户
-	# 	- 用户信息passwd文件分析
-	# 	- 检查可登录用户
-	# 	- 检查超级用户(除root外)
-	# 	- 检查克隆用户
-	# 	- 检查非系统用户
-	# 	- 检查空口令用户
-	# 	- 检查空口令且可登录用户
-	# 	- 检查口令未加密用户
-	# 	- 用户组信息group文件分析
-	# 	- 检查特权用户组(除root组外)
-	# 	- 相同GID用户组
-	# 	- 相同用户组名
-	# - 密码策略
-	#     - 密码有效期策略
-	# 		- 口令生存周期
-	# 		- 口令更改最小时间间隔
-	# 		- 口令最小长度
-	# 		- 口令过期时间天数
-	# 	- 密码复杂度策略
-	# 	- 密码已过期用户
-	# 	- 账号超时锁定策略
-	# 	- grub密码策略检查
-	# 	- lilo密码策略检查
-	# - 远程登录限制
-	#     - 远程访问策略
-	# 	    - 远程允许策略
-	# 		- 远程拒绝策略
-	# - 认证与授权
-	# 	- SSH安全增强
-	# 		- sshd配置
-	# 		- 空口令登录
-	# 		- root远程登录
-	# 		- ssh协议版本
-	# 	- PAM策略
-	# 	- 其他认证服务策略
-	# 文件权限及访问控制
-	# - 关键文件保护(文件或目录的权限及属性)
-	# 	- 文件权限策略
-	# 		- etc文件权限
-	# 		- shadow文件权限
-	# 		- passwd文件权限
-	# 		- group文件权限
-	# 		- securetty文件权限
-	# 		- services文件权限
-	# 		- grub.conf文件权限
-	# 		- xinetd.conf文件权限
-	# 		- lilo.conf文件权限
-	# 		- limits.conf文件权限
-	# 	- 系统文件属性检查
-	# 		- passwd文件属性
-	# 		- shadow文件属性
-	# 		- gshadow文件属性
-	# 		- group文件属性
-	# 	- useradd 和 usedel 的时间属性
-	# 网络配置与服务
-	# - 端口和服务审计
-	# - 防火墙配置
-	# - 网络参数优化
-	# selinux策略
-	# 服务配置策略
-	# - NIS配置策略
-	# - SNMP配置检查
-	# - Nginx配置策略
-	# 日志记录与监控
-	# - rsyslog服务
-	#   - 服务开启
-	#   - 文件权限默认
-	# - audit服务
-	# - 日志轮转和监控
-	# - 实时监控和告警
-	# 备份和恢复策略
-	# 其他安全配置基准
+	## 账户审查 调用 userInfoCheck 函数
+	### 账户登录信息排查 调用 userInfoCheck 函数  函数需要修改
+	echo -e "${YELLOW}==========基线检查==========${NC}" 
+	userInfoCheck()  
+
+	### 密码策略配置
+	echo -e "${YELLOW}[2]正在检查密码策略:${NC}" 
+	echo -e "${YELLOW}[2.1.1]正在检查密码有效期策略[/etc/login.defs ]:${NC}" 
+	(echo -e "${YELLOW}[+]密码有效期策略如下:${NC}" && cat /etc/login.defs | grep -v "#" | grep PASS ) 
+	printf "\n" 
+
+	echo -e "${YELLOW}[2.1.2]正在进行口令生存周期检查:${NC}"  
+	passmax=$(cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}')
+	if [ $passmax -le 90 -a $passmax -gt 0 ];then
+		echo -e "${YELLOW}[+]口令生存周期为${passmax}天,符合要求(要求:0<密码有效期<90天)${NC}"  
+	else
+		echo -e "${RED}[!]口令生存周期为${passmax}天,不符合要求,建议设置为1-90天${NC}" 
+	fi
+
+	echo -e "${YELLOW}[2.1.3]正在进行口令更改最小时间间隔检查:${NC}" 
+	passmin=$(cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}')
+	if [ $passmin -ge 6 ];then
+		echo -e "${YELLOW}[+]口令更改最小时间间隔为${passmin}天,符合要求(不小于6天)${NC}" 
+	else
+		echo -e "${RED}[!]口令更改最小时间间隔为${passmin}天,不符合要求,建议设置不小于6天${NC}" 
+	fi
+
+	echo -e "${YELLOW}[2.1.4]正在进行口令最小长度检查:${NC}" 
+	passlen=$(cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}')
+	if [ $passlen -ge 8 ];then
+		echo -e "${YELLOW}[+]口令最小长度为${passlen},符合要求(最小长度不小于8)${NC}" 
+	else
+		echo -e "${RED}[!]口令最小长度为${passlen},不符合要求,建议设置最小长度大于等于8${NC}" 
+	fi
+
+	echo -e "${YELLOW}[2.1.5]正在进行口令过期警告时间天数检查:${NC}" 
+	passage=$(cat /etc/login.defs | grep PASS_WARN_AGE | grep -v ^# | awk '{print $2}')
+	if [ $passage -ge 30 -a $passage -lt $passmax ];then
+		echo -e "${YELLOW}[+]口令过期警告时间天数为${passage},符合要求(要求大于等于30天并小于口令生存周期)${NC}" 
+	else
+		echo -e "${RED}[!]口令过期警告时间天数为${passage},不符合要求,建议设置大于等于30并小于口令生存周期${NC}" 
+	fi
+	printf "\n" 
 
 
-	# 基线检查
+	echo -e "${YELLOW}[2.2.1]正在检查密码复杂度策略[/etc/pam.d/system-auth]:${NC}" 
+	(echo -e "[+]密码复杂度策略如下:" && cat /etc/pam.d/system-auth | grep -v "#") | 
+	printf "\n" 
+
+
+	echo -e "${YELLOW}[2.2.2]正在检查密码已过期用户[/etc/shadow]:${NC}" 
+	NOW=$(date "+%s")
+	day=$((${NOW}/86400))
+	passwdexpired=$(grep -v ":[\!\*x]([\*\!])?:" /etc/shadow | awk -v today=${day} -F: '{ if (($5!="") && (today>$3+$5)) { print $1 }}')
+	if [ -n "$passwdexpired" ];then
+		(echo -e "${RED}[!]以下用户的密码已过期:${NC}" && echo "$passwdexpired")  
+	else
+		echo -e "${YELLOW}[+]未发现密码已过期用户${NC}" 
+	fi
+	printf "\n" 
+
+
+	echo -e "${YELLOW}[2.2.3]正在检查账号超时锁定策略[/etc/profile]:${NC}"  
+	account_timeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
+	if [ "$account_timeout" != ""  ];then
+		TMOUT=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
+		if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
+			echo -e "${YELLOW}[+]账号超时时间为${TMOUT}秒,符合要求${NC}"  
+		else
+			echo -e "${RED}[!]账号超时时间为${TMOUT}秒,不符合要求,建议设置小于600秒${NC}"  
+	fi
+	else
+		echo -e "${RED}[!]账号超时未锁定,不符合要求,建议设置小于600秒${NC}"  
+	fi
+	printf "\n"  
+
+
+	#### 【这是一个通用的文件检查，centOS7 和 ubuntu 等系统都适用】
+	echo -e "${YELLOW}[2.2.4]正在检查grub2密码策略[/boot/grub2/grub.cfg]:${NC}"
+	echo -e "[+]grub2密码策略如下:"
+
+	GRUB_CFG="/boot/grub2/grub.cfg"
+
+	# 检查文件是否存在
+	if [ ! -f "$GRUB_CFG" ]; then
+		echo -e "${RED}[!]文件 $GRUB_CFG 不存在，无法进行 grub2 密码策略检查${NC}"
+	else
+		# 检查是否配置了加密密码（推荐使用 password_pbkdf2）
+		if grep -qE '^\s*password_pbkdf2' "$GRUB_CFG"; then
+			echo -e "${GREEN}[+]已设置安全的grub2密码(PBKDF2加密),符合要求${NC}"
+		else
+			echo -e "${RED}[!]未设置grub2密码,不符合安全要求!建议立即配置grub2密码保护${NC}"
+		fi
+	fi
+
+	printf "\n"
+
+
+
+	### 远程登录限制
+
 	echo "|----------------------------------------------------------------|" | $saveCheckResult
 	echo "==========10.策略配置检查(基线检查)==========" | $saveCheckResult
 	echo "[10.1]正在检查远程允许策略:" | $saveCheckResult
@@ -2068,98 +2092,7 @@ baselineCheck(){
 	printf "\n" | $saveCheckResult
 
 
-	echo "[10.2]正在检查密码有效期策略:" | $saveCheckResult
-	echo "[10.2.1]正在检查密码有效期策略[/etc/login.defs ]:" | $saveCheckResult
-	(echo "[+]密码有效期策略如下:" && cat /etc/login.defs | grep -v "#" | grep PASS ) | $saveCheckResult
-	printf "\n" | $saveCheckResult
 
-	echo "[10.2.1.1]正在进行口令生存周期检查:" | $saveCheckResult
-	passmax=$(cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}')
-	if [ $passmax -le 90 -a $passmax -gt 0 ];then
-		echo "[+]口令生存周期为${passmax}天,符合要求" | $saveCheckResult
-	else
-		echo "[!]口令生存周期为${passmax}天,不符合要求,建议设置为0-90天" | $saveCheckResult
-	fi
-
-	echo "[10.2.1.2]正在进行口令更改最小时间间隔检查:" | $saveCheckResult
-	passmin=$(cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}')
-	if [ $passmin -ge 6 ];then
-		echo "[+]口令更改最小时间间隔为${passmin}天,符合要求" | $saveCheckResult
-	else
-		echo "[!]口令更改最小时间间隔为${passmin}天,不符合要求,建议设置不小于6天" | $saveCheckResult
-	fi
-
-	echo "[10.2.1.3]正在进行口令最小长度检查:" | $saveCheckResult
-	passlen=$(cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}')
-	if [ $passlen -ge 8 ];then
-		echo "[+]口令最小长度为${passlen},符合要求" | $saveCheckResult
-	else
-		echo "[!]口令最小长度为${passlen},不符合要求,建议设置最小长度大于等于8" | $saveCheckResult
-	fi
-
-	echo "[10.2.1.4]正在进行口令过期警告时间天数检查:" | $saveCheckResult
-	passage=$(cat /etc/login.defs | grep PASS_WARN_AGE | grep -v ^# | awk '{print $2}')
-	if [ $passage -ge 30 -a $passage -lt $passmax ];then
-		echo "[+]口令过期警告时间天数为${passage},符合要求" | $saveCheckResult
-	else
-		echo "[!]口令过期警告时间天数为${passage},不符合要求,建议设置大于等于30并小于口令生存周期" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.2.2]正在检查密码复杂度策略[/etc/pam.d/system-auth]:" | $saveCheckResult
-	(echo "[+]密码复杂度策略如下:" && cat /etc/pam.d/system-auth | grep -v "#") | $saveCheckResult
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.2.3]正在检查密码已过期用户[/etc/shadow]:" | $saveCheckResult
-	NOW=$(date "+%s")
-	day=$((${NOW}/86400))
-	passwdexpired=$(grep -v ":[\!\*x]([\*\!])?:" /etc/shadow | awk -v today=${day} -F: '{ if (($5!="") && (today>$3+$5)) { print $1 }}')
-	if [ -n "$passwdexpired" ];then
-		(echo "[+]以下用户的密码已过期:" && echo "$passwdexpired")  | $saveCheckResult
-	else
-		echo "[+]未发现密码已过期用户" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.2.4]正在检查账号超时锁定策略[/etc/profile]:" | $saveCheckResult
-	account_timeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
-	if [ "$account_timeout" != ""  ];then
-		TMOUT=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
-		if [ $TMOUT -le 600 -a $TMOUT -ge 10 ];then
-			echo "[+]账号超时时间为${TMOUT}秒,符合要求" | $saveCheckResult
-		else
-			echo "[!]账号超时时间为${TMOUT}秒,不符合要求,建议设置小于600秒" | $saveCheckResult
-	fi
-	else
-		echo "[!]账号超时未锁定,不符合要求,建议设置小于600秒" | $saveCheckResult 
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.2.5]正在检查grub密码策略[/etc/grub.conf]:" | $saveCheckResult
-	grubpass=$(cat /etc/grub.conf | grep password)
-	if [ $? -eq 0 ];then
-		echo "[+]已设置grub密码,符合要求" | $saveCheckResult 
-	else
-		echo "[!]未设置grub密码,不符合要求,建议设置grub密码" | $saveCheckResult 
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.2.6]正在检查lilo密码策略[/etc/lilo.conf]:" | $saveCheckResult
-	if [ -f  /etc/lilo.conf ];then
-		lilopass=$(cat /etc/lilo.conf | grep password 2> /dev/null)
-		if [ $? -eq 0 ];then
-			echo "[+]已设置lilo密码,符合要求" | $saveCheckResult
-		else
-			echo "[!]未设置lilo密码,不符合要求,建议设置lilo密码" | $saveCheckResult
-		fi
-	else
-		echo "[+]未发现/etc/lilo.conf文件" | $saveCheckResult
-	fi
 
 
 	echo "[10.3]正在检查selinux策略:" | $saveCheckResult
