@@ -444,8 +444,9 @@ linuxGun.sh 概要
 				- services文件权限
 				- grub.conf文件权限
 				- xinetd.conf文件权限
-				- lilo.conf文件权限
+				- lilo.conf文件权限(存在版本久远-弃用)
 				- limits.conf文件权限
+				    - core dump 关闭
 			- 系统文件属性检查
 				- passwd文件属性
 				- shadow文件属性

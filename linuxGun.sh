@@ -2283,15 +2283,22 @@ baselineCheck(){
 	check_file_perm "/boot/grub2/grub.cfg" "-rw-------" "/boot/grub2/grub.cfg (grub.cfg)"
 	check_file_perm "/etc/default/grub" "-rw-r--r--" "/etc/default/grub (grub)"
 	check_file_perm "/etc/xinetd.conf" "-rw-------" "/etc/xinetd.conf"
+	check_file_perm "/etc/security/limits.conf" "-rw-r--r--" "/etc/security/limits.conf (core dump config)"
 	printf "\n"
 
 
 	# core dump
+	# Core Dump（核心转储） 是操作系统在程序异常崩溃（如段错误、非法指令等）时，自动生成的一个文件，记录了程序崩溃时的内存状态和进程信息
 	echo -e "${YELLOW}正在检查 core dump 设置[/etc/security/limits.conf]${NC}"
 	if (grep -qE '^\*\s+soft\s+core\s+0' /etc/security/limits.conf && grep -qE '^\*\s+hard\s+core\s+0' /etc/security/limits.conf); then
 		echo -e "${YELLOW}[+] core dump 已禁用，符合规范${NC}"
+		# 虽然 core dump可以辅助排查系统崩溃,但是在生产和安全敏感场景中,core dump推荐禁用
 	else
-		echo -e "${RED}[!] core dump 未完全禁用，建议添加: * soft core 0 和 * hard core 0 到 limits.conf${NC}"
+		echo -e "${RED}[!]core dump 未完全禁用,建议添加: * soft core 0 和 * hard core 0 到 limits.conf${NC}"
+		# * 所有用户
+		# soft 软限制,用户可自行调整上限
+		# hard 硬限制,系统管理员可自行调整上限
+		# core 0 表示禁止生成core文件
 	fi
 
 
