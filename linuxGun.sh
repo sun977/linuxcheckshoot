@@ -1965,6 +1965,71 @@ otherCheck(){
 
 }
 
+
+# 防火墙信息检查函数
+check_firewall_rules() {
+    echo -e "${YELLOW}[+]正在检查防火墙策略（允许/拒绝规则）:${NC}"
+
+    if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld; then
+        echo -e "${YELLOW}[+]检测到 firewalld 正在运行${NC}"
+        
+        # 获取所有启用的区域
+        ZONES=$(firewall-cmd --get-active-zones | awk '{print $1}')
+
+        for ZONE in $ZONES; do
+            echo -e "${RED}[!]区域 [${ZONE}] 的配置:${NC}"
+            
+            # 允许的服务
+            SERVICES=$(firewall-cmd --zone=$ZONE --list-services 2>/dev/null)
+            if [ -n "$SERVICES" ]; then
+                echo -e "  [+] 允许的服务: $SERVICES"
+            else
+                echo -e "  [-] 没有配置允许的服务"
+            fi
+
+            # 允许的端口
+            PORTS=$(firewall-cmd --zone=$ZONE --list-ports 2>/dev/null)
+            if [ -n "$PORTS" ]; then
+                echo -e "  [+] 允许的端口: $PORTS"
+            else
+                echo -e "  [-] 没有配置允许的端口"
+            fi
+
+            # 允许的源IP
+            SOURCES=$(firewall-cmd --zone=$ZONE --list-sources 2>/dev/null)
+            if [ -n "$SOURCES" ]; then
+                echo -e "  [+] 允许的源IP: $SOURCES"
+            else
+                echo -e "  [-] 没有配置允许的源IP"
+            fi
+
+            # 拒绝的源IP（黑名单）
+            DENY_IPS=$(firewall-cmd --zone=$ZONE --list-rich-rules | grep 'reject' | grep 'source address' | awk -F "'" '{print $2}')
+            if [ -n "$DENY_IPS" ]; then
+                echo -e "  [!] 拒绝的源IP: $DENY_IPS"
+            else
+                echo -e "  [-] 没有配置拒绝的源IP"
+            fi
+
+            printf "\n"
+        done
+
+    elif [ -x /sbin/iptables ] && iptables -L -n -v &>/dev/null; then
+        echo -e "${YELLOW}[+]检测到 iptables 正在运行${NC}"
+
+        echo -e "${RED}[!]允许的规则(ACCEPT):${NC}"
+        iptables -L -n -v | grep ACCEPT
+        echo -e "${RED}[!]拒绝的规则(REJECT/DROP):${NC}"
+        iptables -L -n -v | grep -E 'REJECT|DROP'
+
+    else
+        echo -e "${YELLOW}[+]未检测到 active 的防火墙服务(firewalld/iptables)${NC}"
+    fi
+
+    printf "\n"
+}
+
+
 # 基线检查【未完成】
 baselineCheck(){
 	# 基线检查项
@@ -2046,6 +2111,10 @@ baselineCheck(){
 
 
 	#### 【这是一个通用的文件检查，centOS7 和 ubuntu 等系统都适用】
+	# 角色: 这是 GRUB 2 引导加载程序的实际配置文件，包含了启动菜单项和其他引导信息。
+	# 内容: 包含了所有可用操作系统条目、内核版本、启动参数等详细信息。这个文件通常非常复杂，并不适合直接手工编辑。
+	# 生成方式: 此文件是由 grub2-mkconfig 命令根据 /etc/default/grub 文件中的设置以及其他脚本（如 /etc/grub.d/ 目录下的脚本）自动生成的。
+	# 作用: 在系统启动时，GRUB 2 使用此文件来显示启动菜单并加载选定的操作系统或内核
 	echo -e "${YELLOW}[2.2.4]正在检查grub2密码策略[/boot/grub2/grub.cfg]:${NC}"
 	echo -e "[+]grub2密码策略如下:"
 
@@ -2066,30 +2135,93 @@ baselineCheck(){
 	printf "\n"
 
 
-
-	### 远程登录限制
-
-	echo "|----------------------------------------------------------------|" | $saveCheckResult
-	echo "==========10.策略配置检查(基线检查)==========" | $saveCheckResult
-	echo "[10.1]正在检查远程允许策略:" | $saveCheckResult
-	echo "[10.1.1]正在检查远程允许策略[/etc/hosts.allow]:" | $saveCheckResult
+	### 远程登录限制 TCP Wrappers
+	# TCP Wrappers 是一种用于增强网络安全性的工具，它通过基于主机的访问控制来限制对网络服务的访问。
+	# 一些流行的服务如 SSH (sshd)、FTP (vsftpd) 和 Telnet 默认支持 TCP Wrappers。
+	# 尽管 TCP Wrappers 提供了一种简单的方法来控制对服务的访问，但随着更高级的防火墙和安全技术（例如 iptables、firewalld）的出现，TCP Wrappers 的使用已经不像过去那样普遍。
+	# 然而，在某些环境中，它仍然是一个有效的补充措施。
+	echo -e "${YELLOW}[3]正在检查远程登录策略(基于 TCP Wrappers):${NC}"  
+	echo -e "${YELLOW}[3.1.1]正在检查远程允许策略[/etc/hosts.allow]:${NC}"  
 	hostsallow=$(cat /etc/hosts.allow | grep -v '#')
 	if [ -n "$hostsallow" ];then
-		(echo "[!]允许以下IP远程访问:" && echo "$hostsallow") |  $saveDangerResult | $saveCheckResult
+		(echo -e "${RED}[!]允许以下IP远程访问:${NC}" && echo "$hostsallow")  
 	else
-		echo "[+]hosts.allow文件未发现允许远程访问地址" | $saveCheckResult
+		echo -e "${YELLOW}[+]hosts.allow文件未发现允许远程访问地址${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"   
 
-
-	echo "[10.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:" | $saveCheckResult
+	echo -e "${YELLOW}[3.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:${NC}"  
 	hostsdeny=$(cat /etc/hosts.deny | grep -v '#')
 	if [ -n "$hostsdeny" ];then
-		(echo "[!]拒绝以下IP远程访问:" && echo "$hostsdeny") | $saveCheckResult
+		(echo -e "${RED}[!]拒绝以下IP远程访问:${NC}" && echo "$hostsdeny")  
 	else
-		echo "[+]hosts.deny文件未发现拒绝远程访问地址" | $saveCheckResult
+		echo -e "${YELLOW}[+]hosts.deny文件未发现拒绝远程访问地址${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"   
+
+	### 防火墙策略检查 firewalld 和 iptables  引用函数
+	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
+    echo -e "${YELLOW}[+]正在检查防火墙策略（允许/拒绝规则）:${NC}"
+    if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld; then
+        echo -e "${YELLOW}[+]检测到 firewalld 正在运行${NC}"
+        
+        # 获取所有启用的区域
+        ZONES=$(firewall-cmd --get-active-zones | awk '{print $1}')
+
+        for ZONE in $ZONES; do
+            echo -e "${RED}[!]区域 [${ZONE}] 的配置:${NC}"
+            
+            # 允许的服务
+            SERVICES=$(firewall-cmd --zone=$ZONE --list-services 2>/dev/null)
+            if [ -n "$SERVICES" ]; then
+                echo -e "  [+] 允许的服务: $SERVICES"
+            else
+                echo -e "  [-] 没有配置允许的服务"
+            fi
+
+            # 允许的端口
+            PORTS=$(firewall-cmd --zone=$ZONE --list-ports 2>/dev/null)
+            if [ -n "$PORTS" ]; then
+                echo -e "  [+] 允许的端口: $PORTS"
+            else
+                echo -e "  [-] 没有配置允许的端口"
+            fi
+
+            # 允许的源IP
+            SOURCES=$(firewall-cmd --zone=$ZONE --list-sources 2>/dev/null)
+            if [ -n "$SOURCES" ]; then
+                echo -e "  [+] 允许的源IP: $SOURCES"
+            else
+                echo -e "  [-] 没有配置允许的源IP"
+            fi
+
+            # 拒绝的源IP（黑名单）
+            DENY_IPS=$(firewall-cmd --zone=$ZONE --list-rich-rules | grep 'reject' | grep 'source address' | awk -F "'" '{print $2}')
+            if [ -n "$DENY_IPS" ]; then
+                echo -e "  [!] 拒绝的源IP: $DENY_IPS"
+            else
+                echo -e "  [-] 没有配置拒绝的源IP"
+            fi
+
+            printf "\n"
+        done
+
+    elif [ -x /sbin/iptables ] && iptables -L -n -v &>/dev/null; then
+        echo -e "${YELLOW}[+]检测到 iptables 正在运行${NC}"
+
+        echo -e "${RED}[!]允许的规则(ACCEPT):${NC}"
+        iptables -L -n -v | grep ACCEPT
+        echo -e "${RED}[!]拒绝的规则(REJECT/DROP):${NC}"
+        iptables -L -n -v | grep -E 'REJECT|DROP'
+
+    else
+        echo -e "${YELLOW}[+]未检测到 active 的防火墙服务(firewalld/iptables)${NC}"
+    fi
+
+    printf "\n"
+
+
+
 
 
 
