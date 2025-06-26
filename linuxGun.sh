@@ -2215,14 +2215,14 @@ baselineCheck(){
 
 	### 防火墙策略检查 firewalld 和 iptables  引用函数
 	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
-    firewallRulesCheck()
+    firewallRulesCheck
 	printf "\n"  
 
 	### 认证与授权
 	#### Selinux 策略
 	echo -e "[4]正在检查selinux策略:"  
 	# echo "selinux策略如下:" && grep -vE '#|^\s*$' /etc/sysconfig/selinux
-	selinuxStatusCheck()
+	selinuxStatusCheck
 	printf "\n"  
 
 
