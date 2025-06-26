@@ -1967,7 +1967,7 @@ otherCheck(){
 
 
 # 防火墙信息检查函数
-check_firewall_rules() {
+firewallRulesCheck(){
     echo -e "${YELLOW}[+]正在检查防火墙策略（允许/拒绝规则）:${NC}"
 
     if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld; then
@@ -2162,7 +2162,7 @@ baselineCheck(){
 
 	### 防火墙策略检查 firewalld 和 iptables  引用函数
 	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
-    check_firewall_rules()
+    firewallRulesCheck()
 
 
 
