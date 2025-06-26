@@ -1974,7 +1974,8 @@ check_firewall_rules() {
         echo -e "${YELLOW}[+]检测到 firewalld 正在运行${NC}"
         
         # 获取所有启用的区域
-        ZONES=$(firewall-cmd --get-active-zones | awk '{print $1}')
+        # ZONES=$(firewall-cmd --get-active-zones | awk '{print $1}')
+		ZONES=$(firewall-cmd --get-active-zones | grep -v '^\s*$' | grep -v '^\s' | sort -u)
 
         for ZONE in $ZONES; do
             echo -e "${RED}[!]区域 [${ZONE}] 的配置:${NC}"
@@ -2161,68 +2162,7 @@ baselineCheck(){
 
 	### 防火墙策略检查 firewalld 和 iptables  引用函数
 	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
-    echo -e "${YELLOW}[+]正在检查防火墙策略（允许/拒绝规则）:${NC}"
-    if command -v firewall-cmd &>/dev/null && systemctl is-active --quiet firewalld; then
-        echo -e "${YELLOW}[+]检测到 firewalld 正在运行${NC}"
-        
-        # 获取所有启用的区域
-        ZONES=$(firewall-cmd --get-active-zones | awk '{print $1}')
-
-        for ZONE in $ZONES; do
-            echo -e "${RED}[!]区域 [${ZONE}] 的配置:${NC}"
-            
-            # 允许的服务
-            SERVICES=$(firewall-cmd --zone=$ZONE --list-services 2>/dev/null)
-            if [ -n "$SERVICES" ]; then
-                echo -e "  [+] 允许的服务: $SERVICES"
-            else
-                echo -e "  [-] 没有配置允许的服务"
-            fi
-
-            # 允许的端口
-            PORTS=$(firewall-cmd --zone=$ZONE --list-ports 2>/dev/null)
-            if [ -n "$PORTS" ]; then
-                echo -e "  [+] 允许的端口: $PORTS"
-            else
-                echo -e "  [-] 没有配置允许的端口"
-            fi
-
-            # 允许的源IP
-            SOURCES=$(firewall-cmd --zone=$ZONE --list-sources 2>/dev/null)
-            if [ -n "$SOURCES" ]; then
-                echo -e "  [+] 允许的源IP: $SOURCES"
-            else
-                echo -e "  [-] 没有配置允许的源IP"
-            fi
-
-            # 拒绝的源IP（黑名单）
-            DENY_IPS=$(firewall-cmd --zone=$ZONE --list-rich-rules | grep 'reject' | grep 'source address' | awk -F "'" '{print $2}')
-            if [ -n "$DENY_IPS" ]; then
-                echo -e "  [!] 拒绝的源IP: $DENY_IPS"
-            else
-                echo -e "  [-] 没有配置拒绝的源IP"
-            fi
-
-            printf "\n"
-        done
-
-    elif [ -x /sbin/iptables ] && iptables -L -n -v &>/dev/null; then
-        echo -e "${YELLOW}[+]检测到 iptables 正在运行${NC}"
-
-        echo -e "${RED}[!]允许的规则(ACCEPT):${NC}"
-        iptables -L -n -v | grep ACCEPT
-        echo -e "${RED}[!]拒绝的规则(REJECT/DROP):${NC}"
-        iptables -L -n -v | grep -E 'REJECT|DROP'
-
-    else
-        echo -e "${YELLOW}[+]未检测到 active 的防火墙服务(firewalld/iptables)${NC}"
-    fi
-
-    printf "\n"
-
-
-
-
+    check_firewall_rules()
 
 
 
