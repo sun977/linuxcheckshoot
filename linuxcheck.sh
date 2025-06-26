@@ -1459,7 +1459,7 @@ else
 fi
 printf "\n" | $saveCheckResult
 
-echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
+echo "[10.5]正在检查NIS配置策略:" | $saveCheckResult
 echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
 nisconfig=$(cat /etc/nsswitch.conf | egrep -v '#|^$')
 if [ -n "$nisconfig" ];then

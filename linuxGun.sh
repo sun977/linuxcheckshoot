@@ -2087,18 +2087,20 @@ selinuxStatusCheck(){
 # 基线检查【未完成】
 baselineCheck(){
 	# 基线检查项
-	## 账户审查 调用 userInfoCheck 函数
-	### 账户登录信息排查 调用 userInfoCheck 函数  函数需要修改
+	## 1.账户审查 调用 userInfoCheck 函数
+	### 1.1 账户登录信息排查 调用 userInfoCheck 函数  函数需要修改
 	echo -e "${YELLOW}==========基线检查==========${NC}" 
-	userInfoCheck()  
+	echo -e "${YELLOW}正在检查账户信息:${NC}"
+	userInfoCheck
+	printf "\n"
 
-	### 密码策略配置
-	echo -e "${YELLOW}[2]正在检查密码策略:${NC}" 
-	echo -e "${YELLOW}[2.1.1]正在检查密码有效期策略[/etc/login.defs ]:${NC}" 
+	### 1.2 密码策略配置
+	echo -e "${YELLOW}正在检查密码策略:${NC}" 
+	echo -e "${YELLOW}[+]正在检查密码有效期策略[/etc/login.defs ]:${NC}" 
 	(echo -e "${YELLOW}[+]密码有效期策略如下:${NC}" && cat /etc/login.defs | grep -v "#" | grep PASS ) 
 	printf "\n" 
 
-	echo -e "${YELLOW}[2.1.2]正在进行口令生存周期检查:${NC}"  
+	echo -e "${YELLOW}正在进行口令生存周期检查:${NC}"  
 	passmax=$(cat /etc/login.defs | grep PASS_MAX_DAYS | grep -v ^# | awk '{print $2}')
 	if [ $passmax -le 90 -a $passmax -gt 0 ];then
 		echo -e "${YELLOW}[+]口令生存周期为${passmax}天,符合要求(要求:0<密码有效期<90天)${NC}"  
@@ -2106,7 +2108,7 @@ baselineCheck(){
 		echo -e "${RED}[!]口令生存周期为${passmax}天,不符合要求,建议设置为1-90天${NC}" 
 	fi
 
-	echo -e "${YELLOW}[2.1.3]正在进行口令更改最小时间间隔检查:${NC}" 
+	echo -e "${YELLOW}正在进行口令更改最小时间间隔检查:${NC}" 
 	passmin=$(cat /etc/login.defs | grep PASS_MIN_DAYS | grep -v ^# | awk '{print $2}')
 	if [ $passmin -ge 6 ];then
 		echo -e "${YELLOW}[+]口令更改最小时间间隔为${passmin}天,符合要求(不小于6天)${NC}" 
@@ -2114,7 +2116,7 @@ baselineCheck(){
 		echo -e "${RED}[!]口令更改最小时间间隔为${passmin}天,不符合要求,建议设置不小于6天${NC}" 
 	fi
 
-	echo -e "${YELLOW}[2.1.4]正在进行口令最小长度检查:${NC}" 
+	echo -e "${YELLOW}正在进行口令最小长度检查:${NC}" 
 	passlen=$(cat /etc/login.defs | grep PASS_MIN_LEN | grep -v ^# | awk '{print $2}')
 	if [ $passlen -ge 8 ];then
 		echo -e "${YELLOW}[+]口令最小长度为${passlen},符合要求(最小长度不小于8)${NC}" 
@@ -2122,7 +2124,7 @@ baselineCheck(){
 		echo -e "${RED}[!]口令最小长度为${passlen},不符合要求,建议设置最小长度大于等于8${NC}" 
 	fi
 
-	echo -e "${YELLOW}[2.1.5]正在进行口令过期警告时间天数检查:${NC}" 
+	echo -e "${YELLOW}正在进行口令过期警告时间天数检查:${NC}" 
 	passage=$(cat /etc/login.defs | grep PASS_WARN_AGE | grep -v ^# | awk '{print $2}')
 	if [ $passage -ge 30 -a $passage -lt $passmax ];then
 		echo -e "${YELLOW}[+]口令过期警告时间天数为${passage},符合要求(要求大于等于30天并小于口令生存周期)${NC}" 
@@ -2131,13 +2133,11 @@ baselineCheck(){
 	fi
 	printf "\n" 
 
-
-	echo -e "${YELLOW}[2.2.1]正在检查密码复杂度策略[/etc/pam.d/system-auth]:${NC}" 
+	echo -e "${YELLOW}正在检查密码复杂度策略[/etc/pam.d/system-auth]:${NC}" 
 	(echo -e "[+]密码复杂度策略如下:" && cat /etc/pam.d/system-auth | grep -v "#") | 
 	printf "\n" 
 
-
-	echo -e "${YELLOW}[2.2.2]正在检查密码已过期用户[/etc/shadow]:${NC}" 
+	echo -e "${YELLOW}正在检查密码已过期用户[/etc/shadow]:${NC}" 
 	NOW=$(date "+%s")
 	day=$((${NOW}/86400))
 	passwdexpired=$(grep -v ":[\!\*x]([\*\!])?:" /etc/shadow | awk -v today=${day} -F: '{ if (($5!="") && (today>$3+$5)) { print $1 }}')
@@ -2149,7 +2149,7 @@ baselineCheck(){
 	printf "\n" 
 
 
-	echo -e "${YELLOW}[2.2.3]正在检查账号超时锁定策略[/etc/profile]:${NC}"  
+	echo -e "${YELLOW}正在检查账号超时锁定策略[/etc/profile]:${NC}"  
 	account_timeout=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
 	if [ "$account_timeout" != ""  ];then
 		TMOUT=$(cat /etc/profile | grep TMOUT | awk -F[=] '{print $2}')
@@ -2189,13 +2189,14 @@ baselineCheck(){
 	printf "\n"
 
 
-	### 远程登录限制 TCP Wrappers
+	### 1.3 远程登录限制 
+	#### 1.3.1 远程登录策略 TCP Wrappers
 	# TCP Wrappers 是一种用于增强网络安全性的工具，它通过基于主机的访问控制来限制对网络服务的访问。
 	# 一些流行的服务如 SSH (sshd)、FTP (vsftpd) 和 Telnet 默认支持 TCP Wrappers。
 	# 尽管 TCP Wrappers 提供了一种简单的方法来控制对服务的访问，但随着更高级的防火墙和安全技术（例如 iptables、firewalld）的出现，TCP Wrappers 的使用已经不像过去那样普遍。
 	# 然而，在某些环境中，它仍然是一个有效的补充措施。
-	echo -e "${YELLOW}[3]正在检查远程登录策略(基于 TCP Wrappers):${NC}"  
-	echo -e "${YELLOW}[3.1.1]正在检查远程允许策略[/etc/hosts.allow]:${NC}"  
+	echo -e "${YELLOW}正在检查远程登录策略(基于 TCP Wrappers):${NC}"  
+	echo -e "${YELLOW}正在检查远程允许策略[/etc/hosts.allow]:${NC}"  
 	hostsallow=$(cat /etc/hosts.allow | grep -v '#')
 	if [ -n "$hostsallow" ];then
 		(echo -e "${RED}[!]允许以下IP远程访问:${NC}" && echo "$hostsallow")  
@@ -2204,7 +2205,7 @@ baselineCheck(){
 	fi
 	printf "\n"   
 
-	echo -e "${YELLOW}[3.1.2]正在检查远程拒绝策略[/etc/hosts.deny]:${NC}"  
+	echo -e "${YELLOW}正在检查远程拒绝策略[/etc/hosts.deny]:${NC}"  
 	hostsdeny=$(cat /etc/hosts.deny | grep -v '#')
 	if [ -n "$hostsdeny" ];then
 		(echo -e "${RED}[!]拒绝以下IP远程访问:${NC}" && echo "$hostsdeny")  
@@ -2213,83 +2214,58 @@ baselineCheck(){
 	fi
 	printf "\n"   
 
-	### 防火墙策略检查 firewalld 和 iptables  引用函数
-	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
+
+	### 1.4 认证与授权
+	#### 1.4.1 SSH安全增强 调用函数
+	echo -e "[${YELLOW}正在检查SSHD配置策略:${NC}"  
+	sshFileCheck
+	printf "\n"
+	
+	#### 1.4.2 PAM策略
+
+
+	#### 1.4.3 其他认证服务策略 
+
+
+	## 2. 文件权限及访问控制 
+	### 2.1 关键文件保护
+	#### 2.1.1 文件权限策略
+
+	#### 2.1.2 系统文件属性
+
+
+	## 3. 网络配置与服务
+	### 3.1 端口和服务审计
+
+
+	### 3.2 防火墙配置
+	#### 防火墙策略检查 firewalld 和 iptables  引用函数
+	echo -e "${YELLOW}正在检查防火墙策略:${NC}"
     firewallRulesCheck
 	printf "\n"  
 
-	### 认证与授权
-	#### Selinux 策略
-	echo -e "[4]正在检查selinux策略:"  
+
+	### 3.3 网络参数优化
+
+	## 4. Selinux 策略
+	echo -e "${YELLOW}正在检查selinux策略:${NC}"  
 	# echo "selinux策略如下:" && grep -vE '#|^\s*$' /etc/sysconfig/selinux
 	selinuxStatusCheck
 	printf "\n"  
 
-
-	echo "[10.4]正在检查SSHD配置策略:" | $saveCheckResult
-	echo "[10.4.1]正在检查sshd配置[/etc/ssh/sshd_config]:" | $saveCheckResult
-	sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
-	if [ -n "$sshdconfig" ];then
-		(echo "[+]sshd配置文件如下:" && echo "$sshdconfig") | $saveCheckResult
-	else
-		echo "[!]未发现sshd配置文件" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.4.2]正在检查是否允许SSH空口令登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-	emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-	nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
-	if [ -n "$emptypasswd" ];then
-		echo "[!]允许空口令登录,请注意!"
-		if [ -n "$nopasswd" ];then
-			(echo "[!]以下用户空口令:" && echo "$nopasswd") |  $saveDangerResult | $saveCheckResult
-		else
-			echo "[+]但未发现空口令用户" | $saveCheckResult
-		fi
-	else
-		echo "[+]不允许空口令用户登录" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.4.3]正在检查是否允许SSH远程root登录[/etc/ssh/sshd_config]:" | $saveCheckResult
-	cat /etc/ssh/sshd_config | grep -v ^# |grep "PermitRootLogin no"
-	if [ $? -eq 0 ];then
-		echo "[+]root不允许登陆,符合要求" | $saveCheckResult
-	else
-		echo "[!]允许root远程登陆,不符合要求,建议/etc/ssh/sshd_config添加PermitRootLogin no" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[10.4.4]正在检查SSH协议版本[/etc/ssh/sshd_config]:" | $saveCheckResult
-	echo "[说明]需要详细的SSH版本信息另行检查,防止SSH版本过低,存在漏洞" | $saveCheckResult
-	protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
-	if [ "$protocolver" = "2" ];then
-		echo "[+]openssh使用ssh2协议,符合要求" 
-	else
-		echo "[!]openssh未ssh2协议,不符合要求"
-	fi
-
-	echo "[10.4.5]正在检查SSH版本[ssh -V]:" | $saveCheckResult
-	sshver=$(ssh -V)
-	if [ -n "$sshver" ];then
-		(echo "[+]ssh版本信息如下:" && echo "$sshver") | $saveCheckResult
-	else
-		(echo "[!]未发现ssh版本信息,请注意这是异常现象!") | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-	echo "[10.5]正在检查SNMP配置策略:" | $saveCheckResult
-	echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:" | $saveCheckResult
+	## 5. 服务配置策略
+	### 5.1 NIS(网络信息服务) 配置策略
+	echo -e "${YELLOW}正在检查nis配置:${NC}"
+	echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:"  
 	nisconfig=$(cat /etc/nsswitch.conf | egrep -v '#|^$')
 	if [ -n "$nisconfig" ];then
-		(echo "[+]NIS服务配置如下:" && echo "$nisconfig") | $saveCheckResult
+		(echo "[+]NIS服务配置如下:" && echo "$nisconfig")  
 	else
-		echo "[+]未发现NIS服务配置" | $saveCheckResult
+		echo "[+]未发现NIS服务配置"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
+
+
 
 
 	echo "[10.6]正在检查nginx配置策略:" | $saveCheckResult
