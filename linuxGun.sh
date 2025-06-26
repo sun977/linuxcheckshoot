@@ -2312,6 +2312,7 @@ baselineCheck(){
 	#### 2.1.2 系统文件属性
 	echo "[9.14]正在检查登陆相关文件属性:" | $saveCheckResult
 
+	# check_file_attributes "/etc/shadow" "/etc/shadow 文件属性" "i"
 	check_file_attributes(){
 		local file="$1"            # 要检查的文件路径
 		local desc="$2"            # 描述信息（可选）
