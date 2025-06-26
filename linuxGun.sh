@@ -2255,26 +2255,50 @@ baselineCheck(){
 
 	## 5. 服务配置策略
 	### 5.1 NIS(网络信息服务) 配置策略
-	echo -e "${YELLOW}正在检查nis配置:${NC}"
-	echo "[10.5.1]正在检查nis配置[/etc/nsswitch.conf]:"  
+	# NIS 它允许在网络上的多个系统之间共享一组通用的配置文件，比如密码文件（/etc/passwd）、组文件（/etc/group）和主机名解析文件（/etc/hosts）等
+	# NIS 配置问价的一般格式: database: source1 [source2 ...],示例如下:
+	# passwd: files nis
+	# group: files nis
+	# hosts: files dns
+	echo -e "${YELLOW}正在检查NIS(网络信息服务)配置:${NC}"
+	echo -e "${YELLOW}正在检查NIS配置文件[/etc/nsswitch.conf]:${NC}"  
 	nisconfig=$(cat /etc/nsswitch.conf | egrep -v '#|^$')
 	if [ -n "$nisconfig" ];then
-		(echo "[+]NIS服务配置如下:" && echo "$nisconfig")  
+		(echo -e "${YELLOW}[+]NIS服务配置如下:${NC}" && echo "$nisconfig")  
 	else
-		echo "[+]未发现NIS服务配置"  
+		echo -e "${RED}[!]未发现NIS服务配置${NC}"  
 	fi
 	printf "\n"  
 
+	### 5.2 SNMP 服务配置
+	# 这个服务不是默认安装的,没安装不存在默认配置文件
+	echo -e "${YELLOW}正在检查SNMP(简单网络协议)配置策略:${NC}"  
+	echo -e "${YELLOW}正在检查SNMP配置[/etc/snmp/snmpd.conf]:${NC}"  
+	if [ -f /etc/snmp/snmpd.conf ];then
+		public=$(cat /etc/snmp/snmpd.conf | grep public | grep -v ^# | awk '{print $4}')
+		private=$(cat /etc/snmp/snmpd.conf | grep private | grep -v ^# | awk '{print $4}')
+		if [ "$public" = "public" ];then
+			echo -e "${YELLOW}发现snmp服务存在默认团体名public,不符合要求${NC}"  
+			# Community String（团体字符串）:这是 SNMPv1 和 SNMPv2c 中用于身份验证的一个明文字符串。
+			# 它类似于密码，用于限制谁可以访问设备的 SNMP 数据。默认情况下，许多设备设置为“public”，这是一个安全隐患，因此建议更改这个值
+		fi
+		if [ "$private" = "private" ];then
+			echo -e "${YELLOW}发现snmp服务存在默认团体名private,不符合要求${NC}"  
+		fi
+	else
+		echo -e "${YELLOW}snmp服务配置文件不存在,可能没有运行snmp服务(使用命令可检测是否安装:[rpm -qa | grep net-snmp])${NC}"  
+	fi
+	printf "\n"  
 
-
-
-	echo "[10.6]正在检查nginx配置策略:" | $saveCheckResult
-	echo "[10.6.1]正在检查Nginx配置文件[nginx/conf/nginx.conf]:" | $saveCheckResult
+	### 5.3 Nginx配置策略
+	# 只检查默认安装路径的 nginx 配置文件
+	echo -e "${YELLOW}正在检查nginx配置策略:${NC}"  
+	echo -e "${YELLOW}正在检查Nginx配置文件[nginx/conf/nginx.conf]:${NC}"  
 	# nginx=$(whereis nginx | awk -F: '{print $2}')
 	nginx_bin=$(which nginx) 
 	if [ -n "$nginx_bin" ];then
-		echo "[+]发现主机存在Nginx服务" | $saveCheckResult
-		echo "[+]Nginx服务二进制文件路径为:$nginx_bin" | $saveCheckResult
+		echo -e "${YELLOW}[+]发现主机存在Nginx服务${NC}"  
+		echo -e "${YELLOW}[+]Nginx服务二进制文件路径为:$nginx_bin${NC}"  
 		# 获取 nginx 配置文件位置，如果 nginx -V 获取不到，则默认为/etc/nginx/nginx.conf
 		config_output="$($nginx_bin -V 2>&1)"
 		config_path=$(echo "$config_output" | awk '/configure arguments:/ {split($0,a,"--conf-path="); if (length(a[2])>0) print a[2]}')  # 获取 nginx 配置文件路径
@@ -2287,44 +2311,25 @@ baselineCheck(){
 		fi
 
 		if [ -f "$ngin_conf" ];then
-			(echo "[+]Nginx配置文件可能的路径为:$ngin_conf") | $saveCheckResult  # 输出变量值
-			echo "[注意]这里只检测nginx.conf主配置文件,其他导入配置文件在主文件同级目录下,请人工排查" | $saveCheckResult
-			(echo "[+]Nginx配置文件内容为:" && cat $ngin_conf | grep -v "^$") | $saveCheckResult   # 查看值文件内容
-			echo "[10.6.2]正在检查Nginx端口转发配置[$ngin_conf]:" | $saveCheckResult
+			(echo -e "${YELLOW}[+]Nginx配置文件可能的路径为:$ngin_conf ${NC}")    # 输出变量值
+			echo -e "${YELLOW}[注意]这里只检测nginx.conf主配置文件,其他导入配置文件在主文件同级目录下,请人工排查${NC}"  
+			(echo -e "${YELLOW}[+]Nginx配置文件内容为:${NC}" && cat $ngin_conf | grep -v "^$")     # 查看值文件内容
+			echo -e "${YELLOW}[+]正在检查Nginx端口转发配置[$ngin_conf]:${NC}"  
 			nginxportconf=$(cat $ngin_conf | grep -E "listen|server|server_name|upstream|proxy_pass|location"| grep -v "^$")
 			if [ -n "$nginxportconf" ];then
-				(echo "[+]可能存在端口转发的情况,请人工分析:" && echo "$nginxportconf") | $saveCheckResult | $saveDangerResult
+				(echo -e "${YELLOW}[+]可能存在端口转发的情况,请人工分析:${NC}" && echo "$nginxportconf")  
 			else
-				echo "[+]未发现端口转发配置" | $saveCheckResult
+				echo -e "${YELLOW}[+]未发现端口转发配置${NC}"  
 			fi
 		else
-			echo "[!]未发现Nginx配置文件" | $saveCheckResult
+			echo -e "${RED}[!]未发现Nginx配置文件${NC}"  
 		fi
 	else
-		echo "[+]未发现Nginx服务" | $saveCheckResult
+		echo -e "${YELLOW}[+]未发现Nginx服务${NC}"  
 	fi
-	printf "\n" | $saveCheckResult
+	printf "\n"  
 
 
-	echo "[10.7]正在检查SNMP配置策略:" | $saveCheckResult
-	echo "[10.7.1]正在检查SNMP配置[/etc/snmp/snmpd.conf]:." | $saveCheckResult
-	if [ -f /etc/snmp/snmpd.conf ];then
-		public=$(cat /etc/snmp/snmpd.conf | grep public | grep -v ^# | awk '{print $4}')
-		private=$(cat /etc/snmp/snmpd.conf | grep private | grep -v ^# | awk '{print $4}')
-		if [ "$public" = "public" ];then
-			echo "发现snmp服务存在默认团体名public,不符合要求" | $saveCheckResult
-		fi
-		if [ "$private" = "private" ];then
-			echo "发现snmp服务存在默认团体名private,不符合要求" | $saveCheckResult
-		fi
-	else
-		echo "snmp服务配置文件不存在,可能没有运行snmp服务" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-	echo "防火墙策略基线在[2.6]节,不在赘述!" | $saveCheckResult
-	echo "配置策略检查(基线检查)结束!" | $saveCheckResult
-	echo "|^----------------------------------------------------------------^|" | $saveCheckResult
 
 
 
