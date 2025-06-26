@@ -2282,7 +2282,7 @@ baselineCheck(){
 	check_file_perm "/etc/services" "-rw-r--r--" "/etc/services (services)"
 	check_file_perm "/boot/grub2/grub.cfg" "-rw-------" "/boot/grub2/grub.cfg (grub.cfg)"
 	check_file_perm "/etc/default/grub" "-rw-r--r--" "/etc/default/grub (grub)"
-	check_file_perm "/etc/xinetd.conf" "-rw-------"" "/etc/xinetd.conf"
+	check_file_perm "/etc/xinetd.conf" "-rw-------" "/etc/xinetd.conf"
 
 
 	# core dump
