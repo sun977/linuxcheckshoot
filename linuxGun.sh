@@ -2259,6 +2259,12 @@ baselineCheck(){
 		local expected_perm=$2  # 期望的权限
 		local desc=$3 			# 描述
 
+		local RED='\033[0;31m'
+		local BLUE='\033[0;34m'
+		local YELLOW='\033[0;33m'
+		local GREEN='\033[0;32m'
+		local NC='\033[0m'
+
 		if [ ! -f "$file_path" ]; then
 			echo -e "${RED}[!] 文件 $file_path 不存在！${NC}"
 			return
@@ -2305,6 +2311,58 @@ baselineCheck(){
 
 	#### 2.1.2 系统文件属性
 	echo "[9.14]正在检查登陆相关文件属性:" | $saveCheckResult
+
+	check_file_attributes(){
+		local file="$1"            # 要检查的文件路径
+		local desc="$2"            # 描述信息（可选）
+		local required_attr="$3"   # 必须包含的属性，如 "i" 或 "a"（可选）
+
+		local yellow='\033[1;33m'
+		local red='\033[0;31m'
+		local nc='\033[0m'
+
+		echo -e "${yellow}[+] 正在检查文件属性: $desc (${file})${nc}"
+
+		if [ ! -e "$file" ]; then
+			echo -e "${red}[-] 文件 $file 不存在！${nc}"
+			return 1
+		fi
+
+		# 检查是否支持 lsattr 命令
+		if ! command -v lsattr &>/dev/null; then
+			echo -e "${red}[-] 未安装 e2fsprogs,无法使用 lsattr 命令，请先安装相关工具包。${nc}"
+			return 1
+		fi
+
+		# 获取文件属性字符串
+		attr=$(lsattr "$file" 2>/dev/null | awk '{print $1}')
+
+		flag=0
+
+		# 检查是否设置 i 属性
+		if [[ "$attr" == *i* ]]; then
+			echo -e "${yellow}[*] 文件 $file 存在 'i' 安全属性（不可修改/删除）${nc}"
+			flag=1
+		fi
+
+		# 检查是否设置 a 属性
+		if [[ "$attr" == *a* ]]; then
+			echo -e "${yellow}[*] 文件 $file 存在 'a' 安全属性（只允许追加）${nc}"
+			flag=1
+		fi
+
+		# 如果没有设置任何安全属性
+		if [ $flag -eq 0 ]; then
+			echo -e "${red}[!] 文件 $file 不存在任何安全属性(推荐设置 'i' 或 'a')${nc}"
+			echo -e "${red}    建议执行: chattr +i $file (完全保护)或 chattr +a $file (仅追加)${nc}"
+			return 1
+		else
+			return 0
+		fi
+	}
+
+
+
 	echo "[9.14.1]正在检查passwd文件属性:" | $saveCheckResult
 	flag=0
 	for ((x=1;x<=15;x++))
