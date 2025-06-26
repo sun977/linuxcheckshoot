@@ -428,6 +428,7 @@ linuxGun.sh 概要
 			- 防火墙访问策略
 				- 允许服务IP端口
 		- 认证与授权
+		    - Selinux策略
 			- SSH安全增强
 				- sshd配置
 				- 空口令登录

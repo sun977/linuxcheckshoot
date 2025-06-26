@@ -2031,6 +2031,59 @@ firewallRulesCheck(){
 }
 
 
+# selinux状态检查函数
+selinuxStatusCheck(){
+    echo -e "${YELLOW}正在检查 SELinux 安全策略:${NC}"
+
+    # 检查是否存在 SELinux 相关命令
+    if ! command -v getenforce &>/dev/null && [ ! -f /usr/sbin/getenforce ] && [ ! -f /sbin/getenforce ]; then
+        echo -e "${YELLOW}[+]未安装 SELinux 工具，跳过检查${NC}"
+        printf "\n"
+        return
+    fi
+
+    # 获取 SELinux 当前状态
+    SELINUX_STATUS=$(getenforce 2>/dev/null)
+
+    case "$SELINUX_STATUS" in
+        Enforcing)
+            echo -e "${RED}[!]SELinux 正在运行于 enforcing 模式(强制模式)${NC}"
+            ;;
+        Permissive)
+            echo -e "${YELLOW}[~]SELinux 处于 permissive 模式(仅记录不阻止)${NC}"
+            ;;
+        Disabled)
+            echo -e "${RED}[X]SELinux 已禁用(disabled)${NC}"
+            printf "\n"
+            return
+            ;;
+        *)
+            echo -e "${YELLOW}[?]无法识别 SELinux 状态: $SELINUX_STATUS${NC}"
+            printf "\n"
+            return
+            ;;
+    esac
+
+    # 获取 SELinux 策略类型
+    SELINUX_POLICY=$(sestatus | grep "Policy from config file" | awk '{print $NF}')
+    if [ -n "$SELINUX_POLICY" ]; then
+        echo -e "  [+]当前 SELinux 策略类型: ${GREEN}$SELINUX_POLICY${NC}"
+    else
+        echo -e "  [-]无法获取 SELinux 策略类型"
+    fi
+
+    # 获取 SELinux 配置文件中的默认模式
+    CONFIG_MODE=$(grep ^SELINUX= /etc/selinux/config | cut -d= -f2)
+    if [ -n "$CONFIG_MODE" ]; then
+        echo -e "  [i]配置文件中设定的默认模式: ${GREEN}${CONFIG_MODE^^}${NC}"
+    else
+        echo -e "  [-]无法读取 SELinux 默认启动模式配置"
+    fi
+
+    printf "\n"
+}
+
+
 # 基线检查【未完成】
 baselineCheck(){
 	# 基线检查项
@@ -2163,14 +2216,14 @@ baselineCheck(){
 	### 防火墙策略检查 firewalld 和 iptables  引用函数
 	echo -e "${YELLOW}[3.2]正在检查防火墙策略:${NC}"
     firewallRulesCheck()
+	printf "\n"  
 
-
-
-
-	echo "[10.3]正在检查selinux策略:" | $saveCheckResult
-	echo "[10.3.1]正在检查selinux策略:" | $saveCheckResult
-	(echo "selinux策略如下:" && egrep -v '#|^$' /etc/sysconfig/selinux ) | $saveCheckResult
-	printf "\n" | $saveCheckResult
+	### 认证与授权
+	#### Selinux 策略
+	echo -e "[4]正在检查selinux策略:"  
+	# echo "selinux策略如下:" && grep -vE '#|^\s*$' /etc/sysconfig/selinux
+	selinuxStatusCheck()
+	printf "\n"  
 
 
 	echo "[10.4]正在检查SSHD配置策略:" | $saveCheckResult
