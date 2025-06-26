@@ -2277,7 +2277,7 @@ baselineCheck(){
 	if [ "${services:1:9}" = "-rw-r--r--" ]; then
 		echo -e "${YELLOW}[+]/etc/services文件权限为644,符合规范${NC}"  
 	else
-		echo -e "${RED}[!]/etc/services文件权限为""$services:1:9}","不符合规范,权限应改为644${NC}"  
+		echo -e "${RED}[!]/etc/services文件权限为""${services:1:9}","不符合规范,权限应改为644${NC}"  
 	fi
 	printf "\n"  
 

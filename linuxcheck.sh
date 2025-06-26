@@ -1122,7 +1122,7 @@ services=$(ls -l /etc/services | awk '{print $1}')
 if [ "${services:1:9}" = "-rw-r--r--" ]; then
     echo "[+]/etc/services文件权限为644,符合规范" | $saveCheckResult
 else
-    echo "[!]/etc/services文件权限为""$services:1:9}","不符合规范,权限应改为644" |  $saveDangerResult | $saveCheckResult
+    echo "[!]/etc/services文件权限为""${services:1:9}","不符合规范,权限应改为644" |  $saveDangerResult | $saveCheckResult
 fi
 printf "\n" | $saveCheckResult
 
