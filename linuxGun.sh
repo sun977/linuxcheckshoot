@@ -2253,7 +2253,7 @@ baselineCheck(){
 	echo -e "${YELLOW}正在检查登陆相关文件权限:${NC}"  
 	# echo -e "${YELLOW}正在检查etc文件权限[etc]:${NC}"  
 	
-	# 检查文件权限函数 
+	# 检查文件权限函数 (目录不适用)
 	check_file_perm(){
 		local file_path=$1      # 文件路径
 		local expected_perm=$2  # 期望的权限
@@ -2272,8 +2272,8 @@ baselineCheck(){
 		fi
 	}
 
-	echo -e "${YELLOW}正在检查登陆相关文件权限${NC}\n"
-	check_file_perm "/etc" "drwxr-x---" "/etc (etc)"
+	echo -e "${YELLOW}正在检查登陆相关文件权限${NC}"
+	# check_file_perm "/etc" "drwxr-x---" "/etc (etc)" # /etc 是目录
 	check_file_perm "/etc/passwd" "-rw-r--r--" "/etc/passwd (passwd)"
 	# check_file_perm "/etc/shadow" "----------" "/etc/shadow (shadow)"
 	check_file_perm "/etc/group" "-rw-r--r--" "/etc/group (group)"
@@ -2283,6 +2283,7 @@ baselineCheck(){
 	check_file_perm "/boot/grub2/grub.cfg" "-rw-------" "/boot/grub2/grub.cfg (grub.cfg)"
 	check_file_perm "/etc/default/grub" "-rw-r--r--" "/etc/default/grub (grub)"
 	check_file_perm "/etc/xinetd.conf" "-rw-------" "/etc/xinetd.conf"
+	printf "\n"
 
 
 	# core dump
