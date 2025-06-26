@@ -2169,6 +2169,7 @@ baselineCheck(){
 	# 内容: 包含了所有可用操作系统条目、内核版本、启动参数等详细信息。这个文件通常非常复杂，并不适合直接手工编辑。
 	# 生成方式: 此文件是由 grub2-mkconfig 命令根据 /etc/default/grub 文件中的设置以及其他脚本（如 /etc/grub.d/ 目录下的脚本）自动生成的。
 	# 作用: 在系统启动时，GRUB 2 使用此文件来显示启动菜单并加载选定的操作系统或内核
+	# /etc/grub2.cfg 是 /boot/grub2/grub.cfg 的软链接，如果要修改 grub 行为，应该修改 /etc/default/grub 文件，然后运行 grub2-mkconfig -o /boot/grub2/grub.cfg 来生成 /boot/grub2/grub.cfg 文件。
 	echo -e "${YELLOW}[2.2.4]正在检查grub2密码策略[/boot/grub2/grub.cfg]:${NC}"
 	echo -e "[+]grub2密码策略如下:"
 
@@ -2229,9 +2230,187 @@ baselineCheck(){
 
 	## 2. 文件权限及访问控制 
 	### 2.1 关键文件保护
-	#### 2.1.1 文件权限策略
+	#### 2.1.1 文件权限策略(登录相关文件权限)
+	echo -e "${YELLOW}正在检查登陆相关文件权限:${NC}"  
+	echo -e "${YELLOW}正在检查etc文件权限[etc]:${NC}"  
+	etc=$(ls -l / | grep etc | awk '{print $1}')
+	if [ "${etc:1:9}" = "rwxr-x---" ]; then
+		echo -e "${YELLOW}[+]/etc/权限为750,权限正常${NC}"  
+	else
+		echo -e "${RED}[!]/etc/文件权限为:""${etc:1:9}","权限不符合规划,权限应改为750${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查passwd文件权限[/etc/passwd]:${NC}"  
+	passwd=$(ls -l /etc/passwd | awk '{print $1}')
+	if [ "${passwd:1:9}" = "rw-r--r--" ]; then
+		echo -e "${YELLOW}[+]/etc/passwd文件权限为644,符合规范${NC}"  
+	else
+		echo -e "${RED}[!]/etc/passwd文件权限为:""${passwd:1:9}"",权限不符合规范,建议改为644${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查group文件权限[/etc/group]:${NC}"  
+	group=$(ls -l /etc/group | awk '{print $1}')
+	if [ "${group:1:9}" = "rw-r--r--" ]; then
+		echo -e "${YELLOW}[+]/etc/group文件权限为644,符合规范${NC}"  
+	else
+		echo -e "${RED}[!]/etc/goup文件权限为""${group:1:9}","不符合规范,权限应改为644${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查securetty文件权限[/etc/securetty]:${NC}"  
+	securetty=$(ls -l /etc/securetty | awk '{print $1}')
+	if [ "${securetty:1:9}" = "-rw-------" ]; then
+		echo -e "${YELLOW}[+]/etc/securetty文件权限为600,符合规范${NC}"  
+	else
+		echo -e "${RED}[!]/etc/securetty文件权限为""${securetty:1:9}","不符合规范,权限应改为600${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查services文件权限[/etc/services]:${NC}"  
+	services=$(ls -l /etc/services | awk '{print $1}')
+	if [ "${services:1:9}" = "-rw-r--r--" ]; then
+		echo -e "${YELLOW}[+]/etc/services文件权限为644,符合规范${NC}"  
+	else
+		echo -e "${RED}[!]/etc/services文件权限为""$services:1:9}","不符合规范,权限应改为644${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查grub.conf文件权限[/boot/grub2/grub.cfg]:${NC}"  
+	grubconf=$(ls -l /boot/grub2/grub.cfg | awk '{print $1}')
+	defaultgrub=$(ls -l /etc/default/grub | awk '{print $1}')
+	if [ "${grubconf:1:9}" = "-rw-------" ]; then
+		echo -e "${YELLOW}[+]/boot/grub2/grub.cfg 文件权限为600,符合规范${NC}""  
+	else
+		echo -e "${RED}[!]/boot/grub2/grub.cfg 文件权限为""${grubconf:1:9}","不符合规范,权限应改为600${NC}"  
+	fi
+	printf "\n" 
+
+	if [ "${defaultgrub:1:9}" = "-rw-r--r--" ]; then
+		echo -e "${YELLOW}[+]/etc/default/grub 文件权限为644,符合规范${NC}""  
+	else
+		echo -e "${RED}[!]/etc/default/grub 文件权限为""${grubconf:1:9}","不符合规范,权限应改为644${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查xinetd.conf文件权限[/etc/xinetd.conf]:${NC}"  
+	xinetdconf=$(ls -l /etc/xinetd.conf | awk '{print $1}')
+	if [ "${xinetdconf:1:9}" = "-rw-------" ]; then
+		echo "${YELLOW}[+]/etc/xinetd.conf文件权限为600,符合规范${NC}"  
+	else
+		echo "${RED}[!]/etc/xinetd.conf文件权限为""${xinetdconf:1:9}","不符合规范,权限应改为600${NC}"  
+	fi
+	printf "\n"  
+
+
+	echo -e "${YELLOW}正在检查limits.conf文件权限[/etc/security/limits.conf]:${NC}"  
+	cat /etc/security/limits.conf | grep -v ^# | grep core
+	if [ $? -eq 0 ];then
+		soft=$(cat /etc/security/limits.conf | grep -v ^# | grep core | awk -F ' ' '{print $2}')
+		for i in $soft
+		do
+			if [ $i = "soft" ];then
+				echo -e "${YELLOW}* soft core 0 已经设置,符合要求${NC}"  
+			fi
+			if [ $i = "hard" ];then
+				echo -e "${YELLOW}* hard core 0 已经设置,符合要求${NC}"  
+			fi
+		done
+	else 
+		echo -e "${YELLOW}没有设置core,建议在/etc/security/limits.conf中添加* soft core 0和* hard core 0${NC}"   
+	fi
+
+
 
 	#### 2.1.2 系统文件属性
+	echo "[9.14]正在检查登陆相关文件属性:" | $saveCheckResult
+	echo "[9.14.1]正在检查passwd文件属性:" | $saveCheckResult
+	flag=0
+	for ((x=1;x<=15;x++))
+	do
+		apend=`lsattr /etc/passwd | cut -c $x`
+		if [ $apend = "i" ];then
+			echo "/etc/passwd文件存在i安全属性,符合要求" | $saveCheckResult
+			flag=1
+		fi
+		if [ $apend = "a" ];then
+			echo "/etc/passwd文件存在a安全属性" | $saveCheckResult
+			flag=1
+		fi
+	done
+
+	if [ $flag = 0 ];then
+		echo "/etc/passwd文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/passwd被删除或修改" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+
+
+
+
+	echo "[9.14.3]正在检查gshadow文件属性:" | $saveCheckResult
+	flag=0
+	for ((x=1;x<=15;x++))
+	do
+		apend=`lsattr /etc/gshadow | cut -c $x`
+		if [ $apend = "i" ];then
+			echo "/etc/gshadow文件存在i安全属性,符合要求" | $saveCheckResult
+			flag=1
+		fi
+		if [ $apend = "a" ];then
+			echo "/etc/gshadow文件存在a安全属性" | $saveCheckResult
+			flag=1
+		fi
+	done
+	if [ $flag = 0 ];then
+		echo "/etc/gshadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/gshadow被删除或修改" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[9.14.4]正在检查group文件属性:" | $saveCheckResult
+	flag=0
+	for ((x=1;x<=15;x++))
+	do
+		apend=`lsattr /etc/group | cut -c $x`
+		if [ $apend = "i" ];then
+			echo "/etc/group文件存在i安全属性,符合要求" | $saveCheckResult
+			flag=1
+		fi
+		if [ $apend = "a" ];then
+			echo "/etc/group文件存在a安全属性" | $saveCheckResult
+			flag=1
+		fi
+	done
+	if [ $flag = 0 ];then
+		echo "/etc/group文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/group被删除或修改" |  $saveDangerResult | $saveCheckResult
+	fi
+	printf "\n" | $saveCheckResult
+
+
+	echo "[9.15]正在检测useradd和userdel时间属性:" | $saveCheckResult
+	echo "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" | $saveCheckResult
+	echo "Modify:修改时间,文件内容改变会导致该时间更新" | $saveCheckResult
+	echo "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新" | $saveCheckResult
+	echo "[9.15.1]正在检查useradd时间属性[/usr/sbin/useradd ]:" | $saveCheckResult
+	echo "[+]useradd时间属性:" | $saveCheckResult
+	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+	echo "[9.15.2]正在检查userdel时间属性[/usr/sbin/userdel]:" | $saveCheckResult
+	echo "[+]userdel时间属性:" | $saveCheckResult
+	stat /usr/sbin/userdel | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
+	printf "\n" | $saveCheckResult
+
+
 
 
 	## 3. 网络配置与服务
@@ -2246,6 +2425,8 @@ baselineCheck(){
 
 
 	### 3.3 网络参数优化
+
+
 
 	## 4. Selinux 策略
 	echo -e "${YELLOW}正在检查selinux策略:${NC}"  
@@ -2330,192 +2511,13 @@ baselineCheck(){
 	printf "\n"  
 
 
+	## 6. 日志记录与监控
 
 
+	## 7. 备份和恢复策略
 
 
-	echo "[9.13]正在检查登陆相关文件权限:" | $saveCheckResult
-	echo "[9.13.1]正在检查etc文件权限[etc]:" | $saveCheckResult
-	etc=$(ls -l / | grep etc | awk '{print $1}')
-	if [ "${etc:1:9}" = "rwxr-x---" ]; then
-		echo "[+]/etc/权限为750,权限正常" | $saveCheckResult
-	else
-		echo "[!]/etc/文件权限为:""${etc:1:9}","权限不符合规划,权限应改为750" | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.3]正在检查passwd文件权限[/etc/passwd]:" | $saveCheckResult
-	passwd=$(ls -l /etc/passwd | awk '{print $1}')
-	if [ "${passwd:1:9}" = "rw-r--r--" ]; then
-		echo "[+]/etc/passwd文件权限为644,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/passwd文件权限为:""${passwd:1:9}"",权限不符合规范,建议改为644" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.4]正在检查group文件权限[/etc/group ]:" | $saveCheckResult
-	group=$(ls -l /etc/group | awk '{print $1}')
-	if [ "${group:1:9}" = "rw-r--r--" ]; then
-		echo "[+]/etc/group文件权限为644,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/goup文件权限为""${group:1:9}","不符合规范,权限应改为644" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.5]正在检查securetty文件权限[/etc/securetty]:" | $saveCheckResult
-	securetty=$(ls -l /etc/securetty | awk '{print $1}')
-	if [ "${securetty:1:9}" = "-rw-------" ]; then
-		echo "[+]/etc/securetty文件权限为600,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/securetty文件权限为""${securetty:1:9}","不符合规范,权限应改为600" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.6]正在检查services文件权限[/etc/services]:" | $saveCheckResult
-	services=$(ls -l /etc/services | awk '{print $1}')
-	if [ "${services:1:9}" = "-rw-r--r--" ]; then
-		echo "[+]/etc/services文件权限为644,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/services文件权限为""$services:1:9}","不符合规范,权限应改为644" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.7]正在检查grub.conf文件权限[/etc/grub.conf]:" | $saveCheckResult
-	grubconf=$(ls -l /etc/grub.conf | awk '{print $1}')
-	if [ "${grubconf:1:9}" = "-rw-------" ]; then
-		echo "[+]/etc/grub.conf文件权限为600,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/grub.conf文件权限为""${grubconf:1:9}","不符合规范,权限应改为600" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.8]正在检查xinetd.conf文件权限[/etc/xinetd.conf]:" | $saveCheckResult
-	xinetdconf=$(ls -l /etc/xinetd.conf | awk '{print $1}')
-	if [ "${xinetdconf:1:9}" = "-rw-------" ]; then
-		echo "[+]/etc/xinetd.conf文件权限为600,符合规范" | $saveCheckResult
-	else
-		echo "[!]/etc/xinetd.conf文件权限为""${xinetdconf:1:9}","不符合规范,权限应改为600" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.9]正在检查lilo.conf文件权限[/etc/lilo.conf ]:" | $saveCheckResult
-	if [ -f /etc/lilo.conf ];then
-	liloconf=$(ls -l /etc/lilo.conf | awk '{print $1}')
-		if [ "${liloconf:1:9}" = "-rw-------" ];then
-			echo "/etc/lilo.conf文件权限为600,符合要求" | $saveCheckResult
-		else
-			echo "/etc/lilo.conf文件权限不为600,不符合要求,建议设置权限为600" | $saveCheckResult
-		fi
-	else
-		echo "/etc/lilo.conf文件夹不存在,不检查,符合要求"
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.13.10]正在检查limits.conf文件权限[/etc/security/limits.conf]:" | $saveCheckResult
-	cat /etc/security/limits.conf | grep -v ^# | grep core
-	if [ $? -eq 0 ];then
-		soft=`cat /etc/security/limits.conf | grep -v ^# | grep core | awk -F ' ' '{print $2}'`
-		for i in $soft
-		do
-			if [ $i = "soft" ];then
-				echo "* soft core 0 已经设置,符合要求" | $saveCheckResult
-			fi
-			if [ $i = "hard" ];then
-				echo "* hard core 0 已经设置,符合要求" | $saveCheckResult
-			fi
-		done
-	else 
-		echo "没有设置core,建议在/etc/security/limits.conf中添加* soft core 0和* hard core 0"  | $saveCheckResult
-	fi
-
-
-	echo "[9.14]正在检查登陆相关文件属性:" | $saveCheckResult
-	echo "[9.14.1]正在检查passwd文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/passwd | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/passwd文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/passwd文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-
-	if [ $flag = 0 ];then
-		echo "/etc/passwd文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/passwd被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-
-
-
-
-	echo "[9.14.3]正在检查gshadow文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/gshadow | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/gshadow文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/gshadow文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-	if [ $flag = 0 ];then
-		echo "/etc/gshadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/gshadow被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.14.4]正在检查group文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/group | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/group文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/group文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-	if [ $flag = 0 ];then
-		echo "/etc/group文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/group被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.15]正在检测useradd和userdel时间属性:" | $saveCheckResult
-	echo "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" | $saveCheckResult
-	echo "Modify:修改时间,文件内容改变会导致该时间更新" | $saveCheckResult
-	echo "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新" | $saveCheckResult
-	echo "[9.15.1]正在检查useradd时间属性[/usr/sbin/useradd ]:" | $saveCheckResult
-	echo "[+]useradd时间属性:" | $saveCheckResult
-	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
-	printf "\n" | $saveCheckResult
-
-	echo "[9.15.2]正在检查userdel时间属性[/usr/sbin/userdel]:" | $saveCheckResult
-	echo "[+]userdel时间属性:" | $saveCheckResult
-	stat /usr/sbin/userdel | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
-	printf "\n" | $saveCheckResult
+	## 8. 其他安全配置基准
 
 
 }
