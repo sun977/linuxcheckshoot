@@ -2084,6 +2084,25 @@ selinuxStatusCheck(){
 }
 
 
+# # 检查文件权限函数 
+# check_file_perm(){
+#     local file_path=$1      # 文件路径
+#     local expected_perm=$2  # 期望的权限
+#     local desc=$3 			# 描述
+
+#     if [ ! -f "$file_path" ]; then
+#         echo -e "${RED}[!] 文件 $file_path 不存在！${NC}"
+#         return
+#     fi
+
+#     local perm=$(stat -c "%A" "$file_path")
+#     if [ "$perm" == "$expected_perm" ]; then
+#         echo -e "${YELLOW}[+] $desc 权限正常 ($perm)${NC}"
+#     else
+#         echo -e "${RED}[!] $desc 权限异常 ($perm),建议改为 $expected_perm${NC}"
+#     fi
+# }
+
 # 基线检查【未完成】
 baselineCheck(){
 	# 基线检查项
@@ -2232,99 +2251,46 @@ baselineCheck(){
 	### 2.1 关键文件保护
 	#### 2.1.1 文件权限策略(登录相关文件权限)
 	echo -e "${YELLOW}正在检查登陆相关文件权限:${NC}"  
-	echo -e "${YELLOW}正在检查etc文件权限[etc]:${NC}"  
-	etc=$(ls -l / | grep etc | awk '{print $1}')
-	if [ "${etc:1:9}" = "rwxr-x---" ]; then
-		echo -e "${YELLOW}[+]/etc/权限为750,权限正常${NC}"  
+	# echo -e "${YELLOW}正在检查etc文件权限[etc]:${NC}"  
+	
+	# 检查文件权限函数 
+	check_file_perm(){
+		local file_path=$1      # 文件路径
+		local expected_perm=$2  # 期望的权限
+		local desc=$3 			# 描述
+
+		if [ ! -f "$file_path" ]; then
+			echo -e "${RED}[!] 文件 $file_path 不存在！${NC}"
+			return
+		fi
+
+		local perm=$(stat -c "%A" "$file_path")
+		if [ "$perm" == "$expected_perm" ]; then
+			echo -e "${YELLOW}[+] $desc 权限正常 ($perm)${NC}"
+		else
+			echo -e "${RED}[!] $desc 权限异常 ($perm),建议改为 $expected_perm${NC}"
+		fi
+	}
+
+	echo -e "${YELLOW}正在检查登陆相关文件权限${NC}\n"
+	check_file_perm "/etc" "drwxr-x---" "/etc (etc)"
+	check_file_perm "/etc/passwd" "-rw-r--r--" "/etc/passwd (passwd)"
+	# check_file_perm "/etc/shadow" "----------" "/etc/shadow (shadow)"
+	check_file_perm "/etc/group" "-rw-r--r--" "/etc/group (group)"
+	# check_file_perm "/etc/gshadow" "----------" "/etc/gshadow (gshadow)"
+	check_file_perm "/etc/securetty" "-rw-------" "/etc/securetty (securetty)"
+	check_file_perm "/etc/services" "-rw-r--r--" "/etc/services (services)"
+	check_file_perm "/boot/grub2/grub.cfg" "-rw-------" "/boot/grub2/grub.cfg (grub.cfg)"
+	check_file_perm "/etc/default/grub" "-rw-r--r--" "/etc/default/grub (grub)"
+	check_file_perm "/etc/xinetd.conf" "-rw-------"" "/etc/xinetd.conf"
+
+
+	# core dump
+	echo -e "${YELLOW}正在检查 core dump 设置[/etc/security/limits.conf]${NC}"
+	if (grep -qE '^\*\s+soft\s+core\s+0' /etc/security/limits.conf && grep -qE '^\*\s+hard\s+core\s+0' /etc/security/limits.conf); then
+		echo -e "${YELLOW}[+] core dump 已禁用，符合规范${NC}"
 	else
-		echo -e "${RED}[!]/etc/文件权限为:""${etc:1:9}","权限不符合规划,权限应改为750${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查passwd文件权限[/etc/passwd]:${NC}"  
-	passwd=$(ls -l /etc/passwd | awk '{print $1}')
-	if [ "${passwd:1:9}" = "rw-r--r--" ]; then
-		echo -e "${YELLOW}[+]/etc/passwd文件权限为644,符合规范${NC}"  
-	else
-		echo -e "${RED}[!]/etc/passwd文件权限为:""${passwd:1:9}"",权限不符合规范,建议改为644${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查group文件权限[/etc/group]:${NC}"  
-	group=$(ls -l /etc/group | awk '{print $1}')
-	if [ "${group:1:9}" = "rw-r--r--" ]; then
-		echo -e "${YELLOW}[+]/etc/group文件权限为644,符合规范${NC}"  
-	else
-		echo -e "${RED}[!]/etc/goup文件权限为""${group:1:9}","不符合规范,权限应改为644${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查securetty文件权限[/etc/securetty]:${NC}"  
-	securetty=$(ls -l /etc/securetty | awk '{print $1}')
-	if [ "${securetty:1:9}" = "-rw-------" ]; then
-		echo -e "${YELLOW}[+]/etc/securetty文件权限为600,符合规范${NC}"  
-	else
-		echo -e "${RED}[!]/etc/securetty文件权限为""${securetty:1:9}","不符合规范,权限应改为600${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查services文件权限[/etc/services]:${NC}"  
-	services=$(ls -l /etc/services | awk '{print $1}')
-	if [ "${services:1:9}" = "-rw-r--r--" ]; then
-		echo -e "${YELLOW}[+]/etc/services文件权限为644,符合规范${NC}"  
-	else
-		echo -e "${RED}[!]/etc/services文件权限为""${services:1:9}","不符合规范,权限应改为644${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查grub.conf文件权限[/boot/grub2/grub.cfg]:${NC}"  
-	grubconf=$(ls -l /boot/grub2/grub.cfg | awk '{print $1}')
-	defaultgrub=$(ls -l /etc/default/grub | awk '{print $1}')
-	if [ "${grubconf:1:9}" = "-rw-------" ]; then
-		echo -e "${YELLOW}[+]/boot/grub2/grub.cfg 文件权限为600,符合规范${NC}""  
-	else
-		echo -e "${RED}[!]/boot/grub2/grub.cfg 文件权限为""${grubconf:1:9}","不符合规范,权限应改为600${NC}"  
-	fi
-	printf "\n" 
-
-	if [ "${defaultgrub:1:9}" = "-rw-r--r--" ]; then
-		echo -e "${YELLOW}[+]/etc/default/grub 文件权限为644,符合规范${NC}""  
-	else
-		echo -e "${RED}[!]/etc/default/grub 文件权限为""${grubconf:1:9}","不符合规范,权限应改为644${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查xinetd.conf文件权限[/etc/xinetd.conf]:${NC}"  
-	xinetdconf=$(ls -l /etc/xinetd.conf | awk '{print $1}')
-	if [ "${xinetdconf:1:9}" = "-rw-------" ]; then
-		echo "${YELLOW}[+]/etc/xinetd.conf文件权限为600,符合规范${NC}"  
-	else
-		echo "${RED}[!]/etc/xinetd.conf文件权限为""${xinetdconf:1:9}","不符合规范,权限应改为600${NC}"  
-	fi
-	printf "\n"  
-
-
-	echo -e "${YELLOW}正在检查limits.conf文件权限[/etc/security/limits.conf]:${NC}"  
-	cat /etc/security/limits.conf | grep -v ^# | grep core
-	if [ $? -eq 0 ];then
-		soft=$(cat /etc/security/limits.conf | grep -v ^# | grep core | awk -F ' ' '{print $2}')
-		for i in $soft
-		do
-			if [ $i = "soft" ];then
-				echo -e "${YELLOW}* soft core 0 已经设置,符合要求${NC}"  
-			fi
-			if [ $i = "hard" ];then
-				echo -e "${YELLOW}* hard core 0 已经设置,符合要求${NC}"  
-			fi
-		done
-	else 
-		echo -e "${YELLOW}没有设置core,建议在/etc/security/limits.conf中添加* soft core 0和* hard core 0${NC}"   
+		echo -e "${RED}[!] core dump 未完全禁用，建议添加: * soft core 0 和 * hard core 0 到 limits.conf${NC}"
 	fi
 
 
