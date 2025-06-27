@@ -2310,8 +2310,6 @@ baselineCheck(){
 
 
 	#### 2.1.2 系统文件属性
-	echo "[9.14]正在检查登陆相关文件属性:" | $saveCheckResult
-
 	# check_file_attributes "/etc/shadow" "/etc/shadow 文件属性" "i"
 	check_file_attributes(){
 		local file="$1"            # 要检查的文件路径
@@ -2362,86 +2360,28 @@ baselineCheck(){
 		fi
 	}
 
-
-
-	echo "[9.14.1]正在检查passwd文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/passwd | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/passwd文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/passwd文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-
-	if [ $flag = 0 ];then
-		echo "/etc/passwd文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/passwd被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
+	echo "[9.14]正在检查登陆相关文件属性:"  
+	# 调用函数检测文件属性
+	check_file_attributes "/etc/passwd" "/etc/passwd 文件属性"  "i"
+	check_file_attributes "/etc/shadow" "/etc/shadow 文件属性"
+	check_file_attributes "/etc/group" "/etc/group 文件属性"
+	check_file_attributes "/etc/gshadow" "/etc/gshadow 文件属性"
 
 
 
+	echo "[9.15]正在检测useradd和userdel时间属性:"  
+	echo "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat"  
+	echo "Modify:修改时间,文件内容改变会导致该时间更新"  
+	echo "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新"  
+	echo "[9.15.1]正在检查useradd时间属性[/usr/sbin/useradd ]:"  
+	echo "[+]useradd时间属性:"  
+	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '('  
+	printf "\n"  
 
-
-
-	echo "[9.14.3]正在检查gshadow文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/gshadow | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/gshadow文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/gshadow文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-	if [ $flag = 0 ];then
-		echo "/etc/gshadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/gshadow被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.14.4]正在检查group文件属性:" | $saveCheckResult
-	flag=0
-	for ((x=1;x<=15;x++))
-	do
-		apend=`lsattr /etc/group | cut -c $x`
-		if [ $apend = "i" ];then
-			echo "/etc/group文件存在i安全属性,符合要求" | $saveCheckResult
-			flag=1
-		fi
-		if [ $apend = "a" ];then
-			echo "/etc/group文件存在a安全属性" | $saveCheckResult
-			flag=1
-		fi
-	done
-	if [ $flag = 0 ];then
-		echo "/etc/group文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/group被删除或修改" |  $saveDangerResult | $saveCheckResult
-	fi
-	printf "\n" | $saveCheckResult
-
-
-	echo "[9.15]正在检测useradd和userdel时间属性:" | $saveCheckResult
-	echo "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" | $saveCheckResult
-	echo "Modify:修改时间,文件内容改变会导致该时间更新" | $saveCheckResult
-	echo "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新" | $saveCheckResult
-	echo "[9.15.1]正在检查useradd时间属性[/usr/sbin/useradd ]:" | $saveCheckResult
-	echo "[+]useradd时间属性:" | $saveCheckResult
-	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
-	printf "\n" | $saveCheckResult
-
-	echo "[9.15.2]正在检查userdel时间属性[/usr/sbin/userdel]:" | $saveCheckResult
-	echo "[+]userdel时间属性:" | $saveCheckResult
-	stat /usr/sbin/userdel | egrep "Access|Modify|Change" | grep -v '(' | $saveCheckResult
-	printf "\n" | $saveCheckResult
+	echo "[9.15.2]正在检查userdel时间属性[/usr/sbin/userdel]:"  
+	echo "[+]userdel时间属性:"  
+	stat /usr/sbin/userdel | egrep "Access|Modify|Change" | grep -v '('  
+	printf "\n"  
 
 
 
