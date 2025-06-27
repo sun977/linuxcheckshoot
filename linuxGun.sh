@@ -2362,7 +2362,7 @@ baselineCheck(){
 
 	echo "[9.14]正在检查登陆相关文件属性:"  
 	# 调用函数检测文件属性
-	check_file_attributes "/etc/passwd" "/etc/passwd 文件属性"  "i"
+	check_file_attributes "/etc/passwd" "/etc/passwd 文件属性" 
 	check_file_attributes "/etc/shadow" "/etc/shadow 文件属性"
 	check_file_attributes "/etc/group" "/etc/group 文件属性"
 	check_file_attributes "/etc/gshadow" "/etc/gshadow 文件属性"
