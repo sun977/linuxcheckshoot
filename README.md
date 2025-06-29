@@ -476,5 +476,92 @@ linuxGun.sh 概要
 
 *********************************************************************
 
+##### 主函数二级参数使用参考
+###### 主函数入口
+main() {
+    if [ $# -eq 0 ]; then
+        usage
+        exit 1
+    fi
+
+    local i=1
+    while [ $i -le $# ]; do
+        eval "arg=\${$i}"
+        case "$arg" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            --firewall)
+                ((i++))
+                eval "sub_arg=\${$i}"
+                case "$sub_arg" in
+                    rule)
+                        firewallRulesCheck
+                        ;;
+                    policy)
+                        firewallDefaultPolicyCheck
+                        ;;
+                    *)
+                        echo -e "${RED}[!] 未知的子选项: $sub_arg${NC}"
+                        usage
+                        exit 1
+                        ;;
+                esac
+                ;;
+            --baseline)
+                ((i++))
+                eval "sub_arg=\${$i}"
+                case "$sub_arg" in
+                    user)
+                        baselineUserCheck
+                        ;;
+                    auth)
+                        baselineAuthCheck
+                        ;;
+                    network)
+                        baselineNetworkCheck
+                        ;;
+                    *)
+                        echo -e "${RED}[!] 未知的子选项: $sub_arg${NC}"
+                        usage
+                        exit 1
+                        ;;
+                esac
+                ;;
+            --all)
+                echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
+                firewallRulesCheck
+                firewallDefaultPolicyCheck
+                baselineUserCheck
+                baselineAuthCheck
+                baselineNetworkCheck
+                echo -e "${GREEN}[+] 所有检查项已完成${NC}"
+                ;;
+            *)
+                echo -e "${RED}[!] 未知的一级选项: $arg${NC}"
+                usage
+                exit 1
+                ;;
+        esac
+        ((i++))
+    done
+}
+
+###### 显示使用帮助
+usage() {
+    echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
+    echo -e "${GREEN}使用方法: ./\$(basename \$0) [选项] [子选项]${NC}"
+    echo -e "${GREEN}可用选项及子选项:${NC}"
+    echo -e "${GREEN}  --firewall rule|policy       防火墙策略检查${NC}"
+    echo -e "${GREEN}  --baseline user|auth|network 基线安全检查${NC}"
+    echo -e "${GREEN}  --all                        执行所有检查项${NC}"
+    echo -e "${GREEN}  -h, --help                   显示帮助信息${NC}"
+}
+
+调用：
+###### 检查防火墙默认策略
+./linuxgun.sh --firewall policy
+
 ```
 
