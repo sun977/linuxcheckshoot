@@ -286,8 +286,8 @@ fi
 
 # 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
 cd $check_file  
-saveCheckResult="tee -a checkresult.txt" 
-saveDangerResult="tee -a dangerlist.txt"
+# saveCheckResult="tee -a checkresult.txt" 
+# saveDangerResult="tee -a dangerlist.txt"
 
 # ------------------------
 
@@ -2582,10 +2582,78 @@ checkOutlogPack(){
 
 
 
+################################################################################
+# 主函数入口
+main() {
+    # 检查是否提供了参数
+    if [ $# -eq 0 ]; then
+        usage
+        exit 1
+    fi
 
+    # 根据参数调用相应功能
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --firewall)
+            firewallRulesCheck
+            ;;
+        --selinux)
+            selinuxStatusCheck
+            ;;
+        --baseline)
+            baselineCheck
+            ;;
+        --k8s)
+            k8sCheck
+            ;;
+        --performance)
+            performanceCheck
+            ;;
+        --specialfile)
+            specialFileCheck
+            ;;
+        --dirfile)
+            dirFileCheck
+            ;;
+        --all)
+            echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
+            firewallRulesCheck
+            selinuxStatusCheck
+            baselineCheck
+            k8sCheck
+            performanceCheck
+            specialFileCheck
+            dirFileCheck
+            echo -e "${GREEN}[+] 所有检查项已完成${NC}"
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+}
 
+# 显示使用帮助
+usage() {
+    echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
+    echo -e "${GREEN}使用方法: ./\$(basename \$0) [选项]${NC}"
+    echo -e "${GREEN}可用选项:${NC}"
+    echo -e "${GREEN}  -h, --help         显示帮助信息${NC}"
+    echo -e "${GREEN}  --firewall         防火墙策略检查${NC}"
+    echo -e "${GREEN}  --selinux          SELinux 策略检查${NC}"
+    echo -e "${GREEN}  --baseline         基线安全检查${NC}"
+    echo -e "${GREEN}  --k8s              Kubernetes 安全检查（待完善）${NC}"
+    echo -e "${GREEN}  --performance      系统性能评估${NC}"
+    echo -e "${GREEN}  --specialfile      SSH相关文件及环境变量检查${NC}"
+    echo -e "${GREEN}  --dirfile          敏感目录文件检查${NC}"
+    echo -e "${GREEN}  --all              执行所有检查项${NC}"
+}
 
-
+# 主函数执行
+main "$@"
 
 
 
