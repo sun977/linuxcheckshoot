@@ -329,45 +329,95 @@ echoBanner() {
 
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
-    echo -e "${GREEN}==========${YELLOW}1.Get System Info${GREEN}==========${NC}"
-    echo -e "${YELLOW}[1.0]Get System Basic Info${NC}"  
-    echo -e "${YELLOW}[1.1]IP地址信息[ip addr]:${NC}"  
+    echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
+
+    echo -e "${YELLOW}[1.0] 获取IP地址信息[ip addr]:${NC}"
     ip=$(ip addr | grep -w inet | awk '{print $2}')
-    if [ -n "$ip" ];then
-        (echo -e "${YELLOW}[+]本机IP地址信息:${NC}" && echo "$ip")   
+    if [ -n "$ip" ]; then
+        echo -e "${YELLOW}[+] 本机IP地址信息:${NC}" && echo "$ip"
     else
-        echo -e "${RED}[!]本机未配置IP地址${NC}"  
+        echo -e "${RED}[!] 本机未配置IP地址${NC}"
     fi
+    printf "\n"
 
-    # 系统版本信息
-    echo -e "${YELLOW}[1.2]系统版本信息[uname -a]:${NC}"  
+    echo -e "${YELLOW}[1.1] 系统版本信息[uname -a]:${NC}"
     unameInfo=$(uname -a)
-    if [ -n "$unameInfo" ];then
-        # (echo -e "${YELLOW}[+]系统内核版本信息:${NC}" && echo "$unameInfo")  
-        echo -e "${YELLOW}[+]系统版本信息如下:${NC}"  
-        osName=$(echo $unameInfo | awk '{print $1}')  # 系统名称
-        hostName=$(echo $unameInfo | awk '{print $2}')  # 主机名
-        kernelVerson=$(echo $unameInfo | awk '{print $3}')  # 内核版本
-        arch=$(echo $unameInfo | awk '{print $12}')  # 系统架构
-        echo -e "${YELLOW}[+]系统名称:$osName${NC}"  
-        echo -e "${YELLOW}[+]主机名:$hostName${NC}"  
-        echo -e "${YELLOW}[+]内核版本:$kernelVerson${NC}"  
-        echo -e "${YELLOW}[+]系统架构:$arch${NC}"  
-    
+    if [ -n "$unameInfo" ]; then
+        osName=$(echo "$unameInfo" | awk '{print $1}')      # 内核名称
+        hostName=$(echo "$unameInfo" | awk '{print $2}')    # 主机名
+        kernelVersion=$(echo "$unameInfo" | awk '{print $3}') # 内核版本
+        arch=$(echo "$unameInfo" | awk '{print $12}')       # 系统架构
+        echo -e "${YELLOW}[+] 内核名称: $osName${NC}"
+        echo -e "${YELLOW}[+] 主机名: $hostName${NC}"
+        echo -e "${YELLOW}[+] 内核版本: $kernelVersion${NC}"
+        echo -e "${YELLOW}[+] 系统架构: $arch${NC}"
     else
-        echo -e "${RED}[!]未发系统版本信息${NC}"  
+        echo -e "${RED}[!] 无法获取系统版本信息${NC}"
     fi
+    printf "\n"
 
-    # 系统发行版本
-    echo -e "${YELLOW}[1.3]系统发行版本信息[/etc/*-release]:${NC}"  
-    systemver=$(cat /etc/*-release)
-    if [ -n "$systemver" ];then
-        (echo -e "${YELLOW}[+]系统发行版本信息:${NC}" && echo "$systemver")  
+    echo -e "${YELLOW}[1.2] 系统发行版本信息:${NC}"
+    distro="Unknown"
+    releaseFile="/etc/os-release"
+
+    if [ -f "$releaseFile" ]; then
+        # 推荐使用 os-release 获取标准化信息
+        distro=$(grep "^PRETTY_NAME" "$releaseFile" | cut -d= -f2 | tr -d '"')  # CentOS Linux 7 (Core)
+        if [ -n "$distro" ]; then
+            echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
+        else
+            echo -e "${YELLOW}[!] 未找到有效的系统发行版本信息${NC}"
+        fi
+    elif [ -f "/etc/redhat-release" ]; then
+        distro=$(cat /etc/redhat-release)
+        echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
+    elif [ -f "/etc/debian_version" ]; then
+        debian_ver=$(cat /etc/debian_version)
+        distro="Debian GNU/Linux $debian_ver"
+        echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
+    elif [ -f "/etc/alpine-release" ]; then
+        alpine_ver=$(cat /etc/alpine-release)
+        distro="Alpine Linux $alpine_ver"
+        echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
+	elif [ -f "/etc/kylin-release" ]; then  # 麒麟系统
+        kylin_ver=$(cat /etc/kylin-release)
+        distro="kylin Linux $kylin_ver"
+        echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
+    elif command -v lsb_release &>/dev/null; then
+        distro=$(lsb_release -d | cut -f2)
+        echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
     else
-        echo -e "${RED}[!]未发现系统发行版本信息${NC}"  
+        echo -e "${YELLOW}[!] 系统发行版本信息未找到，请手动检查${NC}"
     fi
-    printf "\n"  
+    printf "\n"
+
+    echo -e "${YELLOW}[1.3] 系统启动时间信息[uptime]:${NC}"
+    uptimeInfo=$(uptime)
+    if [ -n "$uptimeInfo" ]; then
+        echo -e "${YELLOW}[+] 系统运行时间信息如下:${NC}"
+        echo "$uptimeInfo"
+    else
+        echo -e "${RED}[!] 无法获取系统运行时间信息${NC}"
+    fi
+    printf "\n"
+
+    echo -e "${YELLOW}[1.4] 系统虚拟化环境检测[${NC}"
+    virtWhat=$(dmidecode -s system-manufacturer 2>/dev/null | grep -i virtualbox || true)
+    containerCheck=$(grep -E 'container|lxc|docker' /proc/1/environ 2>/dev/null)  #获取 init/systemd 进程的环境变量
+	k8swhat=$(grep -E 'POD_NAMESPACE|KUBERNETES_SERVICE_HOST|kubernetes' /proc/1/environ 2>/dev/null)
+
+    if [ -n "$virtWhat" ]; then
+        echo -e "${YELLOW}[+] 虚拟化环境: VirtualBox${NC}"
+    elif [ -n "$containerCheck" ]; then
+        echo -e "${YELLOW}[+] 运行在容器[container|lxc|docker]环境中${NC}"
+	elif [ -n "$k8swhat" ]; then
+        echo -e "${YELLOW}[+] 运行在 Kubernetes 集群中${NC}"
+    else
+        echo -e "${YELLOW}[+] 运行在物理机或未知虚拟化平台${NC}"
+    fi
+    printf "\n"
 }
+
 
 # 网络信息【完成】
 networkInfo(){
