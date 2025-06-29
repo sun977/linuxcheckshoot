@@ -2592,55 +2592,96 @@ main() {
         exit 1
     fi
 
-    # 根据参数调用相应功能
-    case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --firewall)
-            firewallRulesCheck
-            ;;
-        --selinux)
-            selinuxStatusCheck
-            ;;
-        --baseline)
-            baselineCheck
-            ;;
-        --k8s)
-            k8sCheck
-            ;;
-        --performance)
-            performanceCheck
-            ;;
-        --specialfile)
-            specialFileCheck
-            ;;
-        --dirfile)
-            dirFileCheck
-            ;;
-        --all)
-            echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
-            firewallRulesCheck
-            selinuxStatusCheck
-            baselineCheck
-            k8sCheck
-            performanceCheck
-            specialFileCheck
-            dirFileCheck
-            echo -e "${GREEN}[+] 所有检查项已完成${NC}"
-            ;;
-        *)
-            usage
-            exit 1
-            ;;
-    esac
+    local run_all=false
+    local modules=()
+
+    # 解析所有参数
+    for arg in "$@"; do
+        case "$arg" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            --firewall)
+                modules+=("firewall")
+                ;;
+            --selinux)
+                modules+=("selinux")
+                ;;
+            --baseline)
+                modules+=("baseline")
+                ;;
+            --k8s)
+                modules+=("k8s")
+                ;;
+            --performance)
+                modules+=("performance")
+                ;;
+            --specialfile)
+                modules+=("specialfile")
+                ;;
+            --dirfile)
+                modules+=("dirfile")
+                ;;
+            --all)
+                run_all=true
+                ;;
+            *)
+                echo -e "${RED}[!] 未知参数: $arg${NC}"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
+    # 如果指定了 --all，则运行所有模块
+    if [ "$run_all" = true ]; then
+        echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
+        firewallRulesCheck
+        selinuxStatusCheck
+        baselineCheck
+        k8sCheck
+        performanceCheck
+        specialFileCheck
+        dirFileCheck
+        echo -e "${GREEN}[+] 所有检查项已完成${NC}"
+    elif [ ${#modules[@]} -gt 0 ]; then
+        for module in "${modules[@]}"; do
+            case "$module" in
+                firewall)
+                    firewallRulesCheck
+                    ;;
+                selinux)
+                    selinuxStatusCheck
+                    ;;
+                baseline)
+                    baselineCheck
+                    ;;
+                k8s)
+                    k8sCheck
+                    ;;
+                performance)
+                    performanceCheck
+                    ;;
+                specialfile)
+                    specialFileCheck
+                    ;;
+                dirfile)
+                    dirFileCheck
+                    ;;
+            esac
+        done
+    else
+        echo -e "${RED}[!] 未指定任何有效的检查模块${NC}"
+        usage
+        exit 1
+    fi
 }
 
 # 显示使用帮助
 usage() {
     echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
-    echo -e "${GREEN}使用方法: bash $0 --[option] --[module-option] ${NC}"
+    echo -e "${GREEN}使用方法: ./\$(basename \$0) [选项]${NC}"
     echo -e "${GREEN}可用选项:${NC}"
     echo -e "${GREEN}  -h, --help         显示帮助信息${NC}"
     echo -e "${GREEN}  --firewall         防火墙策略检查${NC}"
