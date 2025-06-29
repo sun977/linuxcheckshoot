@@ -282,20 +282,17 @@ ensure_root() {
     fi
 }
 
-# ------------------------
-
 # 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
 # cd $check_file  
 # saveCheckResult="tee -a checkresult.txt" 
 # saveDangerResult="tee -a dangerlist.txt"
 
-# ------------------------
 
 ################################################################
 
 # 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
 
-# banner 函数  格式需要调整
+# banner 函数 
 echoBanner() {
     echo -e "${YELLOW}****************************************************************${NC}"
     echo -e "${BLUE}      __     __                      ______                     ${NC}"
@@ -310,13 +307,23 @@ echoBanner() {
 	echo -e "${YELLOW}****************************************************************${NC}"
     echo -e "${GREEN}检查内容:${NC}"
     echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
-    echo -e "${GREEN}    2.将原始数据进行分析,并找出存在可疑或危险项${NC}"
-    echo -e "${GREEN}    3.基线检查的功能${NC}"
-    echo -e "${GREEN}    4.黑客工具检查的功能${NC}"
+	echo -e "${GREEN}    2.网络连接情况分析${NC}"
+	echo -e "${GREEN}    3.系统进程信息分析${NC}"
+	echo -e "${GREEN}    4.系统文件信息分析${NC}"
+	echo -e "${GREEN}    5.后门排查${NC}"
+	echo -e "${GREEN}    6.webshell排查${NC}"
+	echo -e "${GREEN}    7.病毒信息排查${NC}"
+	echo -e "${GREEN}    8.内存信息排查${NC}"
+	echo -e "${GREEN}    9.黑客工具排查${NC}"
+	echo -e "${GREEN}    10.内核信息排查${NC}"
+	echo -e "${GREEN}    11.其他重要排查${NC}"
+	echo -e "${GREEN}    12.kubernets信息排查${NC}"
+	echo -e "${GREEN}    13.系统性能分析${NC}"
+	echo -e "${GREEN}    14.系统基线检查${NC}"
     echo -e "${GREEN}如何使用:${NC}"
     echo -e "${GREEN}    1.需要将本脚本上传到相应的服务器中${NC}"
-    echo -e "${GREEN}    2.执行 chmod +x linuxgun.sh${NC}"
-    echo -e "${GREEN}    3.执行 ./linuxgun.sh 即可运行检查${NC}"
+    echo -e "${GREEN}    2.运行 chmod +x linuxgun.sh 赋予脚本执行权限${NC}"
+    echo -e "${GREEN}    3.运行 ./linuxgun.sh 查看使用说明${NC}"
 	echo -e "${YELLOW}================================================================${NC}"
 }
 
