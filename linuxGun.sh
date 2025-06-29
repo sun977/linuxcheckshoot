@@ -628,6 +628,8 @@ processInfo(){
 		echo -e "${RED}$filtered_output${NC}"
 	done
 	printf "\n" 
+
+	# 异常进程：如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
 }
 
 # 计划任务排查【归档 -- systemCheck】
@@ -1814,16 +1816,17 @@ fileCheck(){
 # 后门排查
 backdoorCheck(){
 	# 常见后门目录 /tmp /usr/bin /usr/sbin 
+	echo "待完善"
 }
 
 # webshell 排查
 webshellCheck(){
 	# 检查网站常见的目录
 	# 可以放一个rkhunter的tar包,解压后直接运行即可
-	echo "[12.2]正在检查webshell文件:" | $saveCheckResult
-	echo "webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现" | $saveCheckResult
-	echo "请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net" | $saveCheckResult
-	printf "\n" | $saveCheckResult
+	echo -e "${YELLOW}正在检查webshell文件:${NC}"  
+	echo -e "${YELLOW}webshell这一块因为技术难度相对较高,并且已有专业的工具,目前这一块建议使用专门的安全检查工具来实现${NC}" 
+	echo -e "${YELLOW}请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net${NC}"  
+	printf "\n"  
 	# 访问日志
 }
 
@@ -1831,11 +1834,14 @@ webshellCheck(){
 virusCheck(){
 	# 基础排查
 	# 病毒特有行为排查
+	echo -e "待完善"
 }
 
 # 内存和VFS排查
 memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
+	# 如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
+	echo -e "待完善"
 }
 
 # 黑客工具排查 【完成】
@@ -2497,6 +2503,8 @@ baselineCheck(){
 
 # k8s排查
 k8sCheck(){
+	echo -e "${YELLOW}正在检查K8s系统配置:${NC}"
+	echo -e "待完善"
 }
 
 
@@ -2544,6 +2552,7 @@ performanceCheck(){
 # 攻击角度信息收集
 attackAngleCheck(){
 	# 
+	echo -e "待完善"
 }
 
 
