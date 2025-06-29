@@ -2376,11 +2376,11 @@ baselineCheck(){
 
 
 	echo -e "${YELLOW}正在检测useradd和userdel时间属性:${NC}"  
-	echo -e "${YELLOW}Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat${NC}"  
-	echo -e "${YELLOW}Modify:修改时间,文件内容改变会导致该时间更新${NC}"  
-	echo -e "${YELLOW}Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新${NC}"  
+	echo -e "${GREEN}Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat${NC}"  
+	echo -e "${GREEN}Modify:修改时间,文件内容改变会导致该时间更新${NC}"  
+	echo -e "${GREEN}Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新${NC}"  
 	echo -e "${YELLOW}正在检查useradd时间属性[/usr/sbin/useradd ]:${NC}"  
-	echo -e "${YELLOW}useradd时间属性:${NC}"  
+	echo -e "${YELLOW}[+]useradd时间属性:${NC}"  
 	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '('  
 	printf "\n"  
 
