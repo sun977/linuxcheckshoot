@@ -13,26 +13,10 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # [KNOW] 知识点
 # [ERRO] 错误输出
 
-# if [[ "$1" == "--ps" ]] || [[ "$1" == "-p" ]]; then
-#     check_nginx_ps
-# elif [[ "$1" == "--inject" ]] || [[ "$1" == "-i" ]]; then
-#     inject_config "$2" "$3"
-# else
-#     echo "Description:"
-#     echo "  - This script is used to inject SOC configuration into the nginx.conf"
-#     echo "  - This script can only be used once, and the original nginx.conf will be backed up"
-#     echo "Usage: $0 [option] [nginx_path] [nginx_conf_path]"
-#     echo "Options:"
-#     echo "  -p, --ps    Check the nginx process information"
-#     echo "  -i, --inject   Inject the SOC configuration into the nginx configuration file"
-#     echo "Example:"
-#     echo "  $0 -c"
-#     echo "  $0 -i /usr/sbin/nginx /etc/nginx/nginx.conf"
-# fi
 
 # 大纲 summary
 	# 系统信息排查
-	#   - IP地址
+	#     - IP地址
 	# - 系统基础信息
 	#     - 系统版本信息
 	#     - 系统发行版本
@@ -162,8 +146,8 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# - 系统负载情况
 	# - 网络流量情况
 	# 基线检查
-	# - 账户管理
-	#     - 账户审查(用户和组策略) -- userInfoCheck() 需要修改成通过不通过
+	# - 1.账户管理
+	#     - 1.1 账户审查(用户和组策略) -- userInfoCheck() 需要修改成通过不通过
 	#     	- 系统最后登录用户
 	# 		- 用户信息passwd文件分析
 	# 		- 检查可登录用户
@@ -177,7 +161,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 		- 检查特权用户组(除root组外)
 	# 		- 相同GID用户组
 	# 		- 相同用户组名
-	# 	- 密码策略
+	# 	- 1.2 密码策略
 	#     	- 密码有效期策略
 	# 			- 口令生存周期
 	# 			- 口令更改最小时间间隔
@@ -186,14 +170,14 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 		- 密码复杂度策略
 	# 		- 密码已过期用户
 	# 		- 账号超时锁定策略
-	#		- grub2密码策略检查
-	#		- grub密码策略检查(存在版本久远-弃用)
-	#		- lilo密码策略检查(存在版本久远-弃用)
-	# 	- 远程登录限制
-	#     	- 远程访问策略
+	# 		- grub2密码策略检查
+	# 		- grub密码策略检查(存在版本久远-弃用)
+	# 		- lilo密码策略检查(存在版本久远-弃用)
+	# 	- 1.3 远程登录限制
+	#     	- 远程访问策略(基于 TCP Wrappers)
 	# 	    	- 远程允许策略
 	# 			- 远程拒绝策略
-	# 	- 认证与授权
+	# 	- 1.4 认证与授权
 	# 		- SSH安全增强
 	# 			- sshd配置
 	# 			- 空口令登录
@@ -201,7 +185,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 			- ssh协议版本
 	# 		- PAM策略
 	# 		- 其他认证服务策略
-	# - 文件权限及访问控制
+	# - 2.文件权限及访问控制
 	# 	- 关键文件保护(文件或目录的权限及属性)
 	# 		- 文件权限策略
 	# 			- etc文件权限
@@ -212,33 +196,34 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 	# 			- services文件权限
 	# 			- grub.conf文件权限
 	# 			- xinetd.conf文件权限
-	# 			- lilo.conf文件权限
+	# 			- lilo.conf文件权限(存在版本久远-弃用)
 	# 			- limits.conf文件权限
+	# 			    - core dump 关闭
 	# 		- 系统文件属性检查
 	# 			- passwd文件属性
 	# 			- shadow文件属性
 	# 			- gshadow文件属性
 	# 			- group文件属性
 	# 		- useradd 和 usedel 的时间属性
-	# - 网络配置与服务
-	# 		- 端口和服务审计
-	# 		- 防火墙配置
-	# 		- 网络参数优化
-	# - selinux策略
-	# - 服务配置策略
+	# - 3.网络配置与服务
+	# 	- 端口和服务审计
+	# 	- 防火墙配置
+	# 		- 允许服务IP端口
+	# 	- 网络参数优化
+	# - 4.selinux策略
+	# - 5.服务配置策略
 	# 	- NIS配置策略
 	# 	- SNMP配置检查
 	# 	- Nginx配置策略
-	# - 日志记录与监控
+	# - 6.日志记录与监控
 	# 	- rsyslog服务
 	# 		- 服务开启
   	# 		- 文件权限默认
 	# 	- audit服务
 	# 	- 日志轮转和监控
 	# 	- 实时监控和告警
-	# - 备份和恢复策略
-	# - 其他安全配置基准
-
+	# - 7.备份和恢复策略
+	# - 8.其他安全配置基准
 # ------------------------
 # 基础变量定义
 # 输出颜色定义
@@ -250,42 +235,57 @@ typeset NC='\033[0m'
 
 # 脚本转换确保可以在Linux下运行
 # dos2unix linuxgun.sh # 将windows格式的脚本转换为Linux格式 不是必须
-date=$(date +%Y%m%d)
-# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 
-# 创建输出目录变量，当前目录下的output目录
-current_dir=$(pwd)  
-check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
-log_file="${check_file}/log"
+# 初始化环境
+init_env(){
+	# 基础变量定义
+	date=$(date +%Y%m%d)
+	# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
+	ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 
-# 删除原有的输出目录
-rm -rf $check_file
-rm -rf $log_file
+	# 创建输出目录变量，当前目录下的output目录
+	current_dir=$(pwd)  
+	check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
+	log_file="${check_file}/log"
 
-# 创建新的输出目录 检查目录 日志目录
-mkdir -p $check_file
-mkdir -p $log_file
-echo "LinuxGun v5.0 检查项" > ${check_file}/checkresult.txt
-echo "" >> ${check_file}/checkresult.txt
-echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
-echo "" >> ${check_file}/dangerlist.txt
+	# 删除原有的输出目录
+	rm -rf $check_file
+	rm -rf $log_file
 
-# 判断目录是否存在
-if [ ! -d "$check_file" ];then
-	echo "检查 ${check_file} 目录不存在,请检查"
-	exit 1
-fi
+	# 创建新的输出目录 检查目录 日志目录
+	mkdir -p $check_file
+	mkdir -p $log_file
 
-if [ $(whoami) != "root" ];then
-	echo "安全检查必须使用root账号,否则某些项无法检查"
-	exit 1
-fi
+	# 初始化报告文件
+	echo "LinuxGun v6.0 检查项" > ${check_file}/checkresult.txt
+	echo "" >> ${check_file}/checkresult.txt
+	echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
+	echo "" >> ${check_file}/dangerlist.txt
+
+	# 判断目录是否存在
+	if [ ! -d "$check_file" ];then
+		echo "检查 ${check_file} 目录不存在,请检查"
+		exit 1
+	fi
+
+	# 进入到检查目录
+	cd $check_file
+
+}
+
+
+# 确保当前用户是root用户
+ensure_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo -e "${RED}[!] 请以 root 权限运行此脚本${NC}"
+        exit 1
+    fi
+}
 
 # ------------------------
 
 # 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
-cd $check_file  
+# cd $check_file  
 # saveCheckResult="tee -a checkresult.txt" 
 # saveDangerResult="tee -a dangerlist.txt"
 
@@ -304,7 +304,7 @@ echoBanner() {
     echo -e "${BLUE}   / /___ / // / / // /_/ /_>  < / /_/ // /_/ // / / /          ${NC}"
     echo -e "${BLUE}  /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/           ${NC}"
     echo -e "${BLUE}                                                                ${NC}" 
-    echo -e "${BLUE}                                                Version:5.0     ${NC}"
+    echo -e "${BLUE}                                                Version:6.0     ${NC}"
     echo -e "${BLUE}                                                Author:sun977   ${NC}"
     echo -e "${BLUE}                                                Date:2025.6.12  ${NC}"
 	echo -e "${YELLOW}****************************************************************${NC}"
@@ -1800,7 +1800,6 @@ systemLogCheck(){
 
 }
 
-
 # 文件信息排查【完成】
 fileCheck(){
 	# 系统服务排查 
@@ -1813,13 +1812,13 @@ fileCheck(){
 	systemLogCheck
 }
 
-# 后门排查
+# 后门排查 【未完成】
 backdoorCheck(){
 	# 常见后门目录 /tmp /usr/bin /usr/sbin 
 	echo "待完善"
 }
 
-# webshell 排查
+# webshell 排查 【未完成】
 webshellCheck(){
 	# 检查网站常见的目录
 	# 可以放一个rkhunter的tar包,解压后直接运行即可
@@ -1830,14 +1829,14 @@ webshellCheck(){
 	# 访问日志
 }
 
-# 病毒排查
+# 病毒排查 【未完成】
 virusCheck(){
 	# 基础排查
 	# 病毒特有行为排查
 	echo -e "待完善"
 }
 
-# 内存和VFS排查
+# 内存和VFS排查 【未完成】
 memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
 	# 如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
@@ -1890,7 +1889,7 @@ kernelCheck(){
 	printf "\n"  
 }
 
-# 其他排查
+# 其他排查 【完成】
 otherCheck(){
 	# 可疑脚本文件排查
 	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
@@ -1972,7 +1971,7 @@ otherCheck(){
 }
 
 
-# 防火墙信息检查函数
+# 防火墙信息检查函数 归档 -- baselineCheck】
 firewallRulesCheck(){
     echo -e "${YELLOW}[+]正在检查防火墙策略（允许/拒绝规则）:${NC}"
 
@@ -2036,8 +2035,7 @@ firewallRulesCheck(){
     printf "\n"
 }
 
-
-# selinux状态检查函数
+# selinux状态检查函数 【归档 -- baselineCheck】
 selinuxStatusCheck(){
     echo -e "${YELLOW}正在检查 SELinux 安全策略:${NC}"
 
@@ -2088,26 +2086,6 @@ selinuxStatusCheck(){
 
     printf "\n"
 }
-
-
-# # 检查文件权限函数 
-# check_file_perm(){
-#     local file_path=$1      # 文件路径
-#     local expected_perm=$2  # 期望的权限
-#     local desc=$3 			# 描述
-
-#     if [ ! -f "$file_path" ]; then
-#         echo -e "${RED}[!] 文件 $file_path 不存在！${NC}"
-#         return
-#     fi
-
-#     local perm=$(stat -c "%A" "$file_path")
-#     if [ "$perm" == "$expected_perm" ]; then
-#         echo -e "${YELLOW}[+] $desc 权限正常 ($perm)${NC}"
-#     else
-#         echo -e "${RED}[!] $desc 权限异常 ($perm),建议改为 $expected_perm${NC}"
-#     fi
-# }
 
 # 基线检查【未完成】
 baselineCheck(){
@@ -2588,6 +2566,11 @@ checkOutlogPack(){
 ################################################################################
 # 主函数入口
 main() {
+	# 初始化环境
+	init_env
+	# 确保 root 权限执行
+	ensure_root
+
     # 检查是否提供了参数
     if [ $# -eq 0 ]; then
 		echoBanner

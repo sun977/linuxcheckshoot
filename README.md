@@ -261,6 +261,10 @@ linuxGun.sh 和 linuxcheck.sh 区别
 linuxGun.sh 更新日志	
 	2024-08-08:
 		1、完善systemCheck检查函数
+	2025-06-29:
+		1、所有功能封装成函数由 main 函数统一调用
+		2、基础功能已经完备
+		3、支持单独调用一个或者模块
 
 linuxGun.sh 概要
 	系统信息排查
