@@ -2594,7 +2594,7 @@ attackAngleCheck(){
 }
 
 
-# 日志统一打包 【完成】
+# 日志统一打包 【完成-暂时没有输出检测报告】
 checkOutlogPack(){ 
 	# 检查文件统一打包
 	echo -e "${YELLOW}正在打包系统原始日志[/var/log]:${NC}"  
@@ -2645,6 +2645,79 @@ main() {
                 usage
                 exit 0
                 ;;
+			--system)
+                modules+=("systemCheck")
+                ;;
+			--system-baseinfo)
+				modules+=("baseInfo")
+				;;
+			--system-user)
+				modules+=("userInfoCheck")
+				;;
+			--system-crontab)
+				modules+=("crontabCheck")
+				;;
+			--system-history)
+				modules+=("historyCheck")
+				;;
+			--network)
+				modules+=("networkInfo")
+				;;
+			--psinfo)
+				modules+=("processInfo")
+				;;
+			--file)
+				modules+=("fileCheck")
+				;;
+			--file-systemservice)
+				modules+=("systemServiceCheck")
+				;;
+			--file-dir)
+				modules+=("dirFileCheck")
+				;;
+			--file-keyfiles)
+				modules+=("specialFileCheck")
+				;;
+			--file-systemlog)
+				modules+=("systemLogCheck")
+				;;
+			--backdoor)
+				modules+=("backdoorCheck")
+				;;
+			--webshell)
+				modules+=("webshellCheck")
+				;;
+			--virus)
+				modules+=("virusCheck")
+				;;
+			--memInfo)
+				modules+=("memInfoCheck")
+				;;
+			--hackerTools)
+				modules+=("hackerToolsCheck")
+				;;
+			--kernel)
+				modules+=("kernelCheck")
+				;;
+			--other)
+				modules+=("otherCheck")
+				;;
+			--k8s)
+				modules+=("k8sCheck")
+				;;
+			--performance)
+				modules+=("performanceCheck")
+				;;
+			--baseline)
+                modules+=("baselineCheck")
+                ;;
+			--baseline-firewall)
+				modules+=("firewallRulesCheck")
+				;;
+			--baseline-selinux)
+				modules+=("selinuxStatusCheck")
+				;;
+		##################################
             --firewall)
                 modules+=("firewall")
                 ;;
@@ -2666,6 +2739,8 @@ main() {
             --dirfile)
                 modules+=("dirfile")
                 ;;
+		####################
+				
             --all)
                 run_all=true
                 ;;
@@ -2680,15 +2755,22 @@ main() {
     # 如果指定了 --all，则运行所有模块
     if [ "$run_all" = true ]; then
         echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
-        firewallRulesCheck
-        selinuxStatusCheck
-        baselineCheck
-        k8sCheck
-        performanceCheck
-        specialFileCheck
-        dirFileCheck
+		systemCheck
+		networkInfo
+		processInfo
+		fileCheck
+		backdoorCheck
+		webshellCheck
+		virusCheck
+		memInfoCheck
+		hackerToolsCheck
+		kernelCheck
+		otherCheck
+		k8sCheck
+		performanceCheck
+		baselineCheck
         echo -e "${GREEN}[+] 所有检查项已完成${NC}"
-    elif [ ${#modules[@]} -gt 0 ]; then
+    elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
             case "$module" in
                 firewall)
@@ -2721,7 +2803,7 @@ main() {
     fi
 }
 
-# 显示使用帮助
+# 显示使用帮助【需要修改】
 usage() {
     echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
     echo -e "${GREEN}使用方法: bash $0 --[option] module-option ${NC}"
