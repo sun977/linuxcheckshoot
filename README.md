@@ -256,7 +256,7 @@ linuxGun.sh 和 linuxcheck.sh 区别
 	3、linuxGun.sh 是设计之初就是交互式的 linux 系统检查脚本,需要安全人员交互执行。
 	4、linuxGun.sh 是针对安全人员使用,安全人员可以自定义检查内容,可以自定义检查内容。
 	5、linuxGun.sh 不自带输出功而 linuxcheck.sh 会自动输出检查结果并打包系统日志。
-	6、linuxGun.sh 在开发中,功能上不完整。
+	6、linuxGun.sh 功能上基本完整。
 
 linuxGun.sh 更新日志	
 	2024-08-08:
