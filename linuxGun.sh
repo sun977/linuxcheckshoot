@@ -2640,7 +2640,7 @@ main() {
 # 显示使用帮助
 usage() {
     echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
-    echo -e "${GREEN}使用方法: ./$0 [option] ${NC}"
+    echo -e "${GREEN}使用方法: bash $0 --[option] --[module-option] ${NC}"
     echo -e "${GREEN}可用选项:${NC}"
     echo -e "${GREEN}  -h, --help         显示帮助信息${NC}"
     echo -e "${GREEN}  --firewall         防火墙策略检查${NC}"
