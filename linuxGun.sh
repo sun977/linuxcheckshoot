@@ -2508,7 +2508,7 @@ k8sCheck(){
 }
 
 
-# 系统性能评估 【未完成】
+# 系统性能评估 【完成】
 performanceCheck(){
 	# 系统性能评估
 	## 磁盘使用情况
@@ -2546,6 +2546,9 @@ performanceCheck(){
 	# yum install nload -y
 	# nload ens192 
 	echo -e "${YELLOW}网络流量情况:${NC}"
+	echo -e "${YELLOW}需要借助第三放工具nload进行流量监控,请自行安装并运行${NC}"
+	echo -e "${GREEN}安装命令: yum install nload -y${NC}"
+	echo -e "${GREEN}检查命令: nload ens192${NC}"
 	
 }
 
