@@ -2653,7 +2653,6 @@ main() {
 
     # 解析所有参数
     for arg in "$@"; do
-	case "$arg" in 
         # 参数和模块绑定
         case "$arg" in
             -h|--help)
