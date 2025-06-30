@@ -2623,7 +2623,20 @@ checkOutlogPack(){
 ################################################################################
 # 主函数入口
 main() {
-	# 初始化环境
+	# 重要变量
+	# saveCheckResult="tee -a checkresult.txt" 
+	# saveDangerResult="tee -a dangerlist.txt"
+	# 将标准输入的内容同时输出到终端和文件
+	# log_to_file() {
+	# 	local log_file_path="$1"
+	# 	tee -a "$log_file_path" | while IFS= read -r line; do
+	# 		echo "$line"
+	# 	done
+	# }
+	# funcA | log_to_file "log.txt"
+	# --all 输出的函数后面都带上这个输出
+
+	# 初始化环境【含有一些定义变量，必须放在最开头调用】
 	init_env
 	# 确保 root 权限执行
 	ensure_root
