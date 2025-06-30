@@ -290,7 +290,7 @@ saveDangerResult="tee -a dangerlist.txt"
 ################################################################
 
 
-echo "LinuxGun 正在检查..."  | $saveCheckResult
+echo "LinuxCheck 正在检查..."  | $saveCheckResult
 echo "==========1.系统基础信息==========" | $saveCheckResult
 echo "[1.0]正在采集系统基础信息:" && "$saveCheckResult"
 echo "[1.1]IP地址信息[ip add]:" | $saveCheckResult

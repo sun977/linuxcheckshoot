@@ -2757,7 +2757,10 @@ main() {
 		# 日志打包函数【等待 2s 后在进行打包，解决脚本执行过程中，日志文件未生成或被占用问题】
 		sleep 2 
 		checkOutlogPack		| log2file "${check_file}/checkresult.txt"
-        echo -e "${GREEN}[+] linuGun 所有检查项已完成${NC}"
+        echo -e "${GREEN}[+] linuGun v6.0 所有检查项已完成${NC}"
+		echo -e "${GREEN} Author:sun977${NC}"  
+		echo -e "${GREEN} Mail:jiuwei977@foxmail.com${NC}"  
+		echo -e "${GREEN} Date:2025.06.30${NC}"  
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
