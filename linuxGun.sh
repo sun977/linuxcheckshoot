@@ -1890,6 +1890,7 @@ webshellCheck(){
 virusCheck(){
 	# 基础排查
 	# 病毒特有行为排查
+	echo -e "${YELLOW}正在进行病毒痕迹分析:${NC}"  
 	echo -e "待完善"
 }
 
@@ -1897,6 +1898,7 @@ virusCheck(){
 memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
 	# 如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
+	echo -e "${YELLOW}正在进行内存分析:${NC}"
 	echo -e "待完善"
 }
 
@@ -2590,6 +2592,7 @@ performanceCheck(){
 # 攻击角度信息收集
 attackAngleCheck(){
 	# 
+	echo -e "${YELLOW}正在进行攻击角度信息采集:${NC}"
 	echo -e "待完善"
 }
 
