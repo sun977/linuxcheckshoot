@@ -2649,10 +2649,12 @@ main() {
     fi
 
     local run_all=false
-    local modules=()
+    local modules=()  # 模块列表,参数选定的模块会追加到这个列表中
 
     # 解析所有参数
     for arg in "$@"; do
+	case "$arg" in 
+        # 参数和模块绑定
         case "$arg" in
             -h|--help)
                 usage
@@ -2729,31 +2731,7 @@ main() {
 				;;
 			--baseline-selinux)
 				modules+=("selinuxStatusCheck")
-				;;
-		##################################
-            --firewall)
-                modules+=("firewall")
-                ;;
-            --selinux)
-                modules+=("selinux")
-                ;;
-            --baseline)
-                modules+=("baseline")
-                ;;
-            --k8s)
-                modules+=("k8s")
-                ;;
-            --performance)
-                modules+=("performance")
-                ;;
-            --specialfile)
-                modules+=("specialfile")
-                ;;
-            --dirfile)
-                modules+=("dirfile")
-                ;;
-		####################
-				
+				;;			
             --all)
                 run_all=true
                 ;;
@@ -2782,31 +2760,85 @@ main() {
 		k8sCheck
 		performanceCheck
 		baselineCheck
+		# 日志打包函数
+		# checkOutlogPack
         echo -e "${GREEN}[+] 所有检查项已完成${NC}"
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
+			# 模块和执行函数绑定
             case "$module" in
-                firewall)
-                    firewallRulesCheck
-                    ;;
-                selinux)
-                    selinuxStatusCheck
-                    ;;
-                baseline)
-                    baselineCheck
-                    ;;
-                k8s)
-                    k8sCheck
-                    ;;
-                performance)
-                    performanceCheck
-                    ;;
-                specialfile)
-                    specialFileCheck
-                    ;;
-                dirfile)
-                    dirFileCheck
-                    ;;
+				system)
+					systemCheck
+					;;
+				system-baseinfo)
+					baseInfo
+					;;
+				system-user)
+					userInfoCheck
+					;;
+				system-crontab)
+					crontabCheck
+					;;
+				system-history)
+					historyCheck
+					;;
+				network)
+					networkInfo
+					;;	
+				psinfo)
+					processInfo
+					;;
+				file)
+					fileCheck
+					;;
+				file-systemservice)
+					systemServiceCheck
+					;;
+				file-dir)
+					dirFileCheck
+					;;
+				file-keyfiles)
+					specialFileCheck
+					;;
+				file-systemlog)
+					systemLogCheck
+					;;
+				backdoor)
+					backdoorCheck
+					;;
+				webshell)
+					webshellCheck
+					;;
+				virus)
+					virusCheck
+					;;
+				memInfo)
+					memInfoCheck
+					;;
+				hackerTools)
+					hackerToolsCheck
+					;;
+				kernel)
+					kernelCheck
+					;;
+				other)
+					otherCheck
+					;;
+				k8s)
+					k8sCheck
+					;;
+				performance)
+					performanceCheck
+					;;
+				baseline)
+					baselineCheck
+					;;
+				baseline-firewall)
+					firewallRulesCheck
+					;;
+				baseline-selinux)
+					selinuxStatusCheck
+					;;
             esac
         done
     else
@@ -2816,27 +2848,59 @@ main() {
     fi
 }
 
-# 显示使用帮助【需要修改】
+# 显示使用帮助
 usage() {
-    echo -e "${GREEN}LinuxGun 安全检查工具 v5.0 使用说明${NC}"
-    echo -e "${GREEN}使用方法: bash $0 --[option] module-option ${NC}"
+    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0 使用说明${NC}"
+    echo -e "${GREEN}使用方法: bash $0 [选项]${NC}"
     echo -e "${GREEN}可用选项:${NC}"
-    echo -e "${GREEN}  -h, --help         显示帮助信息${NC}"
-    echo -e "${GREEN}  --firewall         防火墙策略检查${NC}"
-    echo -e "${GREEN}  --selinux          SELinux 策略检查${NC}"
-    echo -e "${GREEN}  --baseline         基线安全检查${NC}"
-    echo -e "${GREEN}  --k8s              Kubernetes 安全检查（待完善）${NC}"
-    echo -e "${GREEN}  --performance      系统性能评估${NC}"
-    echo -e "${GREEN}  --specialfile      SSH相关文件及环境变量检查${NC}"
-    echo -e "${GREEN}  --dirfile          敏感目录文件检查${NC}"
-    echo -e "${GREEN}  --all              执行所有检查项${NC}"
+
+	echo -e "${GREEN}  查看帮助:${NC}"
+    echo -e "${YELLOW}    -h, --help             显示此帮助信息${NC}"
+
+	echo -e "${GREEN}  全量检查:${NC}"
+    echo -e "${YELLOW}    --all                   执行所有检查项(推荐首次运行)${NC}"
+
+    echo -e "${GREEN}  系统相关检查:${NC}"
+    echo -e "${YELLOW}    --system                执行所有系统相关检查(baseinfo/user/crontab/history)${NC}"
+    echo -e "${YELLOW}    --system-baseinfo       检查系统基础信息(IP/版本/发行版)${NC}"
+    echo -e "${YELLOW}    --system-user           用户信息分析(登录用户/克隆用户/非系统用户/口令检查等)${NC}"
+    echo -e "${YELLOW}    --system-crontab        检查计划任务(系统/用户级crontab)${NC}"
+    echo -e "${YELLOW}    --system-history        历史命令分析(.bash_history/.mysql_history/历史下载/敏感命令等)${NC}"
+
+    echo -e "${GREEN}  网络相关检查:${NC}"
+    echo -e "${YELLOW}    --network               网络连接信息(ARP/高危端口/网络连接/DNS/路由/防火墙策略等)${NC}"
+
+    echo -e "${GREEN}  进程相关检查:${NC}"
+    echo -e "${YELLOW}    --psinfo                进程信息分析(ps/top/敏感进程匹配)${NC}"
+
+    echo -e "${GREEN}  文件相关检查:${NC}"
+    echo -e "${YELLOW}    --file                  执行所有文件相关检查(系统服务/敏感目录/关键文件属性/各种日志文件分析)${NC}"
+    echo -e "${YELLOW}    --file-systemservice    系统服务检查(系统服务/用户服务/启动项等)${NC}"
+    echo -e "${YELLOW}    --file-dir              敏感目录检查(/tmp /root/ 隐藏文件等)${NC}"
+    echo -e "${YELLOW}    --file-keyfiles         关键文件检查(SSH相关配置/环境变量/hosts/shadow/24H变动文件/特权文件等)${NC}"
+    echo -e "${YELLOW}    --file-systemlog        系统日志检查(message/secure/cron/yum/dmesg/btmp/lastlog/wtmp等)[/var/log]${NC}"
+
+    echo -e "${GREEN}  后门与攻击痕迹检查:${NC}"
+    echo -e "${YELLOW}    --backdoor              检查后门特征(SUID/SGID/启动项/异常进程)[待完成]${NC}"
+    echo -e "${YELLOW}    --webshell              WebShell 排查(关键词匹配/文件特征)[待完成]${NC}"
+    echo -e "${YELLOW}    --virus                 病毒信息排查(已安装可疑软件/RPM检测)[待完成]${NC}"
+    echo -e "${YELLOW}    --memInfo               内存信息排查(内存占用/异常内容)[待完成]${NC}"
+    echo -e "${YELLOW}    --hackerTools           黑客工具检查(自定义规则匹配)${NC}"
+
+    echo -e "${GREEN}  其他重要检查:${NC}"
+    echo -e "${YELLOW}    --kernel                内核信息与安全配置检查(驱动排查)${NC}"
+    echo -e "${YELLOW}    --other                 其他安全项检查(可以脚本/文件完整性校验/软件排查)${NC}"
+    echo -e "${YELLOW}    --k8s                   Kubernetes 安全检查[待完善]${NC}"
+    echo -e "${YELLOW}    --performance           系统性能评估(磁盘/CPU/内存/负载/流量)${NC}"
+
+	echo -e "${GREEN}  系统安全基线相关:${NC}"
+    echo -e "${YELLOW}    --baseline              执行所有基线安全检查项${NC}"
+    echo -e "${YELLOW}    --baseline-firewall     防火墙策略检查(firewalld/iptables)${NC}"
+    echo -e "${YELLOW}    --baseline-selinux      SELinux 策略检查${NC}"
 }
 
 # 主函数执行
 main "$@"
-
-
-
 
 
 
