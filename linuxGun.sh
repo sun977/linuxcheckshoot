@@ -401,7 +401,7 @@ baseInfo(){
     fi
     printf "\n"
 
-    echo -e "${YELLOW}[1.4] 系统虚拟化环境检测[${NC}"
+    echo -e "${YELLOW}[1.4] 系统虚拟化环境检测:${NC}"
     virtWhat=$(dmidecode -s system-manufacturer 2>/dev/null | grep -i virtualbox || true)
     containerCheck=$(grep -E 'container|lxc|docker' /proc/1/environ 2>/dev/null)  #获取 init/systemd 进程的环境变量
 	k8swhat=$(grep -E 'POD_NAMESPACE|KUBERNETES_SERVICE_HOST|kubernetes' /proc/1/environ 2>/dev/null)
