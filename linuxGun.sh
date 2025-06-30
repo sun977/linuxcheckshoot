@@ -2653,83 +2653,83 @@ main() {
 
     # 解析所有参数
     for arg in "$@"; do
-        # 参数和模块绑定
+        # 参数和模块绑定  --system[参数] modules+=("system") 模块名 $module 执行函数
         case "$arg" in
             -h|--help)
                 usage
                 exit 0
                 ;;
 			--system)
-                modules+=("systemCheck")
+                modules+=("system")
                 ;;
 			--system-baseinfo)
-				modules+=("baseInfo")
+				modules+=("system-baseinfo")
 				;;
 			--system-user)
-				modules+=("userInfoCheck")
+				modules+=("system-user")
 				;;
 			--system-crontab)
-				modules+=("crontabCheck")
+				modules+=("system-crontab")
 				;;
 			--system-history)
-				modules+=("historyCheck")
+				modules+=("system-history")
 				;;
 			--network)
-				modules+=("networkInfo")
+				modules+=("network")
 				;;
 			--psinfo)
-				modules+=("processInfo")
+				modules+=("psinfo")
 				;;
 			--file)
-				modules+=("fileCheck")
+				modules+=("file")
 				;;
 			--file-systemservice)
-				modules+=("systemServiceCheck")
+				modules+=("file-systemservice")
 				;;
 			--file-dir)
-				modules+=("dirFileCheck")
+				modules+=("file-dir")
 				;;
 			--file-keyfiles)
-				modules+=("specialFileCheck")
+				modules+=("file-keyfiles")
 				;;
 			--file-systemlog)
-				modules+=("systemLogCheck")
+				modules+=("file-systemlog")
 				;;
 			--backdoor)
-				modules+=("backdoorCheck")
+				modules+=("backdoor")
 				;;
 			--webshell)
-				modules+=("webshellCheck")
+				modules+=("webshell")
 				;;
 			--virus)
-				modules+=("virusCheck")
+				modules+=("virus")
 				;;
 			--memInfo)
-				modules+=("memInfoCheck")
+				modules+=("memInfo")
 				;;
 			--hackerTools)
-				modules+=("hackerToolsCheck")
+				modules+=("hackerTools")
 				;;
 			--kernel)
-				modules+=("kernelCheck")
+				modules+=("kernel")
 				;;
 			--other)
-				modules+=("otherCheck")
+				modules+=("other")
 				;;
 			--k8s)
-				modules+=("k8sCheck")
+				modules+=("k8s")
 				;;
 			--performance)
-				modules+=("performanceCheck")
+				modules+=("performance")
 				;;
 			--baseline)
-                modules+=("baselineCheck")
+                modules+=("baseline")
                 ;;
 			--baseline-firewall)
-				modules+=("firewallRulesCheck")
+				modules+=("baseline-firewall")
 				;;
 			--baseline-selinux)
-				modules+=("selinuxStatusCheck")
+				modules+=("baseline-selinux")
 				;;			
             --all)
                 run_all=true
