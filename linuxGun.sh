@@ -303,9 +303,9 @@ echoBanner() {
     echo -e "${BLUE}   / /___ / // / / // /_/ /_>  < / /_/ // /_/ // / / /          ${NC}"
     echo -e "${BLUE}  /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/           ${NC}"
     echo -e "${BLUE}                                                                ${NC}" 
-    echo -e "${BLUE}                                                Version:6.0     ${NC}"
-    echo -e "${BLUE}                                                Author:sun977   ${NC}"
-    echo -e "${BLUE}                                                Date:2025.6.12  ${NC}"
+    echo -e "${BLUE}                                     Version:6.0     			${NC}"
+    echo -e "${BLUE}                                     Author:sun977   			${NC}"
+	echo -e "${BLUE}                                     Mail:jiuwei977@foxmail.com ${NC}"
 	echo -e "${YELLOW}****************************************************************${NC}"
     echo -e "${GREEN}检查内容:${NC}"
     echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
@@ -419,7 +419,6 @@ baseInfo(){
     fi
     printf "\n"
 }
-
 
 # 网络信息【完成】
 networkInfo(){
@@ -1249,7 +1248,6 @@ systemServiceCheck(){
 	userServiceCheck
 }
 
-
 # 敏感目录排查(包含隐藏文件)【归档 -- fileCheck】
 dirFileCheck(){
 	# /tmp/下
@@ -1392,7 +1390,6 @@ sshFileCheck(){
 
 	# 其他
 }
-
 
 # 特殊文件排查【归档 -- fileCheck】
 specialFileCheck(){
@@ -1566,7 +1563,6 @@ specialFileCheck(){
 
 	# 其他
 }
-
 
 # 系统日志分析【归档 -- fileCheck】
 systemLogCheck(){
@@ -2030,7 +2026,6 @@ otherCheck(){
 	printf "\n" 
 
 }
-
 
 # 防火墙信息检查函数 归档 -- baselineCheck】
 firewallRulesCheck(){
@@ -2546,7 +2541,6 @@ k8sCheck(){
 	echo -e "待完善"
 }
 
-
 # 系统性能评估 【完成】
 performanceCheck(){
 	# 系统性能评估
@@ -2598,7 +2592,6 @@ attackAngleCheck(){
 	echo -e "待完善"
 }
 
-
 # 日志统一打包 【完成-暂时没有输出检测报告】
 checkOutlogPack(){ 
 	# 检查文件统一打包
@@ -2624,9 +2617,7 @@ checkOutlogPack(){
 }
 
 
-
-################################################################################
-# 主函数入口
+#### 主函数入口 ####
 main() {
 	# 将标准输入的内容同时输出到终端和文件
 	log2file() {
@@ -2854,7 +2845,7 @@ main() {
 
 # 显示使用帮助
 usage() {
-    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0 使用说明${NC}"
+    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0 -- 2025.06.30 ${NC}"
     echo -e "${GREEN}使用方法: bash $0 [选项]${NC}"
     echo -e "${GREEN}可用选项:${NC}"
     echo -e "${YELLOW}    -h, --help             ${GREEN}显示此帮助信息${NC}"

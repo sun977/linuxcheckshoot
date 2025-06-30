@@ -16,7 +16,7 @@ cat <<EOF
 Version:4.3
 Author:sun977
 Mail:jiuwei977@foxmail.com
-Date:2024.08.07
+Date:2025.04.15
 
 更新日志:
 	2024.06.16:
