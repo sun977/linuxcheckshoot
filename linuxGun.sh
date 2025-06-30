@@ -2893,7 +2893,7 @@ usage() {
 	echo -e "${GREEN}  系统安全基线相关:${NC}"
     echo -e "${YELLOW}    --baseline              ${GREEN}执行所有基线安全检查项${NC}"
     echo -e "${YELLOW}    --baseline-firewall     ${GREEN}防火墙策略检查(firewalld/iptables)${NC}"
-    echo -e "${YELLOW}    --baseline-selinux      ${GREEN}ELinux 策略检查${NC}"
+    echo -e "${YELLOW}    --baseline-selinux      ${GREEN}SeLinux 策略检查${NC}"
 }
 
 # 主函数执行
