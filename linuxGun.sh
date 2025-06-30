@@ -2601,18 +2601,18 @@ attackAngleCheck(){
 checkOutlogPack(){ 
 	# 检查文件统一打包
 	echo -e "${YELLOW}正在打包系统原始日志[/var/log]:${NC}"  
-	tar -czvf ${log_file}/system_log.tar.gz /var/log/ -P
+	tar -czvf ${log_file}/system_log.tar.gz /var/log/ -P >/dev/null 2>&1
 	if [ $? -eq 0 ];then
 		echo -e "${YELLOW}[+]日志打包成功${NC}"  
 	else
-		echo -e "${RED}[!]日志打包失败,请工人导出日志${NC}"  
+		echo -e "${RED}[!]日志打包失败,请工人导出系统原始日志${NC}"  
 	fi
 	printf "\n"  
 
 
-	echo -e "${YELLOW}正在打包脚本检查日志到/output/目录下:${NC}"  
+	echo -e "${YELLOW}正在打包linuGun检查日志到/output/目录下:${NC}"  
 	# zip -r /tmp/linuxcheck_${ipadd}_${date}.zip /tmp/linuxcheck_${ipadd}_${date}/*
-	tar -zcvf ${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxcheck_${ipadd}_${date}/* -P
+	tar -zcvf ${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxcheck_${ipadd}_${date}/* -P >/dev/null 2>&1
 	if [ $? -eq 0 ];then
 		echo -e "${YELLOW}[+]检查文件打包成功${NC}"  
 	else
@@ -2626,15 +2626,12 @@ checkOutlogPack(){
 ################################################################################
 # 主函数入口
 main() {
-	# 重要变量
-	# saveCheckResult="tee -a checkresult.txt" 
-	# saveDangerResult="tee -a dangerlist.txt"
 	# 将标准输入的内容同时输出到终端和文件
 	log2file() {
 		local log_file_path="$1"
 		tee -a "$log_file_path" 
 	}
-	# funcA | log_to_file "log.txt"
+	# funcA | log2file "log.txt"
 	# --all 输出的函数后面都带上这个输出
 
 	# 初始化环境【含有一些定义变量，必须放在最开头调用】
@@ -2745,7 +2742,7 @@ main() {
 
     # 如果指定了 --all，则运行所有模块
     if [ "$run_all" = true ]; then
-        echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
+        echo -e "${YELLOW}[+] linuGun 开始执行所有检查项:${NC}"
 		systemCheck  		| log2file "${check_file}/checkresult.txt"
 		networkInfo	 		| log2file "${check_file}/checkresult.txt"
 		processInfo			| log2file "${check_file}/checkresult.txt"
@@ -2760,9 +2757,10 @@ main() {
 		k8sCheck			| log2file "${check_file}/checkresult.txt"
 		performanceCheck	| log2file "${check_file}/checkresult.txt"
 		baselineCheck		| log2file "${check_file}/checkresult.txt"
-		# 日志打包函数
+		# 日志打包函数【等待 2s 后在进行打包，解决脚本执行过程中，日志文件未生成或被占用问题】
+		sleep 2 
 		checkOutlogPack		| log2file "${check_file}/checkresult.txt"
-        echo -e "${GREEN}[+] 所有检查项已完成${NC}"
+        echo -e "${GREEN}[+] linuGun 所有检查项已完成${NC}"
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
