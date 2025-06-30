@@ -13,7 +13,7 @@ cat <<EOF
 /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/ 
                                                     
 
-Version:4.3
+Version:5.0
 Author:sun977
 Mail:jiuwei977@foxmail.com
 Date:2025.04.15
@@ -2207,7 +2207,7 @@ fi
 
 
 echo "检查结束!" | $saveCheckResult
-echo "Version:4.3" | $saveCheckResult
+echo "Version:5.0" | $saveCheckResult
 echo "Author:sun977" | $saveCheckResult
 echo "Mail:jiuwei977@foxmail.com" |	$saveCheckResult
 echo "Date:2024.08.07" | $saveCheckResult
