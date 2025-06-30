@@ -14,21 +14,28 @@ unzip linuxcheckshoot.zip
 # 使用方法 Usage
 ### 目录结构
 1、linuxGun.sh 是新版本应急响应工具，功能已经封装成不同的模块函数，支持交互式应急，运行指定一个或者多个功能模块，也可以一把梭然后分析日志报告。
+
 2、linuxcheck.sh 是旧版本一把梭工具，功能齐全但是未封装成函数，不支持交互式。
+
 3、linuxcheck_EN.sh 是旧版本的英文版本（之前给阿曼学生定制的版本），全英文输出，中国人在终端编码异常懒得调整的时候可以考虑使用这个版本，一把梭。
+
 4、checkrules 目录是存放检查规则文件的位置，不论是 linuxGun.sh 还是 linuxcheck.sh，都是基于这个目录下的规则文件进行检查的。里面的规则支持自定义（支持正则）。
 	- dangerstcpports.txt 危险TCP端口定义
 	- dangersudpports.txt 危险UDP端口定义
 	- hackertoolslist.txt 恶意或黑客软件定义
 	- dangerspslist.txt 危险进程定义
+
 5、output 目录是存放检查结果文件的位置。运行后会自动生成，项目里面未体现，结果文件有以下几个:
 	- log 存放检查日志，采集的系统日志和工具自身生成的检查日志文件都会放在这里。
 	- checkresult.txt 是 linuxGun.sh 或者 linuxcheck.sh 运行结果文件（和shell输出一致），为了后期方便看所以打印了一份。
 	- dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
 	- 其他文件若干。
+
 ### 运行检查
 [!]脚本需要使用 root 权限运行
+
 [!]记得给 shell 文件添加执行权限
+
 ```SHELL
 chmod +x linuxGun.sh 
 或者
@@ -43,24 +50,28 @@ bash linuxGun.sh -h
 bash linuxGun.sh --system-user 
 ```
 #### linuxcheck.sh
-```SHELL
 一把梭
+```SHELL
 bash linuxcheck.sh 
 ```
 
 # 贡献指南 Contributing
 代码贡献者：sun977
+
 思路贡献者：安全圈的朋友们
 
 # 联系方式 Contact
 邮箱：jiuwei977@foxmail.com
+
 纷传：启点安全实验室
 
 # 功能特性 Features
 ### linuxGun 的功能特性
 #### 基础特性
 1、模块化：功能函数模块化（小白友好）
+
 2、可定制：匹配规则可高度自定义
+
 3、支持交互式应急
 #### 详细功能
 ```SHELL
