@@ -257,10 +257,10 @@ init_env(){
 	mkdir -p $log_file
 
 	# 初始化报告文件
-	echo "LinuxGun v6.0 检查项" > ${check_file}/checkresult.txt
+	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt
 	echo "" >> ${check_file}/checkresult.txt
-	echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
-	echo "" >> ${check_file}/dangerlist.txt
+	# echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
+	# echo "" >> ${check_file}/dangerlist.txt
 
 	# 判断目录是否存在
 	if [ ! -d "$check_file" ];then
@@ -2630,12 +2630,10 @@ main() {
 	# saveCheckResult="tee -a checkresult.txt" 
 	# saveDangerResult="tee -a dangerlist.txt"
 	# 将标准输入的内容同时输出到终端和文件
-	# log_to_file() {
-	# 	local log_file_path="$1"
-	# 	tee -a "$log_file_path" | while IFS= read -r line; do
-	# 		echo "$line"
-	# 	done
-	# }
+	log2file() {
+		local log_file_path="$1"
+		tee -a "$log_file_path" 
+	}
 	# funcA | log_to_file "log.txt"
 	# --all 输出的函数后面都带上这个输出
 
@@ -2748,22 +2746,22 @@ main() {
     # 如果指定了 --all，则运行所有模块
     if [ "$run_all" = true ]; then
         echo -e "${YELLOW}[+] 开始执行所有检查项:${NC}"
-		systemCheck
-		networkInfo
-		processInfo
-		fileCheck
-		backdoorCheck
-		webshellCheck
-		virusCheck
-		memInfoCheck
-		hackerToolsCheck
-		kernelCheck
-		otherCheck
-		k8sCheck
-		performanceCheck
-		baselineCheck
+		systemCheck  		| log2file "${check_file}/checkresult.txt"
+		networkInfo	 		| log2file "${check_file}/checkresult.txt"
+		processInfo			| log2file "${check_file}/checkresult.txt"
+		fileCheck			| log2file "${check_file}/checkresult.txt"
+		backdoorCheck		| log2file "${check_file}/checkresult.txt"
+		webshellCheck		| log2file "${check_file}/checkresult.txt"
+		virusCheck			| log2file "${check_file}/checkresult.txt"
+		memInfoCheck		| log2file "${check_file}/checkresult.txt"
+		hackerToolsCheck	| log2file "${check_file}/checkresult.txt"
+		kernelCheck			| log2file "${check_file}/checkresult.txt"
+		otherCheck			| log2file "${check_file}/checkresult.txt"
+		k8sCheck			| log2file "${check_file}/checkresult.txt"
+		performanceCheck	| log2file "${check_file}/checkresult.txt"
+		baselineCheck		| log2file "${check_file}/checkresult.txt"
 		# 日志打包函数
-		# checkOutlogPack
+		checkOutlogPack		| log2file "${check_file}/checkresult.txt"
         echo -e "${GREEN}[+] 所有检查项已完成${NC}"
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
