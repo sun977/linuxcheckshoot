@@ -20,21 +20,21 @@ unzip linuxcheckshoot.zip
 3、linuxcheck_EN.sh 是旧版本的英文版本（之前给阿曼学生定制的版本），全英文输出，中国人在终端编码异常懒得调整的时候可以考虑使用这个版本，一把梭。
 
 4、checkrules 目录是存放检查规则文件的位置，不论是 linuxGun.sh 还是 linuxcheck.sh，都是基于这个目录下的规则文件进行检查的。里面的规则支持自定义（支持正则）。
-	- dangerstcpports.txt 危险TCP端口定义
-	- dangersudpports.txt 危险UDP端口定义
-	- hackertoolslist.txt 恶意或黑客软件定义
-	- dangerspslist.txt 危险进程定义
+- dangerstcpports.txt 危险TCP端口定义
+- dangersudpports.txt 危险UDP端口定义
+- hackertoolslist.txt 恶意或黑客软件定义
+- dangerspslist.txt 危险进程定义
 
 5、output 目录是存放检查结果文件的位置。运行后会自动生成，项目里面未体现，结果文件有以下几个:
-	- log 存放检查日志，采集的系统日志和工具自身生成的检查日志文件都会放在这里。
-	- checkresult.txt 是 linuxGun.sh 或者 linuxcheck.sh 运行结果文件（和shell输出一致），为了后期方便看所以打印了一份。
-	- dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
-	- 其他文件若干。
+- log 存放检查日志，采集的系统日志和工具自身生成的检查日志文件都会放在这里。
+- checkresult.txt 是 linuxGun.sh 或者 linuxcheck.sh 运行结果文件（和shell输出一致），为了后期方便看所以打印了一份。
+- dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
+- 其他文件若干。
 
 ### 运行检查
-[!]脚本需要使用 root 权限运行
+**[!]脚本需要使用 root 权限运行**
 
-[!]记得给 shell 文件添加执行权限
+**[!]记得给 shell 文件添加执行权限**
 
 ```SHELL
 chmod +x linuxGun.sh 
