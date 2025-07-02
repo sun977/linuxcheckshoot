@@ -5,11 +5,12 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 更新功能,所有系统通用【等待更新】
 # 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
 # 根据参数执行不同的功能 
-# [INFO] 提示输出 -- 提示
-# [NOTE] 注意输出 -- 需要注意
-# [WARN] 警告输出 -- 重点关注
+# [INFO] 提示输出 -- 提示     [+]
+# [NOTE] 注意输出 -- 需要注意  
+# [WARN] 警告输出 -- 重点关注  [!]
 # [KNOW] 知识点
 # [ERRO] 错误输出
+# [i] 
 
 # 大纲输出函数
 print_summary() {
@@ -2545,6 +2546,22 @@ baselineCheck(){
 k8sClusterInfo() {
     echo -e "${YELLOW}正在检查K8s集群基础信息:${NC}"
 
+	# 检查 Kubernetes 版本信息
+    echo -e "\n${YELLOW}[+]正在检查 Kubernetes 版本信息:${NC}"
+    echo -e "${GREEN}[+] kubectl 版本信息 (客户端/服务端):${NC}"
+    if command -v kubectl &>/dev/null; then
+        kubectl version 2>&1
+    else
+        echo -e "${RED}[!] 警告: kubectl 命令未安装，无法获取版本信息${NC}"
+    fi
+
+    echo -e "${GREEN}[+] kubelet 版本信息:${NC}"2
+    if command -v kubelet &>/dev/null; then
+        kubelet --version 2>&1
+    else
+        echo -e "${RED}[!] 警告: kubelet 命令未安装，无法获取版本信息${NC}"
+    fi
+
     # 检查 Kubernetes 服务状态
     echo -e "${BLUE}1. 检查 Kubernetes 服务状态:${NC}"
     systemctl status kubelet 2>&1 | grep -v "No such process"
@@ -2622,6 +2639,7 @@ k8sClusterInfo() {
     done
 }
 
+
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
     echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
@@ -2676,14 +2694,80 @@ k8sSecretCheck() {
     fi
 }
 
-
-# 收集 Kubernetes 敏感信息
+# 收集 Kubernetes 敏感信息（仅查找指定目录下规定后缀的文件）
 k8sSensitiveInfo() { 
-	# 收集 Kubernetes Tokens 1、文件搜索 2、kubectl get secrets
-	echo -e "${YELLOW}正在收集K8s集群敏感信息:${NC}"
+    echo -e "${YELLOW}正在收集K8s集群敏感信息(仅查找文件):${NC}"
 
+    # 定义需要扫描的路径列表
+    SCAN_PATHS=(
+		"/var/lib/kubelet/pods/"
+        "/var/run/secrets/kubernetes.io/serviceaccount/"
+        "/etc/kubernetes/"
+        "/root/.kube/"
+        "/run/secrets/"
+        "/var/lib/kubelet/config/"
+        "/opt/kubernetes/"
+        "/usr/local/etc/kubernetes/"
+		"/home/"
+		"/etc/"
+		"/var/lib/docker/"
+		"/usr/"
+    )
+
+    # 定义要查找的文件名模式（find -name 格式）
+    search_patterns=(
+        "*token*"
+        "*cert*"
+        "*credential*"
+        "config"
+		"conf"
+        "*.kubeconfig*"
+        ".kube/config"
+		"ca.crt"
+        "namespace"
+		"*pass*.*"
+		"*.key"
+		"*secret"
+		"*y*ml"
+		"*c*f*g*.json"
+    )
+
+    # 创建输出目录用于保存发现的敏感文件
+    K8S_SENSITIVE_DIR="${$k8s_file}/k8s_sensitive"   # ${check_file}/k8s/k8s_sensitive
+    if [ ! -d "$K8S_SENSITIVE_DIR" ]; then
+        mkdir -p "$K8S_SENSITIVE_DIR"
+        echo -e "${GREEN}[+] 创建目录: $K8S_SENSITIVE_DIR${NC}"
+    fi
+
+    # 遍历每个路径
+    for path in "${SCAN_PATHS[@]}"; do
+        if [ -d "$path" ]; then
+            echo -e "${BLUE}[i] 正在扫描路径: $path${NC}"
+
+            # 遍历每个文件模式
+            for pattern in "${search_patterns[@]}"; do
+                # 使用 find 匹配文件名模式，并安全处理带空格/换行的文件名
+                find "$path" -type f -name "$pattern" -print0 2>/dev/null | while IFS= read -r -d '' file; do
+                    if [ -f "$file" ]; then
+                        echo -e "${RED}[!] 发现敏感文件: $file${NC}"
+
+						# 输出文件内容到终端
+						# echo -e "${GREEN}[+] 文件内容如下:${NC}"
+						# cat "$file"
+
+                        # 复制文件到输出目录
+                        filename=$(basename "$file")
+                        cp "$file" "$K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)"
+                        echo -e "${GREEN}[+] 已保存敏感文件副本至: $K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)${NC}"
+                        echo -e ""
+                    fi
+                done
+            done
+        else
+            echo -e "${YELLOW}[i] 路径不存在或无权限访问: $path${NC}"
+        fi
+    done
 }
-
 
 # Kubernetes 基线检查函数
 k8sBaselineCheck() {
@@ -2798,13 +2882,23 @@ k8sBaselineCheck() {
 
 # k8s排查
 k8sCheck(){
-    echo -e "${YELLOW}正在检查K8s系统配置:${NC}"
-    
-    # 调用函数
-	## 1. 集群基础信息
-	k8sClusterInfo
-	## 2. 集群安全信息
-	k8sSecretCheck
+    echo -e "${YELLOW}正在检查K8s系统信息:${NC}"
+    # 判断环境是否使用 k8s 集群
+	if [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; then 
+		echo -e "${YELLOW}[+] 检测到 Kubernetes 环境，开始执行相关检查...${NC}"
+		
+		# 调用函数
+		## 1. 集群基础信息
+		k8sClusterInfo
+		## 2. 集群安全信息
+		k8sSecretCheck
+		## 3. 集群敏感信息(会拷贝敏感文件到路径)
+		k8sSensitiveInfo
+		## 4. 集群基线检查
+	else
+		echo -e "${RED}[!] 未检测到 Kubernetes 环境，跳过所有 Kubernetes 相关检查${NC}"
+
+	fi
 }
 
 
@@ -2859,6 +2953,97 @@ attackAngleCheck(){
 	echo -e "${YELLOW}正在进行攻击角度信息采集:${NC}"
 	echo -e "待完善"
 }
+
+# 查找敏感配置文件函数（支持多模式定义）【攻击角度通用】
+findSensitiveFiles() {
+    echo -e "${YELLOW}正在查找敏感配置文件:${NC}"
+
+    # 定义需要扫描的路径列表
+    SCAN_PATHS=(
+        "/var/run/secrets/"
+        "/etc/kubernetes/"
+        "/root/"
+        "/home/"
+        "/tmp/"
+        "/opt/"
+        "/usr/local/etc/"
+    )
+
+    # 定义要查找的文件名模式（find -name 格式）
+    search_patterns=(
+        -name '*Jenkinsfile*'
+        -name 'nacos'
+        -name '*kubeconfig*'
+        -name '.gitlab-ci.yml'
+        -name 'conf'
+        -name 'config'
+        -name '*.yaml'
+        -name '*.yml'
+        -name '*.json'
+        -name '*.kubeconfig'
+        -name 'id_rsa'
+        -name 'id_ed25519'
+    )
+
+    # 创建输出目录
+    SENSITIVE_DIR="${check_file}/sensitive_files"
+    if [ ! -d "$SENSITIVE_DIR" ]; then
+        mkdir -p "$SENSITIVE_DIR"
+        echo -e "${GREEN}[+] 创建敏感文件输出目录: $SENSITIVE_DIR${NC}"
+    fi
+
+    # 构建 find 命令参数
+    for path in "${SCAN_PATHS[@]}"; do
+        if [ -d "$path" ]; then
+            echo -e "${BLUE}[i] 正在扫描路径: $path${NC}"
+
+            # 初始化 find 参数数组
+            find_args=("$path" -type f)
+
+            # 添加所有 -name 条件
+            for pattern in "${search_patterns[@]}"; do
+                find_args+=("${pattern}")
+                find_args+=(-o)
+            done
+
+            # 删除最后一个多余的 -o
+            unset 'find_args[${#find_args[@]}-1]'
+
+            # 执行 find 命令并处理结果
+            if [ ${#find_args[@]} -gt 0 ]; then
+                find "${find_args[@]}" | while read -r file; do
+                    echo -e "${RED}[!] 发现敏感文件: $file${NC}"
+
+                    # 输出文件内容到终端
+                    echo -e "${GREEN}[+] 文件内容如下:${NC}"
+                    cat "$file"
+
+                    # 复制文件到输出目录
+                    filename=$(basename "$file")
+                    cp "$file" "$SENSITIVE_DIR/${filename}_$(date +%Y%m%d%H%M%S)"
+                    echo -e "${GREEN}[+] 已保存副本至: $SENSITIVE_DIR/${filename}_$(date +%Y%m%d%H%M%S)${NC}"
+                    echo -e ""
+                done
+            fi
+
+        else
+            echo -e "${YELLOW}[i] 路径不存在或无权限访问: $path${NC}"
+        fi
+    done
+
+    # 检查环境变量中是否包含敏感关键词（如 token, password）
+    echo -e "${BLUE}[i] 正在检查环境变量中的敏感信息...${NC}"
+    env | grep -i 'token\|password' 2>&1 | tee /tmp/sensitive_env.txt
+    if [ -s /tmp/sensitive_env.txt ]; then
+        echo -e "${RED}[!] 发现环境变量中包含敏感信息:${NC}"
+        cat /tmp/sensitive_env.txt
+        cp /tmp/sensitive_env.txt "$SENSITIVE_DIR/env_sensitive_$(date +%Y%m%d%H%M%S)"
+        rm -f /tmp/sensitive_env.txt
+    else
+        echo -e "${YELLOW}[i] 未发现环境变量中的敏感信息${NC}"
+    fi
+}
+
 
 # 日志统一打包 【完成-暂时没有输出检测报告】
 checkOutlogPack(){ 
