@@ -138,8 +138,13 @@ LinuxGun 安全检查工具 v6.0 使用说明
   其他重要检查:
     --kernel                内核信息与安全配置检查(驱动排查)
     --other                 其他安全项检查(可以脚本/文件完整性校验/软件排查)
-    --k8s                   Kubernetes 安全检查[待完善]
     --performance           系统性能评估(磁盘/CPU/内存/负载/流量)
+  Kubernetes 相关检查:
+    --k8s                   Kubernetes 全量安全检查
+    --k8s-cluster           Kubernetes 集群信息检查(集群信息/节点信息/服务信息等)
+    --k8s-secret            Kubernetes 集群凭据信息检查(secret/pod等) 
+    --k8s-fscan            	Kubernetes 集群敏感信息扫描(默认路径指定后缀文件[会备份敏感文件]) 
+    --k8s-baseline          Kubernetes 集群安全基线检查
   系统安全基线相关:
     --baseline              执行所有基线安全检查项
     --baseline-firewall     防火墙策略检查(firewalld/iptables)
@@ -154,6 +159,13 @@ LinuxGun 安全检查工具 v6.0 使用说明
 		2、基础功能已经完备
 		3、支持单独调用一个或多个模块函数
 		4、统一的输出函数
+	2025-07-02:
+		1、添加 k8s 排查模块函数，功能包含
+			- 集群信息检查
+			- secrets 排查
+			- 敏感文件扫描
+			- 集群基线检查
+
 
 linuxGun 检测项目大纲(summary)
 	一.系统信息排查
@@ -280,6 +292,10 @@ linuxGun 检测项目大纲(summary)
 		- 系统文件完整性校验(MD5)
 		- 安装软件排查
 	十二.k8s排查
+		- 集群信息排查
+		- 集群凭据排查
+		- 集群敏感文件扫描
+		- 集群基线检查
 	十三.系统性能分析
 		- 磁盘使用情况
 		- CPU使用情况

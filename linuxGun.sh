@@ -2,6 +2,10 @@
 HELL=/bin/bash 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
+# Version: 6.0.2
+# Author: Sun977
+# Update: 2025-07-02
+
 # 更新功能,所有系统通用【等待更新】
 # 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
 # 根据参数执行不同的功能 
@@ -140,6 +144,10 @@ print_summary() {
 		- 系统文件完整性校验(MD5)
 		- 安装软件排查
 	十二.k8s排查
+		- 集群信息排查
+		- 集群凭据排查
+		- 集群敏感文件扫描
+		- 集群基线检查
 	十三.系统性能分析
 		- 磁盘使用情况
 		- CPU使用情况
@@ -279,7 +287,6 @@ init_env(){
 
 }
 
-
 # 确保当前用户是root用户
 ensure_root() {
     if [ "$(id -u)" -ne 0 ]; then
@@ -292,7 +299,6 @@ ensure_root() {
 # cd $check_file  
 # saveCheckResult="tee -a checkresult.txt" 
 # saveDangerResult="tee -a dangerlist.txt"
-
 
 ################################################################
 
@@ -2548,6 +2554,7 @@ k8sClusterInfo() {
 
 	# 检查 Kubernetes 版本信息
     echo -e "\n${YELLOW}[+]正在检查 Kubernetes 版本信息:${NC}"
+	# kubectl 命令行工具，通过其向 API server 发送指令
     echo -e "${GREEN}[+] kubectl 版本信息 (客户端/服务端):${NC}"
     if command -v kubectl &>/dev/null; then
         kubectl version 2>&1
@@ -2555,7 +2562,8 @@ k8sClusterInfo() {
         echo -e "${RED}[!] 警告: kubectl 命令未安装，无法获取版本信息${NC}"
     fi
 
-    echo -e "${GREEN}[+] kubelet 版本信息:${NC}"2
+	# kubelet 运行在每个node上运行，用于管理容器的生命周期，检查kubelet服务状态
+    echo -e "${GREEN}[+] kubelet 版本信息:${NC}"
     if command -v kubelet &>/dev/null; then
         kubelet --version 2>&1
     else
@@ -2639,13 +2647,12 @@ k8sClusterInfo() {
     done
 }
 
-
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
     echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
 
     # 创建 k8s 子目录用于存储 Secret 文件
-    K8S_SECRET_DIR="${check_file}/k8s"  # 文件在 init_env 函数已经创建
+    K8S_SECRET_DIR="${k8s_file}"  # 文件在 init_env 函数已经创建 k8s_file="${check_file}/k8s"
     if [ ! -d "$K8S_SECRET_DIR" ]; then
         mkdir -p "$K8S_SECRET_DIR"
         echo -e "${GREEN}[+] 重新创建目录: $K8S_SECRET_DIR${NC}"
@@ -2719,8 +2726,8 @@ k8sSensitiveInfo() {
         "*token*"
         "*cert*"
         "*credential*"
-        "config"
-		"conf"
+        "*.config"
+		"*.conf"
         "*.kubeconfig*"
         ".kube/config"
 		"ca.crt"
@@ -2895,6 +2902,7 @@ k8sCheck() {
 		## 3. 集群敏感信息(会拷贝敏感文件到路径)
 		k8sSensitiveInfo
 		## 4. 集群基线检查
+		k8sBaselineCheck
 	else
 		echo -e "${RED}[!] 未检测到 Kubernetes 环境，跳过所有 Kubernetes 相关检查${NC}"
 
@@ -3167,6 +3175,18 @@ main() {
 			--k8s)
 				modules+=("k8s")
 				;;
+			--k8s-cluster)
+				modules+=("k8s-cluster")
+				;;
+			--k8s-secret)
+				modules+=("k8s-secret")
+				;;
+			--k8s-fscan)
+				modules+=("k8s-fscan")
+				;;
+			--k8s-baseline)
+				modules+=("k8s-baseline")
+				;;
 			--performance)
 				modules+=("performance")
 				;;
@@ -3278,6 +3298,18 @@ main() {
 				k8s)
 					k8sCheck
 					;;
+				k8s-cluster)
+					k8sClusterInfo
+					;;
+				k8s-secret)
+					k8sSecretCheck
+					;;
+				k8s-fscan)
+					k8sSensitiveInfo
+					;;
+				k8s-baseline)
+					k8sBaselineCheck
+					;;
 				performance)
 					performanceCheck
 					;;
@@ -3301,7 +3333,7 @@ main() {
 
 # 显示使用帮助
 usage() {
-    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0 -- 2025.06.30 ${NC}"
+    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0.2 -- 2025.07.02 ${NC}"
     echo -e "${GREEN}使用方法: bash $0 [选项]${NC}"
     echo -e "${GREEN}可用选项:${NC}"
     echo -e "${YELLOW}    -h, --help             ${GREEN}显示此帮助信息${NC}"
@@ -3340,9 +3372,15 @@ usage() {
     echo -e "${GREEN}  其他重要检查:${NC}"
     echo -e "${YELLOW}    --kernel                ${GREEN}内核信息与安全配置检查(驱动排查)${NC}"
     echo -e "${YELLOW}    --other                 ${GREEN}其他安全项检查(可以脚本/文件完整性校验/软件排查)${NC}"
-    echo -e "${YELLOW}    --k8s                   ${GREEN}Kubernetes 安全检查[待完善]${NC}"
-    echo -e "${YELLOW}    --performance           ${GREEN}系统性能评估(磁盘/CPU/内存/负载/流量)${NC}"
+	echo -e "${YELLOW}    --performance           ${GREEN}系统性能评估(磁盘/CPU/内存/负载/流量)${NC}"
 
+	echo -e "${GREEN}  Kubernetes 相关检查:${NC}"
+    echo -e "${YELLOW}    --k8s                   ${GREEN}Kubernetes 全量安全检查${NC}"
+	echo -e "${YELLOW}    --k8s-cluster           ${GREEN}Kubernetes 集群信息检查(集群信息/节点信息/服务信息等)${NC}"
+	echo -e "${YELLOW}    --k8s-secret            ${GREEN}Kubernetes 集群凭据信息检查(secret/pod等)${NC}"
+	echo -e "${YELLOW}    --k8s-fscan             ${GREEN}Kubernetes 集群敏感信息扫描(默认路径指定后缀文件[会备份敏感文件])${NC}"
+	echo -e "${YELLOW}    --k8s-baseline          ${GREEN}Kubernetes 集群安全基线检查${NC}"
+    
 	echo -e "${GREEN}  系统安全基线相关:${NC}"
     echo -e "${YELLOW}    --baseline              ${GREEN}执行所有基线安全检查项${NC}"
     echo -e "${YELLOW}    --baseline-firewall     ${GREEN}防火墙策略检查(firewalld/iptables)${NC}"
@@ -3351,10 +3389,6 @@ usage() {
 
 # 主函数执行
 main "$@"
-
-
-
-
 
 
 
