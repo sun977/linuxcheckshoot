@@ -2881,7 +2881,7 @@ k8sBaselineCheck() {
 
 
 # k8s排查
-k8sCheck(){
+k8sCheck() {
     echo -e "${YELLOW}正在检查K8s系统信息:${NC}"
     # 判断环境是否使用 k8s 集群
 	if [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; then 
