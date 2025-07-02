@@ -2715,10 +2715,10 @@ k8sSensitiveInfo() {
         "/var/lib/kubelet/config/"
         "/opt/kubernetes/"
         "/usr/local/etc/kubernetes/"
-		"/home/"
-		"/etc/"
-		"/var/lib/docker/"
-		"/usr/"
+		# "/home/"
+		# "/etc/"
+		# "/var/lib/docker/"
+		# "/usr/"
     )
 
     # 定义要查找的文件名模式（find -name 格式）
