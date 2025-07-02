@@ -2550,6 +2550,12 @@ baselineCheck(){
 
 # 检查 Kubernetes 集群基础信息
 k8sClusterInfo() {
+	# 判断是否为 Kubernetes 环境（目录或命令存在）
+    if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        exit 0
+    fi
+
     echo -e "${YELLOW}正在检查K8s集群基础信息:${NC}"
 
 	# 检查 Kubernetes 版本信息
@@ -2649,6 +2655,12 @@ k8sClusterInfo() {
 
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
+	# 判断是否为 Kubernetes 环境（目录或命令存在）
+    if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        exit 0
+    fi
+
     echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
 
     # 创建 k8s 子目录用于存储 Secret 文件
@@ -2703,6 +2715,12 @@ k8sSecretCheck() {
 
 # 收集 Kubernetes 敏感信息（仅查找指定目录下规定后缀的文件）
 k8sSensitiveInfo() { 
+	# 判断是否为 Kubernetes 环境（目录或命令存在）
+    if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        exit 0
+    fi
+
     echo -e "${YELLOW}正在收集K8s集群敏感信息(仅查找文件):${NC}"
 
     # 定义需要扫描的路径列表
@@ -2778,6 +2796,12 @@ k8sSensitiveInfo() {
 
 # Kubernetes 基线检查函数
 k8sBaselineCheck() {
+	# 判断是否为 Kubernetes 环境（目录或命令存在）
+    if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        exit 0
+    fi
+
     echo -e "${YELLOW}正在执行 Kubernetes 基线安全检查:${NC}"
 
     echo -e "\n${BLUE}1. 控制平面配置检查:${NC}"
@@ -2885,7 +2909,6 @@ k8sBaselineCheck() {
         echo -e "${RED}[!] 警告: 检测到特权容器，建议禁用或限制特权容器运行${NC}"
     fi
 }
-
 
 # k8s排查
 k8sCheck() {
