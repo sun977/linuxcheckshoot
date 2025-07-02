@@ -2740,7 +2740,7 @@ k8sSensitiveInfo() {
     )
 
     # 创建输出目录用于保存发现的敏感文件
-    K8S_SENSITIVE_DIR="${$k8s_file}/k8s_sensitive"   # ${check_file}/k8s/k8s_sensitive
+    K8S_SENSITIVE_DIR="${k8s_file}/k8s_sensitive"   # ${check_file}/k8s/k8s_sensitive
     if [ ! -d "$K8S_SENSITIVE_DIR" ]; then
         mkdir -p "$K8S_SENSITIVE_DIR"
         echo -e "${GREEN}[+] 创建目录: $K8S_SENSITIVE_DIR${NC}"
