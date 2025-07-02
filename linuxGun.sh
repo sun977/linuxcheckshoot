@@ -2535,11 +2535,143 @@ baselineCheck(){
 
 }
 
+
+
+
+# 检查 Kubernetes 集群基础信息
+k8sClusterInfo() {
+    echo -e "${YELLOW}正在检查K8s集群基础信息:${NC}"
+
+    # 检查 Kubernetes 服务状态
+    echo -e "${BLUE}1. 检查 Kubernetes 服务状态:${NC}"
+    systemctl status kubelet 2>&1 | grep -v "No such process"
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}kubelet 服务未运行${NC}"
+    fi
+
+    echo -e "\n${BLUE}2. 检查集群信息:${NC}"
+    kubectl cluster-info 2>&1
+
+    echo -e "\n${BLUE}3. 检查节点状态:${NC}"
+    kubectl get nodes 2>&1
+
+    echo -e "\n${BLUE}4. 检查所有命名空间中的 Pod 状态:${NC}"
+    kubectl get pods --all-namespaces 2>&1
+
+    echo -e "\n${BLUE}5. 检查系统 Pod 状态:${NC}"
+    kubectl get pods -n kube-system 2>&1
+
+    echo -e "\n${BLUE}6. 检查持久卷(PV)状态:${NC}"
+    kubectl get pv 2>&1
+
+    echo -e "\n${BLUE}7. 检查持久卷声明(PVC)状态:${NC}"
+    kubectl get pvc 2>&1
+
+    echo -e "\n${BLUE}8. 检查服务状态:${NC}"
+    kubectl get svc --all-namespaces 2>&1
+
+    echo -e "\n${BLUE}9. 检查部署状态:${NC}"
+    kubectl get deployments --all-namespaces 2>&1
+
+    echo -e "\n${BLUE}10. 检查守护进程集状态:${NC}"
+    kubectl get daemonsets --all-namespaces 2>&1
+
+    echo -e "\n${BLUE}11. 检查事件信息:${NC}"
+    kubectl get events --sort-by=.metadata.creationTimestamp 2>&1
+
+    echo -e "\n${BLUE}12. 检查 Kubernetes 配置文件:${NC}"
+
+    # 定义要检查的 Kubernetes 配置文件路径
+    K8S_CONFIG_FILES=(
+        "/etc/kubernetes/kubelet.conf"
+        "/etc/kubernetes/config"
+        "/etc/kubernetes/apiserver"
+        "/etc/kubernetes/controller-manager"
+        "/etc/kubernetes/scheduler"
+    )
+
+    for config_file in "${K8S_CONFIG_FILES[@]}"; do
+        if [ -f "$config_file" ]; then
+            echo -e "${BLUE}检查配置文件: $config_file${NC}"
+
+            # 检查文件权限
+            echo -e "${GREEN}[+] 文件权限:${NC}"
+            ls -l "$config_file"
+
+            # 检查常见安全配置项（示例：查看是否设置了认证和授权相关参数）
+            echo -e "${GREEN}[+] 关键配置项检查:${NC}"
+            grep -E 'client-ca-file|token-auth-file|authorization-mode|secure-port' "$config_file" 2>&1
+
+            # 如果是 kubelet.conf，额外检查是否有 insecure-port 设置为 0
+            if [[ "$config_file" == "/etc/kubernetes/kubelet.conf" ]]; then
+                echo -e "${GREEN}[+] 检查 kubelet 是否禁用不安全端口:${NC}"
+                if grep -q 'insecure-port=0' "$config_file"; then
+                    echo -e "${GREEN}✓ 不安全端口已禁用${NC}"
+                else
+                    echo -e "${RED}[!] 警告: kubelet 的不安全端口未禁用${NC}"
+                fi
+            fi
+
+            echo -e ""
+        else
+            echo -e "${RED}[!] 配置文件 $config_file 不存在${NC}"
+        fi
+    done
+}
+
+# 检查 Kubernetes Secrets 安全信息
+k8sSecretCheck() {
+    echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
+
+    echo -e "\n${BLUE}1. 检查 Kubernetes Secrets:${NC}"
+
+    # 获取所有命名空间下的 Secret
+    SECRETS=$(kubectl get secrets --all-namespaces 2>&1)
+    if echo "$SECRETS" | grep -q "No resources found"; then
+        echo -e "${RED}[!] 未发现任何 Secret${NC}"
+    else
+        echo -e "${GREEN}[+] 发现以下 Secret:${NC}"
+        echo "$SECRETS"
+
+        # 列出每个 Secret 的详细信息及其关联的 Pod
+        echo "$SECRETS" | awk 'NR>1 {print $1, $2}' | while read -r namespace secret_name; do
+            echo -e "\n${BLUE}检查 Secret: $namespace/$secret_name${NC}"
+
+            # 显示 Secret 的详细信息
+            kubectl describe secret "$secret_name" -n "$namespace" 2>&1
+
+            # 检查哪些 Pod 使用了该 Secret
+            PODS_USING_SECRET=$(kubectl get pods -n "$namespace" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.volumes[?(@.secret.secretName=="'$secret_name'")].secret.secretName}{"\n"}{end}' 2>&1)
+            if [ -n "$PODS_USING_SECRET" ]; then
+                echo -e "${GREEN}[+] 使用此 Secret 的 Pod:${NC}"
+                echo "$PODS_USING_SECRET" | grep -v '^$'
+            else
+                echo -e "${YELLOW}[i] 此 Secret 当前没有被任何 Pod 使用${NC}"
+            fi
+
+            # 检查 Secret 数据内容（以 base64 解码为例）
+            echo -e "${GREEN}[+] Secret 数据内容 (Base64 解码):${NC}"
+            SECRET_DATA=$(kubectl get secret "$secret_name" -n "$namespace" -o jsonpath='{.data}' 2>&1)
+            if [ -n "$SECRET_DATA" ]; then
+                echo "$SECRET_DATA" | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"'
+            else
+                echo -e "${YELLOW}[i] 无数据或无法获取 Secret 内容${NC}"
+            fi
+        done
+    fi
+}
+
+
 # k8s排查
 k8sCheck(){
-	echo -e "${YELLOW}正在检查K8s系统配置:${NC}"
-	echo -e "待完善"
+    echo -e "${YELLOW}正在检查K8s系统配置:${NC}"
+    
+    # 调用函数
+	k8sClusterInfo
+	k8sSecretCheck
 }
+
+
 
 # 系统性能评估 【完成】
 performanceCheck(){
