@@ -249,14 +249,17 @@ init_env(){
 	current_dir=$(pwd)  
 	check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
 	log_file="${check_file}/log"
+	k8s_file="${check_file}/k8s"
 
 	# 删除原有的输出目录
 	rm -rf $check_file
 	rm -rf $log_file
+	rm -rf $k8s_file
 
 	# 创建新的输出目录 检查目录 日志目录
 	mkdir -p $check_file
 	mkdir -p $log_file
+	mkdir -p $k8s_file  # 20250702 新增 k8s 检查路径
 
 	# 初始化报告文件
 	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt
@@ -1528,6 +1531,7 @@ specialFileCheck(){
 	fi
 	printf "\n" 
 
+	# 需要优化，定义需要检查的目录，然后重点检查这些目录，其他的不检查 --- 20250702
 	echo -e "${YELLOW}正在检查最近24小时内变动的所有文件:${NC}" 
 	#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
 	echo -e "${YELLOW}[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害 ${NC}" 
@@ -2537,7 +2541,6 @@ baselineCheck(){
 
 
 
-
 # 检查 Kubernetes 集群基础信息
 k8sClusterInfo() {
     echo -e "${YELLOW}正在检查K8s集群基础信息:${NC}"
@@ -2623,6 +2626,13 @@ k8sClusterInfo() {
 k8sSecretCheck() {
     echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
 
+    # 创建 k8s 子目录用于存储 Secret 文件
+    K8S_SECRET_DIR="${check_file}/k8s"  # 文件在 init_env 函数已经创建
+    if [ ! -d "$K8S_SECRET_DIR" ]; then
+        mkdir -p "$K8S_SECRET_DIR"
+        echo -e "${GREEN}[+] 重新创建目录: $K8S_SECRET_DIR${NC}"
+    fi
+
     echo -e "\n${BLUE}1. 检查 Kubernetes Secrets:${NC}"
 
     # 获取所有命名空间下的 Secret
@@ -2640,6 +2650,11 @@ k8sSecretCheck() {
             # 显示 Secret 的详细信息
             kubectl describe secret "$secret_name" -n "$namespace" 2>&1
 
+            # 保存 Secret 原始数据到文件
+            SECRET_YAML_FILE="${K8S_SECRET_DIR}/${namespace}_${secret_name}.yaml"
+            kubectl get secret "$secret_name" -n "$namespace" -o yaml > "$SECRET_YAML_FILE"
+            echo -e "${GREEN}[+] 已保存 Secret 到文件: $SECRET_YAML_FILE${NC}"
+
             # 检查哪些 Pod 使用了该 Secret
             PODS_USING_SECRET=$(kubectl get pods -n "$namespace" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.volumes[?(@.secret.secretName=="'$secret_name'")].secret.secretName}{"\n"}{end}' 2>&1)
             if [ -n "$PODS_USING_SECRET" ]; then
@@ -2655,9 +2670,128 @@ k8sSecretCheck() {
             if [ -n "$SECRET_DATA" ]; then
                 echo "$SECRET_DATA" | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"'
             else
-                echo -e "${YELLOW}[i] 无数据或无法获取 Secret 内容${NC}"
+                echo -e "${RED}[i] 无数据或无法获取 Secret 内容${NC}"
             fi
         done
+    fi
+}
+
+
+# 收集 Kubernetes 敏感信息
+k8sSensitiveInfo() { 
+	# 收集 Kubernetes Tokens 1、文件搜索 2、kubectl get secrets
+	echo -e "${YELLOW}正在收集K8s集群敏感信息:${NC}"
+
+}
+
+
+# Kubernetes 基线检查函数
+k8sBaselineCheck() {
+    echo -e "${YELLOW}正在执行 Kubernetes 基线安全检查:${NC}"
+
+    echo -e "\n${BLUE}1. 控制平面配置检查:${NC}"
+    # 检查 kubelet 配置是否存在 insecure-port=0
+    if [ -f /etc/kubernetes/kubelet.conf ]; then
+        echo -e "${GREEN}[+] kubelet 是否禁用不安全端口:${NC}"
+        if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf; then
+            echo -e "${GREEN}[+] 不安全端口已禁用${NC}"
+        else
+            echo -e "${RED}[!] 警告: kubelet 的不安全端口未禁用${NC}"
+        fi
+    else
+        echo -e "${YELLOW}[i] kubelet.conf 文件不存在，跳过检查${NC}"
+    fi
+
+    echo -e "\n${BLUE}2. RBAC 授权模式检查:${NC}"
+    if [ -f /etc/kubernetes/apiserver ]; then
+        echo -e "${GREEN}[+] API Server 是否启用 RBAC:${NC}"
+        if grep -q 'authorization-mode=.*RBAC' /etc/kubernetes/apiserver; then
+            echo -e "${GREEN}✓ 已启用 RBAC 授权模式${NC}"
+        else
+            echo -e "${RED}[!] 警告: API Server 未启用 RBAC 授权模式${NC}"
+        fi
+    else
+        echo -e "${YELLOW}[i] apiserver 配置文件不存在，跳过检查${NC}"
+    fi
+
+    echo -e "\n${BLUE}3. Pod 安全策略检查:${NC}"
+    echo -e "${GREEN}[+] 是否启用 PodSecurityPolicy 或 Pod Security Admission:${NC}"
+    psp_enabled=$(kubectl api-resources | grep -E 'podsecuritypolicies|podsecurityadmission')
+    if [ -n "$psp_enabled" ]; then
+        echo -e "${GREEN}✓ 已启用 Pod 安全策略${NC}"
+    else
+        echo -e "${RED}[!] 警告: 未检测到任何 Pod 安全策略机制${NC}"
+    fi
+
+    echo -e "\n${BLUE}4. 网络策略(NetworkPolicy)检查:${NC}"
+    netpolicy_enabled=$(kubectl api-resources | grep networkpolicies)
+    if [ -n "$netpolicy_enabled" ]; then
+        echo -e "${GREEN}✓ 网络策略功能已启用${NC}"
+    else
+        echo -e "${RED}[!] 警告: 未启用网络策略(NetworkPolicy)，可能导致跨命名空间通信风险${NC}"
+    fi
+
+    echo -e "\n${BLUE}5. Secret 加密存储检查:${NC}"
+    echo -e "${GREEN}[+] 是否启用 Secret 加密存储:${NC}"
+    encryption_config="/etc/kubernetes/encryption-config.yaml"
+    if [ -f "$encryption_config" ]; then
+        echo -e "${GREEN}✓ 已配置加密存储：$encryption_config${NC}"
+    else
+        echo -e "${RED}[!] 警告: 未发现 Secret 加密配置文件${NC}"
+    fi
+
+    echo -e "\n${BLUE}6. 审计日志检查:${NC}"
+    audit_log_path="/var/log/kube-audit/audit.log"
+    if [ -f "$audit_log_path" ]; then
+        echo -e "${GREEN}✓ 审计日志已启用，路径为: $audit_log_path${NC}"
+    else
+        echo -e "${RED}[!] 警告: 未发现审计日志文件${NC}"
+    fi
+
+    echo -e "\n${BLUE}7. ServiceAccount 自动挂载 Token 检查:${NC}"
+    default_sa=$(kubectl get serviceaccount default -o jsonpath='{.automountServiceAccountToken}')
+    if [ "$default_sa" = "false" ]; then
+        echo -e "${GREEN}✓ 默认 ServiceAccount 未自动挂载 Token${NC}"
+    else
+        echo -e "${RED}[!] 警告: 默认 ServiceAccount 启用了自动挂载 Token，存在提权风险${NC}"
+    fi
+
+    echo -e "\n${BLUE}8. Etcd 安全配置检查:${NC}"
+    etcd_config="/etc/kubernetes/manifests/etcd.yaml"
+    if [ -f "$etcd_config" ]; then
+        echo -e "${GREEN}[+] Etcd 是否启用 TLS 加密:${NC}"
+        if grep -q '--cert-file' "$etcd_config" && grep -q '--key-file' "$etcd_config"; then
+            echo -e "${GREEN}✓ Etcd 启用了 TLS 加密通信${NC}"
+        else
+            echo -e "${RED}[!] 警告: Etcd 未启用 TLS 加密通信${NC}"
+        fi
+
+        echo -e "${GREEN}[+] Etcd 是否限制客户端访问:${NC}"
+        if grep -q '--client-cert-auth' "$etcd_config"; then
+            echo -e "${GREEN}✓ Etcd 启用了客户端证书认证${NC}"
+        else
+            echo -e "${RED}[!] 警告: Etcd 未启用客户端证书认证，可能存在未授权访问风险${NC}"
+        fi
+    else
+        echo -e "${YELLOW}[i] etcd.yaml 配置文件不存在，跳过检查${NC}"
+    fi
+
+    echo -e "\n${BLUE}9. 容器运行时安全配置:${NC}"
+    echo -e "${GREEN}[+] 是否禁止以 root 用户运行容器:${NC}"
+    pod_runasuser=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.securityContext.runAsUser}{"\n"}{end}' | sort -u)
+    if echo "$pod_runasuser" | grep -v '^$' | grep -q -v '0'; then
+        echo -e "${GREEN}✓ 大多数 Pod 未以 root 用户运行${NC}"
+    else
+        echo -e "${RED}[!] 警告: 存在以 root 用户运行的容器，请检查 Pod 安全上下文配置${NC}"
+    fi
+
+    echo -e "\n${BLUE}10. 特权容器检查:${NC}"
+	# 使用检查配置文件件中是否存在 privileged==true 的方式判断是否是特权容器
+    privileged_pods=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.containers[?(@.securityContext.privileged==true)]}{"\n"}{end}')
+    if [ -z "$privileged_pods" ]; then
+        echo -e "${GREEN}✓ 未发现特权容器(privileged)${NC}"
+    else
+        echo -e "${RED}[!] 警告: 检测到特权容器，建议禁用或限制特权容器运行${NC}"
     fi
 }
 
@@ -2667,7 +2801,9 @@ k8sCheck(){
     echo -e "${YELLOW}正在检查K8s系统配置:${NC}"
     
     # 调用函数
+	## 1. 集群基础信息
 	k8sClusterInfo
+	## 2. 集群安全信息
 	k8sSecretCheck
 }
 
