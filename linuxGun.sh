@@ -794,27 +794,51 @@ processInfo(){
 	# 2. 检查网络连接与进程对应关系
 	echo -e "${YELLOW}[+]检查网络连接与进程对应关系:${NC}"
 	unknown_connections=()
-	if command -v netstat > /dev/null 2>&1; then
-		while IFS= read -r line; do
-			if echo "$line" | grep -q "/"; then
-				pid_info=$(echo "$line" | awk '{print $NF}')
-				pid=$(echo "$pid_info" | cut -d'/' -f1)
-				if [ "$pid" != "-" ] && ! ps -p "$pid" > /dev/null 2>&1; then
-					unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
-				fi
-			fi
-		done <<< "$(netstat -tulnp 2>/dev/null | grep -v '^Active')"
-	else
-		# 使用ss命令作为备选
-		if command -v ss > /dev/null 2>&1; then
+	
+	# 检测操作系统类型并使用相应的命令
+	if [[ "$(uname)" == "Darwin" ]]; then
+		# macOS系统使用lsof命令
+		if command -v lsof > /dev/null 2>&1; then
 			while IFS= read -r line; do
-				if echo "$line" | grep -q "pid="; then
-					pid=$(echo "$line" | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
-					if [ -n "$pid" ] && ! ps -p "$pid" > /dev/null 2>&1; then
+				# lsof输出格式: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+				if echo "$line" | grep -E "(TCP|UDP)" > /dev/null; then
+					pid=$(echo "$line" | awk '{print $2}')
+					# 验证PID是数字且检查进程是否存在
+					if [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
+						proc_name=$(echo "$line" | awk '{print $1}')
+						unknown_connections+=("连接: $line (进程PID:$pid Name:$proc_name 不存在)")
+					fi
+				fi
+			done <<< "$(lsof -i -n -P 2>/dev/null | tail -n +2)"
+		else
+			echo -e "${YELLOW}[+]macOS系统未找到lsof命令，跳过网络连接检查${NC}"
+		fi
+	else
+		# Linux系统使用netstat或ss命令
+		if command -v netstat > /dev/null 2>&1; then
+			while IFS= read -r line; do
+				if echo "$line" | grep -q "/"; then
+					pid_info=$(echo "$line" | awk '{print $NF}')
+					pid=$(echo "$pid_info" | cut -d'/' -f1)
+					if [ "$pid" != "-" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
 						unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
 					fi
 				fi
-			done <<< "$(ss -tulnp 2>/dev/null)"
+			done <<< "$(netstat -tulnp 2>/dev/null | grep -v '^Active')"
+		else
+			# 使用ss命令作为备选
+			if command -v ss > /dev/null 2>&1; then
+				while IFS= read -r line; do
+					if echo "$line" | grep -q "pid="; then
+						pid=$(echo "$line" | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
+						if [ -n "$pid" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
+							unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
+						fi
+					fi
+				done <<< "$(ss -tulnp 2>/dev/null)"
+			else
+				echo -e "${YELLOW}[+]Linux系统未找到netstat或ss命令，跳过网络连接检查${NC}"
+			fi
 		fi
 	fi
 	
