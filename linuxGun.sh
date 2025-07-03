@@ -2989,7 +2989,6 @@ attackAngleCheck(){
 findSensitiveFiles() {
     echo -e "${YELLOW}正在查找敏感配置文件:${NC}"
 
-    # 定义需要扫描的路径列表
     SCAN_PATHS=(
         "/var/run/secrets/"
         "/etc/kubernetes/"
@@ -3000,80 +2999,64 @@ findSensitiveFiles() {
         "/usr/local/etc/"
     )
 
-    # 定义要查找的文件名模式（find -name 格式）
     search_patterns=(
-        -name '*Jenkinsfile*'
-        -name 'nacos'
-        -name '*kubeconfig*'
-        -name '.gitlab-ci.yml'
-        -name 'conf'
-        -name 'config'
-        -name '*.yaml'
-        -name '*.yml'
-        -name '*.json'
-        -name '*.kubeconfig'
-        -name 'id_rsa'
-        -name 'id_ed25519'
+        '*Jenkinsfile*'
+        'nacos'
+        '*kubeconfig*'
+        '.gitlab-ci.yml'
+        'conf'
+        'config'
+        '*.yaml'
+        '*.yml'
+        '*.json'
+        '*.kubeconfig'
+        'id_rsa'
+        'id_ed25519'
     )
 
-    # 创建输出目录
     SENSITIVE_DIR="${check_file}/sensitive_files"
     if [ ! -d "$SENSITIVE_DIR" ]; then
         mkdir -p "$SENSITIVE_DIR"
         echo -e "${GREEN}[+] 创建敏感文件输出目录: $SENSITIVE_DIR${NC}"
     fi
 
-    # 构建 find 命令参数
     for path in "${SCAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
             echo -e "${BLUE}[i] 正在扫描路径: $path${NC}"
-
-            # 初始化 find 参数数组
-            find_args=("$path" -type f)
-
-            # 添加所有 -name 条件
+            find_cmd=(find "$path" -type f)
             for pattern in "${search_patterns[@]}"; do
-                find_args+=("${pattern}")
-                find_args+=(-o)
+                find_cmd+=( -name "$pattern" -o )
             done
-
-            # 删除最后一个多余的 -o
-            unset 'find_args[${#find_args[@]}-1]'
-
-            # 执行 find 命令并处理结果
-            if [ ${#find_args[@]} -gt 0 ]; then
-                find "${find_args[@]}" | while read -r file; do
-                    echo -e "${RED}[!] 发现敏感文件: $file${NC}"
-
-                    # 输出文件内容到终端
-                    echo -e "${GREEN}[+] 文件内容如下:${NC}"
-                    cat "$file"
-
-                    # 复制文件到输出目录
-                    filename=$(basename "$file")
-                    cp "$file" "$SENSITIVE_DIR/${filename}_$(date +%Y%m%d%H%M%S)"
-                    echo -e "${GREEN}[+] 已保存副本至: $SENSITIVE_DIR/${filename}_$(date +%Y%m%d%H%M%S)${NC}"
-                    echo -e ""
-                done
-            fi
-
+            unset 'find_cmd[${#find_cmd[@]}-1]'
+            files=$(eval "${find_cmd[@]}")
+            while IFS= read -r file; do
+                [ -z "$file" ] && continue
+                echo -e "${RED}[!] 发现敏感文件: $file${NC}"
+                echo -e "${GREEN}[+] 文件内容如下:${NC}"
+                cat "$file"
+                filename=$(basename "$file")
+                ts=$(date +%Y%m%d%H%M%S)
+                cp "$file" "$SENSITIVE_DIR/${filename}_$ts"
+                echo -e "${GREEN}[+] 已保存副本至: $SENSITIVE_DIR/${filename}_$ts${NC}\n"
+            done <<< "$files"
         else
             echo -e "${YELLOW}[i] 路径不存在或无权限访问: $path${NC}"
         fi
     done
 
-    # 检查环境变量中是否包含敏感关键词（如 token, password）
     echo -e "${BLUE}[i] 正在检查环境变量中的敏感信息...${NC}"
-    env | grep -i 'token\|password' 2>&1 | tee /tmp/sensitive_env.txt
+    env | grep -iE 'token|password' 2>&1 | tee /tmp/sensitive_env.txt
     if [ -s /tmp/sensitive_env.txt ]; then
         echo -e "${RED}[!] 发现环境变量中包含敏感信息:${NC}"
         cat /tmp/sensitive_env.txt
-        cp /tmp/sensitive_env.txt "$SENSITIVE_DIR/env_sensitive_$(date +%Y%m%d%H%M%S)"
+        ts=$(date +%Y%m%d%H%M%S)
+        cp /tmp/sensitive_env.txt "$SENSITIVE_DIR/env_sensitive_$ts"
         rm -f /tmp/sensitive_env.txt
     else
         echo -e "${YELLOW}[i] 未发现环境变量中的敏感信息${NC}"
     fi
 }
+
 
 
 # 日志统一打包 【完成-暂时没有输出检测报告】
