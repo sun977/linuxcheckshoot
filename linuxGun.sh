@@ -1401,6 +1401,118 @@ sshFileCheck(){
 	# 其他
 }
 
+# 检查最近指定小时内变动的文件
+# 检查最近变动文件的函数
+# 功能: 检查指定时间范围内变动的文件，支持敏感文件和所有文件两种模式
+# 参数1: 时间范围(小时数，默认24)
+# 参数2: 检查类型(sensitive|all，默认sensitive)
+# 使用示例:
+#   checkRecentModifiedFiles                    # 检查最近24小时内的敏感文件
+#   checkRecentModifiedFiles 48                 # 检查最近48小时内的敏感文件
+#   checkRecentModifiedFiles 24 "sensitive"     # 检查最近24小时内的敏感文件
+#   checkRecentModifiedFiles 24 "all"          # 检查最近24小时内的所有文件
+#   checkRecentModifiedFiles 72 "all"          # 检查最近72小时内的所有文件
+checkRecentModifiedFiles() {
+	local time_hours=${1:-24}  # 默认24小时
+	local check_type=${2:-"sensitive"}  # 默认检查敏感文件
+	
+	echo -e "${YELLOW}正在检查最近${time_hours}小时内变动的文件:${NC}"
+	
+	# 定义排除目录列表
+	local EXCLUDE_DIRS=(
+		"/proc/*"
+		"/dev/*"
+		"/sys/*"
+		"/run/*"
+		"/tmp/systemd-private-*"
+		"*/node_modules/*"
+		"*/.cache/*"
+		"*/site-packages/*"
+		"*/.vscode-server/*"
+		"*/.cache/*"
+		"*.log"
+	)
+	
+	# 定义敏感文件后缀列表
+	local SENSITIVE_EXTENSIONS=(
+		"*.py"
+		"*.sh"
+		"*.per"
+		"*.pl"
+		"*.php"
+		"*.asp"
+		"*.jsp"
+		"*.exe"
+		"*.jar"
+		"*.war"
+		"*.class"
+		"*.so"
+		"*.elf"
+		"*.txt"
+	)
+	
+	# 计算mtime参数 (小时转换为天数的分数)
+	local mtime_param
+	if [ "$time_hours" -le 24 ]; then
+		mtime_param="-1"  # 24小时内
+	else
+		local days=$((time_hours / 24))
+		mtime_param="-${days}"
+	fi
+	
+	# 构建find命令的排除条件
+	local exclude_conditions=()
+	for exclude_dir in "${EXCLUDE_DIRS[@]}"; do
+		exclude_conditions+=("-not" "-path" "$exclude_dir")
+	done
+	
+	if [ "$check_type" = "sensitive" ]; then
+		echo -e "${YELLOW}[说明] 检查敏感文件类型: ${SENSITIVE_EXTENSIONS[*]}${NC}"
+		echo -e "${YELLOW}[注意] 排除目录: ${EXCLUDE_DIRS[*]}${NC}"
+		
+		# 构建文件扩展名条件
+		local extension_conditions=()
+		for i in "${!SENSITIVE_EXTENSIONS[@]}"; do
+			extension_conditions+=("-name" "${SENSITIVE_EXTENSIONS[$i]}")
+			if [ $i -lt $((${#SENSITIVE_EXTENSIONS[@]}-1)) ]; then
+				extension_conditions+=("-o")
+			fi
+		done
+		
+		# 执行find命令查找敏感文件
+		local find_result
+		find_result=$(find / "${exclude_conditions[@]}" -mtime "$mtime_param" -type f \( "${extension_conditions[@]}" \) 2>/dev/null)
+		
+		if [ -n "$find_result" ]; then
+			echo -e "${RED}[!]发现最近${time_hours}小时内变动的敏感文件:${NC}"
+			echo "$find_result"
+		else
+			echo -e "${YELLOW}[+]未发现最近${time_hours}小时内变动的敏感文件${NC}"
+		fi
+		
+	elif [ "$check_type" = "all" ]; then
+		echo -e "${YELLOW}[说明] 检查所有文件类型${NC}"
+		echo -e "${YELLOW}[注意] 排除目录: ${EXCLUDE_DIRS[*]}${NC}"
+		
+		# 执行find命令查找所有文件
+		local find_result_all
+		find_result_all=$(find / "${exclude_conditions[@]}" -type f -mtime "$mtime_param" 2>/dev/null)
+		
+		if [ -n "$find_result_all" ]; then
+			echo -e "${RED}[!]发现最近${time_hours}小时内变动的所有文件:${NC}"
+			echo "$find_result_all"
+		else
+			echo -e "${YELLOW}[+]未发现最近${time_hours}小时内变动的文件${NC}"
+		fi
+	else
+		echo -e "${RED}[!]错误: 不支持的检查类型 '$check_type'，支持的类型: sensitive, all${NC}"
+		return 1
+	fi
+	
+	printf "\n"
+}
+
+
 # 特殊文件排查【归档 -- fileCheck】
 specialFileCheck(){
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
@@ -1502,7 +1614,6 @@ specialFileCheck(){
 		# 文件权限检查
 		echo -e "${YELLOW}[+]gshadow文件权限如下:${NC}"
 
-
 		# 文件属性检查
 		echo -e "${YELLOW}[+]正在检查gshadow文件属性:${NC}"
 
@@ -1511,51 +1622,16 @@ specialFileCheck(){
 	fi
 	printf "\n"
 
-	# 黑客工具检查匹配【迁移出去】
-	# /proc/<pid>/[cmdline|environ|fd/*] 【迁移出去】
-	
 	# 24小时内新增文件分析
-	# 24小时内修改文件分析
-	echo -e "${YELLOW}正在检查最近24小时内变动的敏感文件[py|sh|per|pl|php|asp|jsp|exe]:${NC}" 
-	echo -e "${YELLOW}[说明] find / -mtime -1 -type f ${NC}" 
-	echo -e "${YELLOW}[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害 ${NC}" 
-	#find_tmp=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -mtime -1 -type f | grep -E "\.(py|sh|per|pl|php|asp|jsp|exe)$")
-	# find_tmp=$(find / \
-  	# -not $ -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" $ \
-  	# -mtime -1 -type f $ -name "*.py" -o -name "*.sh" -o -name "*.per" -o -name "*.pl" \
-  	# -o -name "*.php" -o -name "*.asp" -o -name "*.jsp" -o -name "*.exe" $ )
+	# 24小时内修改文件分析 - 使用新的函数
+	echo -e "${YELLOW}[+]正在检查最近变动的文件(默认24小时内新增/修改):${NC}"
+	
+	# 调用函数:checkRecentModifiedFiles
+	# 检查敏感文件(默认24小时)
+	checkRecentModifiedFiles 24 "sensitive"
 
-	find_tmp=$(find / \
-  	-not \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) \
-  	-mtime -1 -type f \
-  	\( -name "*.py" -o -name "*.sh" -o -name "*.per" -o -name "*.pl" \
-  	-o -name "*.php" -o -name "*.asp" -o -name "*.jsp" -o -name "*.exe" \))
-
-	if [ -n "$find_tmp" ];then
-		echo -e "${YELLOW}[+]最近24小时内变动的敏感文件如下:${NC}" && echo "$find_tmp"
-	else
-		echo -e "${RED}[!]未发现最近24小时内变动的敏感文件${NC}"
-	fi
-	printf "\n" 
-
-	# 需要优化，定义需要检查的目录，然后重点检查这些目录，其他的不检查 --- 20250702
-	echo -e "${YELLOW}正在检查最近24小时内变动的所有文件:${NC}" 
-	#查看最近24小时内有改变的文件类型文件，排除内容目录/proc /dev /sys  
-	echo -e "${YELLOW}[注意]不检查/proc,/dev,/sys,/run目录,需要检查请自行修改脚本,脚本需要人工判定是否有害 ${NC}" 
-	#find_tmp2=$(find / ! \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) -type f -mtime -1) 
-	# find_tmp2=$(find / \
- 	# -not $ -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" $ \
-  	# -type f -mtime -1 )
-	find_tmp2=$(find / \
-  	-not \( -path "/proc/*" -o -path "/dev/*" -o -path "/sys/*" -o -path "/run/*" \) \
-  	-type f -mtime -1)
-
-	if [ -n "$find_tmp2" ];then
-		echo -e "${YELLOW}[+]最近24小时内变动的所有文件如下:${NC}" && echo "$find_tmp2"
-	else
-		echo -e "${RED}[!]未发现最近24小时内变动的所有文件${NC}"
-	fi
-	printf "\n"
+	# 检查所有文件(默认24小时)
+	checkRecentModifiedFiles 24 "all"
 
 	# SUID/SGID Files 可用于提权 
 	## SUID(Set User ID) 文件是一种特殊权限文件,它允许文件拥有者以root权限运行,而不需要root权限。
@@ -1881,7 +1957,8 @@ fileCheck(){
 # 后门排查 【未完成】
 backdoorCheck(){
 	# 常见后门目录 /tmp /usr/bin /usr/sbin 
-	echo "待完善"
+	echo -e "${YELLOW}正在检查后门文件:${NC}"
+	echo -e "待完善"
 }
 
 # webshell 排查 【未完成】
@@ -1893,6 +1970,12 @@ webshellCheck(){
 	echo -e "${YELLOW}请使用rkhunter工具来检查系统层的恶意文件,下载地址:http://rkhunter.sourceforge.net${NC}"  
 	printf "\n"  
 	# 访问日志
+}
+
+# 隧道和反弹shell检查
+tunnelCheck(){ 
+	echo -e "${YELLOW}正在检查隧道和反弹shell${NC}"
+	echo -e "${YELLOW}目前没有针对此漏洞的检测方法,请自行使用相关工具进行排查(后续补充)${NC}"
 }
 
 # 病毒排查 【未完成】
@@ -3005,7 +3088,6 @@ findSensitiveFiles() {
         "/run/"
         "/sys/"
         "*/node_modules/*"
-        "node_modules/*"
 		"*/site-packages/*"
 		"*/.cache/*"
     )
