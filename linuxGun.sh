@@ -767,15 +767,19 @@ processInfo(){
 	echo -e "${YELLOW}[+]检查进程树完整性(孤儿进程检测):${NC}"
 	orphan_processes=()
 	while IFS= read -r line; do
-		pid=$(echo "$line" | awk '{print $2}')
-		ppid=$(echo "$line" | awk '{print $3}')
-		# 检查父进程是否存在(除了init进程)
-		if [ "$ppid" != "0" ] && [ "$ppid" != "1" ] && [ "$ppid" != "2" ]; then
-			if ! ps -p "$ppid" > /dev/null 2>&1; then
-				orphan_processes+=("PID:$pid PPID:$ppid (父进程不存在)")
+		# 使用更精确的字段提取，处理不同系统的ps输出格式
+		pid=$(echo "$line" | awk '{print $1}')
+		ppid=$(echo "$line" | awk '{print $2}')
+		# 验证PID和PPID都是数字
+		if [[ "$pid" =~ ^[0-9]+$ ]] && [[ "$ppid" =~ ^[0-9]+$ ]]; then
+			# 检查父进程是否存在(除了init进程和内核线程)
+			if [ "$ppid" != "0" ] && [ "$ppid" != "1" ] && [ "$ppid" != "2" ]; then
+				if ! ps -p "$ppid" > /dev/null 2>&1; then
+					orphan_processes+=("PID:$pid PPID:$ppid (父进程不存在)")
+				fi
 			fi
 		fi
-	done <<< "$(ps -eo pid,ppid,comm --no-headers)"
+	done <<< "$(ps -eo pid,ppid 2>/dev/null | tail -n +2)"
 	
 	if [ ${#orphan_processes[@]} -gt 0 ]; then
 		echo -e "${RED}[!]发现 ${#orphan_processes[@]} 个可疑孤儿进程:${NC}"
@@ -881,9 +885,9 @@ processInfo(){
 			# 检查sys_call_table符号是否存在
 			sys_call_table=$(grep "sys_call_table" /proc/kallsyms 2>/dev/null)
 			if [ -n "$sys_call_table" ]; then
-				echo -e "${YELLOW}[+]系统调用表符号存在: $sys_call_table${NC}"
+				echo -e "${YELLOW}[+]系统调用表符号存在: $sys_call_table ${NC}"
 			else
-				echo -e "${RED}[!]警告: 无法找到sys_call_table符号，可能被隐藏${NC}"
+				echo -e "${RED}[!]警告: 无法找到sys_call_table符号,可能被隐藏${NC}"
 			fi
 			
 			# 检查可疑的内核符号
