@@ -3217,7 +3217,7 @@ main() {
 				modules+=("baseline-selinux")
 				;;	
 			--attack-filescan)
-				modules+=("--attack-filescan")
+				modules+=("attack-filescan")
 				;;	
             --all)
                 run_all=true
@@ -3253,7 +3253,7 @@ main() {
         echo -e "${GREEN}[+] linuGun v6.0 所有检查项已完成${NC}"
 		echo -e "${GREEN} Author:sun977${NC}"  
 		echo -e "${GREEN} Mail:jiuwei977@foxmail.com${NC}"  
-		echo -e "${GREEN} Date:2025.06.30${NC}"  
+		echo -e "${GREEN} Date:2025.07.03${NC}"  
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
