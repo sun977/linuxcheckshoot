@@ -867,8 +867,6 @@ historyCheck(){
 		echo -e "${YELLOW}+]未发现数据库历史命令${NC}"  
 	fi
 	printf "\n"  
-
-
 }
 
 # 用户信息排查【归档 -- systemCheck】
@@ -1401,18 +1399,17 @@ sshFileCheck(){
 	# 其他
 }
 
-# 检查最近指定小时内变动的文件
-# 检查最近变动文件的函数
-# 功能: 检查指定时间范围内变动的文件，支持敏感文件和所有文件两种模式
-# 参数1: 时间范围(小时数，默认24)
-# 参数2: 检查类型(sensitive|all，默认sensitive)
-# 使用示例:
-#   checkRecentModifiedFiles                    # 检查最近24小时内的敏感文件
-#   checkRecentModifiedFiles 48                 # 检查最近48小时内的敏感文件
-#   checkRecentModifiedFiles 24 "sensitive"     # 检查最近24小时内的敏感文件
-#   checkRecentModifiedFiles 24 "all"          # 检查最近24小时内的所有文件
-#   checkRecentModifiedFiles 72 "all"          # 检查最近72小时内的所有文件
+
+# 检查最近变动文件的函数 
 checkRecentModifiedFiles() {
+	# 功能: 检查指定时间范围内变动的文件，支持敏感文件和所有文件两种模式
+	# 参数1: 时间范围(小时数，默认24)
+	# 参数2: 检查类型(sensitive|all，默认sensitive)
+	# 使用示例:
+	#   checkRecentModifiedFiles                    # 检查最近24小时内的敏感文件
+	#   checkRecentModifiedFiles 48                 # 检查最近48小时内的敏感文件
+	#   checkRecentModifiedFiles 24 "sensitive"     # 检查最近24小时内的敏感文件
+	#   checkRecentModifiedFiles 24 "all"          # 检查最近24小时内的所有文件
 	local time_hours=${1:-24}  # 默认24小时
 	local check_type=${2:-"sensitive"}  # 默认检查敏感文件
 	
@@ -1429,7 +1426,7 @@ checkRecentModifiedFiles() {
 		"*/.cache/*"
 		"*/site-packages/*"
 		"*/.vscode-server/*"
-		"*/.cache/*"
+		"*/cache/*"
 		"*.log"
 	)
 	
@@ -1558,78 +1555,32 @@ specialFileCheck(){
 	fi
 	printf "\n"
 
-	# shadow文件分析 【好几个 shadow】	
-	## shadow 内容 权限 属性
+	# shadow文件分析
 	echo -e "${YELLOW}[+]正在检查shadow文件[/etc/shadow]:${NC}"
 	shadow_tmp=$(cat /etc/shadow)
 	if [ -n "$shadow_tmp" ];then
 		# 输出 shadow 文件内容
 		echo -e "${YELLOW}[+]shadow文件如下:${NC}" && echo "$shadow_tmp"
-		
-		# 文件权限检查
-		echo -e "${YELLOW}[+]shadow文件权限如下:${NC}"
-		shadow_au=$(ls -l /etc/shadow | awk '{print $1}')
-		if [ "${shadow_au:1:9}" = "rw-------" ]; then
-			echo -e "${YELLOW}[+]/etc/shadow文件权限为600,权限符合规范${NC}" 
-		else
-			echo -e "${YELLOW}[!]/etc/shadow文件权限为:""${shadow_au:1:9}"",不符合规范,权限应改为600${NC}" 
-		fi
-		
-		# 文件属性检查
-		# 当一个文件或目录具有 "a" 属性时，只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
-		# 其他普通用户在写入文件时只能进行数据的追加操作，而无法对现有数据进行修改或删除。
-		# 属性 "i" 表示文件被设置为不可修改（immutable）的权限。这意味着文件不能被更改、重命名、删除或链接。
-		# 具有 "i" 属性的文件对于任何用户或进程都是只读的，并且不能进行写入操作
-		echo -e "${YELLOW}[+]正在检查shadow文件属性:${NC}"
-		flag=0
-		for ((x=1;x<=15;x++))
-		do
-			apend=$(lsattr /etc/shadow | cut -c $x)
-			if [ $apend = "i" ];then
-				echo "/etc/shadow文件存在i安全属性,符合要求" 
-				flag=1
-			fi
-			if [ $apend = "a" ];then
-				echo "/etc/shadow文件存在a安全属性" 
-				flag=1
-			fi
-		done
-		if [ $flag = 0 ];then
-			echo "/etc/shadow文件不存在相关安全属性,建议使用chattr +i或chattr +a防止/etc/shadow被删除或修改" 
-		fi
-		printf "\n" 
-
 	else
 		echo -e "${RED}[!]未发现shadow文件${NC}"
 	fi
 	printf "\n"
 
-	## gshadow 内容 权限 属性
+	## gshadow文件分析
 	echo -e "${YELLOW}[+]正在检查gshadow文件[/etc/gshadow]:${NC}"
 	gshadow_tmp=$(cat /etc/gshadow)
 	if [ -n "$gshadow_tmp" ];then
 		# 输出 gshadow 文件内容
 		echo -e "${YELLOW}[+]gshadow文件如下:${NC}" && echo "$gshadow_tmp"
-		
-		# 文件权限检查
-		echo -e "${YELLOW}[+]gshadow文件权限如下:${NC}"
-
-		# 文件属性检查
-		echo -e "${YELLOW}[+]正在检查gshadow文件属性:${NC}"
-
 	else
 		echo -e "${RED}[!]未发现gshadow文件${NC}"
 	fi
 	printf "\n"
 
-	# 24小时内新增文件分析
-	# 24小时内修改文件分析 - 使用新的函数
+	# 24小时内修改文件分析 - 使用新的函数checkRecentModifiedFiles
 	echo -e "${YELLOW}[+]正在检查最近变动的文件(默认24小时内新增/修改):${NC}"
-	
-	# 调用函数:checkRecentModifiedFiles
 	# 检查敏感文件(默认24小时)
 	checkRecentModifiedFiles 24 "sensitive"
-
 	# 检查所有文件(默认24小时)
 	checkRecentModifiedFiles 24 "all"
 
@@ -2444,6 +2395,11 @@ baselineCheck(){
 
 
 	#### 2.1.2 系统文件属性
+		# 文件属性检查
+		# 当一个文件或目录具有 "a" 属性时，只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
+		# 其他普通用户在写入文件时只能进行数据的追加操作，而无法对现有数据进行修改或删除。
+		# 属性 "i" 表示文件被设置为不可修改（immutable）的权限。这意味着文件不能被更改、重命名、删除或链接。
+		# 具有 "i" 属性的文件对于任何用户或进程都是只读的，并且不能进行写入操作
 	# check_file_attributes "/etc/shadow" "/etc/shadow 文件属性" "i"
 	check_file_attributes(){
 		local file="$1"            # 要检查的文件路径
