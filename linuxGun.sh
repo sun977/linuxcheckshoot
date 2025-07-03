@@ -3037,20 +3037,18 @@ findSensitiveFiles() {
         if [ -d "$path" ]; then
             echo -e "${BLUE}[i] 正在扫描路径: $path${NC}"
             find_cmd=(find "$path" -type f)
-            # 拼接排除目录条件
-            exclude_expr=()
             for exdir in "${EXCLUDE_DIRS[@]}"; do
-                exclude_expr+=( ! -path "$exdir*" )
+                find_cmd+=( ! -path "$exdir*" )
             done
-            # 拼接-name条件
-            name_expr=()
-            for pattern in "${search_patterns[@]}"; do
-                name_expr+=( -name "$pattern" -o )
+            find_cmd+=( \( )
+            for idx in "${!search_patterns[@]}"; do
+                find_cmd+=( -name "${search_patterns[$idx]}" )
+                if [ $idx -lt $((${#search_patterns[@]}-1)) ]; then
+                    find_cmd+=( -o )
+                fi
             done
-            unset 'name_expr[${#name_expr[@]}-1]'
-            # 合并表达式，顺序必须：find 路径 -type f [排除条件] \( [name条件] \)
-            find_cmd+=( "${exclude_expr[@]}" \( "${name_expr[@]}" \) )
-            files=$(eval "${find_cmd[@]}")
+            find_cmd+=( \) )
+            files=$("${find_cmd[@]}")
             while IFS= read -r file; do
                 [ -z "$file" ] && continue
                 echo -e "${RED}[!] 发现敏感文件: $file${NC}"
