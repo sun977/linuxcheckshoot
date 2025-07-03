@@ -2546,8 +2546,6 @@ baselineCheck(){
 
 }
 
-
-
 # 检查 Kubernetes 集群基础信息
 k8sClusterInfo() {
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
@@ -2933,7 +2931,6 @@ k8sCheck() {
 }
 
 
-
 # 系统性能评估 【完成】
 performanceCheck(){
 	# 系统性能评估
@@ -2978,12 +2975,6 @@ performanceCheck(){
 	
 }
 
-# 攻击角度信息收集
-attackAngleCheck(){
-	# 
-	echo -e "${YELLOW}正在进行攻击角度信息采集:${NC}"
-	echo -e "待完善"
-}
 
 # 查找敏感配置文件函数（支持多模式定义）【攻击角度通用】
 findSensitiveFiles() {
@@ -3070,6 +3061,14 @@ findSensitiveFiles() {
 
 }
 
+# 攻击角度信息收集
+attackAngleCheck(){
+	# 攻击角度信息
+	echo -e "${YELLOW}正在进行攻击角度信息采集:${NC}"
+	# 调用函数 【查找敏感文件】
+	findSensitiveFiles 
+	echo -e "${YELLOW}攻击角度信息采集完成${NC}"
+}
 
 # 日志统一打包 【完成-暂时没有输出检测报告】
 checkOutlogPack(){ 
@@ -3216,7 +3215,10 @@ main() {
 				;;
 			--baseline-selinux)
 				modules+=("baseline-selinux")
-				;;			
+				;;	
+			--attack-filescan)
+				modules+=("--attack-filescan")
+				;;	
             --all)
                 run_all=true
                 ;;
@@ -3340,6 +3342,9 @@ main() {
 				baseline-selinux)
 					selinuxStatusCheck
 					;;
+				attack-filescan)
+					attackAngleCheck
+					;;
             esac
         done
     else
@@ -3403,6 +3408,9 @@ usage() {
     echo -e "${YELLOW}    --baseline              ${GREEN}执行所有基线安全检查项${NC}"
     echo -e "${YELLOW}    --baseline-firewall     ${GREEN}防火墙策略检查(firewalld/iptables)${NC}"
     echo -e "${YELLOW}    --baseline-selinux      ${GREEN}SeLinux 策略检查${NC}"
+
+	echo -e "${GREEN}  攻击角度信息收集[可选|默认不与--all执行]:${NC}"
+    echo -e "${YELLOW}    --attack-filescan       ${GREEN}攻击角度信息收集默认收集当前系统所有敏感文件信息)${NC}"
 }
 
 # 主函数执行
