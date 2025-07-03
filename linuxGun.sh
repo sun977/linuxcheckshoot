@@ -254,7 +254,7 @@ init_env(){
 	# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
 	ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 
-	# 创建输出目录变量，当前目录下的output目录
+	# 创建输出目录变量,当前目录下的output目录
 	current_dir=$(pwd)  
 	check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
 	log_file="${check_file}/log"
@@ -295,7 +295,7 @@ ensure_root() {
     fi
 }
 
-# 在 check_file 下追加模式打开文件，将输出结果展示在终端且同时保存到对应文件中 
+# 在 check_file 下追加模式打开文件,将输出结果展示在终端且同时保存到对应文件中 
 # cd $check_file  
 # saveCheckResult="tee -a checkresult.txt" 
 # saveDangerResult="tee -a dangerlist.txt"
@@ -399,7 +399,7 @@ baseInfo(){
         distro=$(lsb_release -d | cut -f2)
         echo -e "${YELLOW}[+] 系统发行版本: $distro${NC}"
     else
-        echo -e "${YELLOW}[!] 系统发行版本信息未找到，请手动检查${NC}"
+        echo -e "${YELLOW}[!] 系统发行版本信息未找到,请手动检查${NC}"
     fi
     printf "\n"
 
@@ -441,15 +441,15 @@ networkInfo(){
     else
         echo -e "${RED}[!]未发现ARP表${NC}"  
     fi
-    # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别，然后输出重复的MAC地址以及它们的出现次数
-    # 该命令用于统计arp表中的MAC地址出现次数，并显示重复的MAC地址及其出现频率。
+    # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数
+    # 该命令用于统计arp表中的MAC地址出现次数,并显示重复的MAC地址及其出现频率。
     # 具体解释如下：
-    # - `arp -a -n`：查询ARP表，并以IP地址和MAC地址的格式显示结果。
+    # - `arp -a -n`：查询ARP表,并以IP地址和MAC地址的格式显示结果。
     # - `awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}'`：使用awk命令进行处理。
     #   - `{++S[$4]}`：对数组S中以第四个字段（即MAC地址）作为索引的元素加1进行计数。
-    #   - `END {for(a in S) {if($2>1) print $2,a,S[a]}}`：在处理完所有行之后，遍历数组S。
+    #   - `END {for(a in S) {if($2>1) print $2,a,S[a]}}`：在处理完所有行之后,遍历数组S。
     #     - `for(a in S)`：遍历数组S中的每个元素。
-    #     - `if($2>1)`：如果第二个字段（即计数）大于1，则表示这是一个重复的MAC地址。
+    #     - `if($2>1)`：如果第二个字段（即计数）大于1,则表示这是一个重复的MAC地址。
     #     - `print $2,a,S[a]`：打印重复的MAC地址的计数、MAC地址本身和出现的次数。
 
     # ARP攻击检查
@@ -697,7 +697,7 @@ processInfo(){
 	done
 	printf "\n" 
 
-	# 异常进程检测：如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
+	# 异常进程检测：如果存在 /proc 目录中有进程文件夹,但是在 ps -aux 命令里没有显示的,就认为可能是异常进程
 	echo -e "${YELLOW}[+]正在检查异常进程(存在于/proc但不在ps命令中显示):${NC}"
 	
 	# 获取所有ps命令显示的PID
@@ -756,7 +756,7 @@ processInfo(){
 		done
 		echo -e "${RED}[!]建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
 	else
-		echo -e "${YELLOW}[+]未发现异常进程，所有/proc中的进程都能在ps命令中找到${NC}"
+		echo -e "${YELLOW}[+]未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
 	fi
 	printf "\n"
 
@@ -767,7 +767,7 @@ processInfo(){
 	echo -e "${YELLOW}[+]检查进程树完整性(孤儿进程检测):${NC}"
 	orphan_processes=()
 	while IFS= read -r line; do
-		# 使用更精确的字段提取，处理不同系统的ps输出格式
+		# 使用更精确的字段提取,处理不同系统的ps输出格式
 		pid=$(echo "$line" | awk '{print $1}')
 		ppid=$(echo "$line" | awk '{print $2}')
 		# 验证PID和PPID都是数字
@@ -796,7 +796,7 @@ processInfo(){
 	unknown_connections=()
 	
 	# 检测操作系统类型并使用相应的命令
-	if [[ "$(uname)" == "Darwin" ]]; then
+	if [[ "$(uname)" == "Darwin" ]]; then  # macOS
 		# macOS系统使用lsof命令
 		if command -v lsof > /dev/null 2>&1; then
 			while IFS= read -r line; do
@@ -811,7 +811,7 @@ processInfo(){
 				fi
 			done <<< "$(lsof -i -n -P 2>/dev/null | tail -n +2)"
 		else
-			echo -e "${YELLOW}[+]macOS系统未找到lsof命令，跳过网络连接检查${NC}"
+			echo -e "${YELLOW}[+]macOS系统未找到lsof命令,跳过网络连接检查${NC}"
 		fi
 	else
 		# Linux系统使用netstat或ss命令
@@ -837,7 +837,7 @@ processInfo(){
 					fi
 				done <<< "$(ss -tulnp 2>/dev/null)"
 			else
-				echo -e "${YELLOW}[+]Linux系统未找到netstat或ss命令，跳过网络连接检查${NC}"
+				echo -e "${YELLOW}[+]Linux系统未找到netstat或ss命令,跳过网络连接检查${NC}"
 			fi
 		fi
 	fi
@@ -923,7 +923,7 @@ processInfo(){
 				echo -e "${YELLOW}[+]未发现可疑内核符号${NC}"
 			fi
 		else
-			echo -e "${YELLOW}[+]/proc/kallsyms不可读，跳过系统调用表检查${NC}"
+			echo -e "${YELLOW}[+]/proc/kallsyms不可读,跳过系统调用表检查${NC}"
 		fi
 	else
 		echo -e "${YELLOW}[+]需要root权限进行系统调用表检查${NC}"
@@ -1013,9 +1013,9 @@ crontabCheck(){
 			# 从这里可以看到计划任务的状态[最近修改时间等]
 			# "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
             # "Modify:修改时间,文件内容改变会导致该时间更新" 
-            # "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新
+            # "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新,不会导致修改时间更新
 
-			# # 检测可疑计划任务[可以写在内部，但是颜色有点问题]
+			# # 检测可疑计划任务[可以写在内部,但是颜色有点问题]
 			# echo -e "${YELLOW}[+]检测可疑计划任务:${NC}"
 			# hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$cronfile")
 			# if [ $? -eq 0 ];then
@@ -1032,17 +1032,17 @@ crontabCheck(){
 historyCheck(){
 	# history 和 cat /[user]/.bash_history 的区别
 	# history:
-	# - 实时历史: history 命令显示的是当前 shell 会话中已经执行过的命令历史，包括那些在当前会话中输入的命令。默认显示 500 条命令，可以通过 -c 参数清除历史记录。
-	# - 动态更新: 当你在 shell 会话中执行命令时，这些命令会被实时添加到历史记录中，因此 history 命令的输出会随着你的命令输入而不断更新。
-	# - 受限于当前会话: history 命令只显示当前 shell 会话的历史记录。如果关闭了终端再重新打开，history 命令将只显示新会话中的命令历史，除非你使用了历史文件共享设置。
-	# - 命令编号: history 命令的输出带有命令编号，这使得引用特定历史命令变得容易。你可以使用 !number 形式来重新执行历史中的任意命令
+	# - 实时历史: history 命令显示的是当前 shell 会话中已经执行过的命令历史,包括那些在当前会话中输入的命令。默认显示 500 条命令,可以通过 -c 参数清除历史记录。
+	# - 动态更新: 当你在 shell 会话中执行命令时,这些命令会被实时添加到历史记录中,因此 history 命令的输出会随着你的命令输入而不断更新。
+	# - 受限于当前会话: history 命令只显示当前 shell 会话的历史记录。如果关闭了终端再重新打开,history 命令将只显示新会话中的命令历史,除非你使用了历史文件共享设置。
+	# - 命令编号: history 命令的输出带有命令编号,这使得引用特定历史命令变得容易。你可以使用 !number 形式来重新执行历史中的任意命令
 	# cat /[user]/.bash_history:
-	# - 持久化历史: /[user]/.bash_history 文件是 bash shell 保存的命令历史文件，它保存了用户过去执行的命令，即使在关闭终端或注销后，这些历史记录也会被保留下来。
-	# - 静态文件: /[user]/.bash_history 是一个文件，它的内容不会随着你当前会话中的命令输入而实时更新。文件的内容会在你退出终端会话时更新，bash 会把当前会话的命令追加到这个文件中。
-	# - 不受限于当前会话: cat /[user]/.bash_history 可以显示用户的所有历史命令，包括以前会话中的命令，而不只是当前会话的命令。
-	# - 无命令编号: 由于 /[user]/.bash_history 是一个普通的文本文件，它的输出没有命令编号，你不能直接使用 !number 的方式来引用历史命令。
+	# - 持久化历史: /[user]/.bash_history 文件是 bash shell 保存的命令历史文件,它保存了用户过去执行的命令,即使在关闭终端或注销后,这些历史记录也会被保留下来。
+	# - 静态文件: /[user]/.bash_history 是一个文件,它的内容不会随着你当前会话中的命令输入而实时更新。文件的内容会在你退出终端会话时更新,bash 会把当前会话的命令追加到这个文件中。
+	# - 不受限于当前会话: cat /[user]/.bash_history 可以显示用户的所有历史命令,包括以前会话中的命令,而不只是当前会话的命令。
+	# - 无命令编号: 由于 /[user]/.bash_history 是一个普通的文本文件,它的输出没有命令编号,你不能直接使用 !number 的方式来引用历史命令。
 	# 注意: 大多数情况下 linux 系统会为每个用户创建一个 .bash_history 文件。
-	# 		set +o history 是关闭命令历史记录功能，set -o history 重新打开[只影响当前的 shell 会话]
+	# 		set +o history 是关闭命令历史记录功能,set -o history 重新打开[只影响当前的 shell 会话]
 	
 	# 输出 root 历史命令[history]
 	echo -e "${YELLOW}[+]输出当前shell下历史命令[history]:${NC}"
@@ -1058,14 +1058,14 @@ historyCheck(){
 	if [ -f /root/.bash_history ]; then
 		history=$(cat /root/.bash_history)
 		if [ -n "$history" ]; then
-			# 如果文件非空，输出历史命令
+			# 如果文件非空,输出历史命令
 			(echo -e "${YELLOW}[+]操作系统历史命令如下:${NC}" && echo "$history") 
 		else
-			# 如果文件为空，输出警告信息
+			# 如果文件为空,输出警告信息
 			echo -e "${RED}[!]未发现历史命令,请检查是否记录及已被清除${NC}" 
 		fi
 	else
-		# 如果文件不存在，同样输出警告信息
+		# 如果文件不存在,同样输出警告信息
 		echo -e "${RED}[!]未发现历史命令文件,请检查/root/.bash_history是否存在${NC}" 
 	fi
 
@@ -1115,18 +1115,18 @@ historyCheck(){
 		echo -e "${YELLOW}[+]未发现其他可疑命令${NC}" 
 	fi
 
-	# 检查历史记录目录，看是否被备份，注意：这里可以看开容器持久化的.bash_history
+	# 检查历史记录目录,看是否被备份,注意：这里可以看开容器持久化的.bash_history
 	echo -e "${YELLOW}[+]输出系统中所有可能的.bash_history*文件路径:${NC}"
 	findOut=$(find / -name ".bash_history*" -type f -exec ls -l {} \;) # 输出所有.bash_history文件[包含容器]
 	if [ -n "$findOut" ]; then
-		echo -e "${YELLOW}以下历史命令文件如有未检查需要人工手动检查，有可能涵盖容器内 history 文件${NC}"
+		echo -e "${YELLOW}以下历史命令文件如有未检查需要人工手动检查,有可能涵盖容器内 history 文件${NC}"
 		(echo -e "${YELLOW}[+]系统中所有可能的.bash_history*文件如下:${NC}" && echo "$findOut") 
 	else
 		echo -e "${RED}[!]未发现系统中存在历史命令文件,请人工检查机器是否被清理攻击痕迹${NC}" 
 	fi
 
 	# 输出其他用户的历史命令[cat /[user]/.bash_history]
-	# 使用awk处理/etc/passwd文件，提取用户名和主目录，并检查.bash_history文件
+	# 使用awk处理/etc/passwd文件,提取用户名和主目录,并检查.bash_history文件
 	echo -e "${YELLOW}[+]遍历系统用户并输出其的历史命令[cat /[user]/.bash_history]${NC}"
 	awk -F: '{
 		user=$1
@@ -1214,8 +1214,8 @@ userInfoCheck(){
 	# 1. 从`/etc/passwd`文件中提取使用`/bin/bash`作为shell的用户名。--> 可登录的用户
 	# 2. 从`/etc/shadow`文件中获取密码字段为空的用户名。  --> 空密码的用户
 	# 3. 检查`/etc/ssh/sshd_config`中SSH服务器配置是否允许空密码。 --> ssh 是否允许空密码登录
-	# 4. 遍历步骤1中获取的每个用户名，并检查其是否与步骤2中获取的任何用户名匹配，并且根据步骤3是否允许空密码进行判断。如果存在匹配，则打印通知，表示存在空密码且允许登录的用户。
-	# 5. 最后，根据是否找到匹配，打印警告消息，要求人工分析配置和账户，或者打印消息表示未发现空口令且可登录的用户。
+	# 4. 遍历步骤1中获取的每个用户名,并检查其是否与步骤2中获取的任何用户名匹配,并且根据步骤3是否允许空密码进行判断。如果存在匹配,则打印通知,表示存在空密码且允许登录的用户。
+	# 5. 最后,根据是否找到匹配,打印警告消息,要求人工分析配置和账户,或者打印消息表示未发现空口令且可登录的用户。
 	##允许空口令用户登录方法
 	##1.passwd -d username
 	##2.echo "PermitEmptyPasswords yes" >>/etc/ssh/sshd_config
@@ -1309,7 +1309,7 @@ systemEnabledServiceCheck(){
 			systemdList=$(systemctl list-unit-files | grep -E "enabled" | awk '{print $1}') # 输出启动项名称列表
 			if [ -n "$systemd" ];then
 				echo -e "${YELLOW}[+]systemd自启动项:${NC}" && echo "$systemd"
-				# 分析系统启动项 【这里只是启动服务项，不包括其他服务项，所以在这里检查不完整，单独检查吧】
+				# 分析系统启动项 【这里只是启动服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd启动项
 				echo -e "${YELLOW}[+]正在分析危险systemd启动项[systemctl list-unit-files]:${NC}"
 				echo -e "${YELLOW}[说明]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
@@ -1382,7 +1382,7 @@ systemRunningServiceCheck(){
 			systemRunningServiceList=$(systemctl | grep -E "\.service.*running" | awk '{print $1}')  # 输出启动项名称列表
 			if [ -n "$systemRunningService" ];then
 				echo -e "${YELLOW}[+]systemd正在运行中服务项:${NC}" && echo "$systemRunningService"
-				# 分析系统启动项 【这里只是运行中服务项，不包括其他服务项，所以在这里检查不完整，单独检查吧】
+				# 分析系统启动项 【这里只是运行中服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd运行中的服务
 				echo -e "${YELLOW}[+]正在分析危险systemd运行中服务项[systemctl list-unit-files]:${NC}"
 				echo -e "${YELLOW}[说明]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
@@ -1683,9 +1683,9 @@ sshFileCheck(){
 
 # 检查最近变动文件的函数 
 checkRecentModifiedFiles() {
-	# 功能: 检查指定时间范围内变动的文件，支持敏感文件和所有文件两种模式
-	# 参数1: 时间范围(小时数，默认24)
-	# 参数2: 检查类型(sensitive|all，默认sensitive)
+	# 功能: 检查指定时间范围内变动的文件,支持敏感文件和所有文件两种模式
+	# 参数1: 时间范围(小时数,默认24)
+	# 参数2: 检查类型(sensitive|all,默认sensitive)
 	# 使用示例:
 	#   checkRecentModifiedFiles                    # 检查最近24小时内的敏感文件
 	#   checkRecentModifiedFiles 48                 # 检查最近48小时内的敏感文件
@@ -1783,7 +1783,7 @@ checkRecentModifiedFiles() {
 			echo -e "${YELLOW}[+]未发现最近${time_hours}小时内变动的文件${NC}"
 		fi
 	else
-		echo -e "${RED}[!]错误: 不支持的检查类型 '$check_type'，支持的类型: sensitive, all${NC}"
+		echo -e "${RED}[!]错误: 不支持的检查类型 '$check_type',支持的类型: sensitive, all${NC}"
 		return 1
 	fi
 	
@@ -1969,8 +1969,8 @@ systemLogCheck(){
 	## 3.1 SSH爆破情况分析
 	echo -e "${YELLOW}正在检查系统安全日志中登录失败记录(SSH爆破)[more /var/log/secure* | grep "Failed"]:" 
 	# loginfailed=$(more /var/log/secure* | grep "Failed password" | awk '{print $1,$2,$3,$9,$11}')
-	# 如果是对root用户的爆破，$9 是 root，$11 是 IP 
-	# 如果是对非root用户的爆破，$9 是 invalid $11 才是 用户名 $13 是 IP
+	# 如果是对root用户的爆破,$9 是 root,$11 是 IP 
+	# 如果是对非root用户的爆破,$9 是 invalid $11 才是 用户名 $13 是 IP
 	# from 前面是是用户,后面是 IP
 	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
 	if [ -n "$loginfailed" ];then
@@ -2043,7 +2043,7 @@ systemLogCheck(){
 	fi
 	printf "\n" 
 
-	# 5 yum 日志分析 【只适配使用 yum 的系统，apt/history.log 的格式和yum 的格式差距较大，还有 dnf 包管理工具也另说】
+	# 5 yum 日志分析 【只适配使用 yum 的系统,apt/history.log 的格式和yum 的格式差距较大,还有 dnf 包管理工具也另说】
 	echo -e "${YELLOW}正在分析使用yum下载安装过的脚本文件[/var/log/yum*|grep Installed]:${NC}"  
 	yum_installscripts=$(more /var/log/yum* | grep Installed | grep -E "(\.sh$\.py$|\.pl$|\.exe$)" | awk '{print $NF}' | sort | uniq)
 	if [ -n "$yum_installscripts" ];then
@@ -2077,7 +2077,7 @@ systemLogCheck(){
 	printf "\n"  
 
 	
-	# 6 dmesg日志分析 [内核环境提示信息，包括启动消息、硬件检测和系统错误]
+	# 6 dmesg日志分析 [内核环境提示信息,包括启动消息、硬件检测和系统错误]
 	echo -e "${YELLOW}正在分析dmesg内核自检日志[dmesg]:${NC}" 
 	dmesg=$(dmesg)
 	if [ $? -eq 0 ];then
@@ -2088,7 +2088,7 @@ systemLogCheck(){
 	printf "\n" 
 
 
-	# 7 btmp 日志分析 [记录失败的登录尝试，包括日期、时间和用户名] 【二进制日志文件,不能直接 cat 查看】
+	# 7 btmp 日志分析 [记录失败的登录尝试,包括日期、时间和用户名] 【二进制日志文件,不能直接 cat 查看】
 	echo -e "正在分析btmp错误登录日志[lastb]:"  
 	lastb=$(lastb)
 	if [ -n "$lastb" ];then
@@ -2098,7 +2098,7 @@ systemLogCheck(){
 	fi
 	printf "\n"  
 
-	# 8 lastlog 日志分析 [记录最后一次登录的日志，包括日期、时间和用户名]
+	# 8 lastlog 日志分析 [记录最后一次登录的日志,包括日期、时间和用户名]
 	echo -e "[14.8]正在分析lastlog最后一次登录日志[lastlog]:"  
 	lastlog=$(lastlog)
 	if [ -n "$lastlog" ];then
@@ -2221,7 +2221,7 @@ virusCheck(){
 # 内存和VFS排查 【未完成】
 memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
-	# 如果存在 /proc 目录中有进程文件夹，但是在 ps -aux 命令里没有显示的，就认为可能是异常进程
+	# 如果存在 /proc 目录中有进程文件夹,但是在 ps -aux 命令里没有显示的,就认为可能是异常进程
 	echo -e "${YELLOW}正在进行内存分析:${NC}"
 	echo -e "待完善"
 }
@@ -2312,7 +2312,7 @@ otherCheck(){
 		# 清空或创建文件
 		> "$file"
 
-		# 遍历每个目录，查找可执行文件
+		# 遍历每个目录,查找可执行文件
 		for dir in "${dirs_to_check[@]}"; do
 			if [ -d "$dir" ]; then
 				echo -e "${YELLOW}[INFO] 正在扫描目录${NC}: $dir"  
@@ -2424,7 +2424,7 @@ selinuxStatusCheck(){
 
     # 检查是否存在 SELinux 相关命令
     if ! command -v getenforce &>/dev/null && [ ! -f /usr/sbin/getenforce ] && [ ! -f /sbin/getenforce ]; then
-        echo -e "${YELLOW}[+]未安装 SELinux 工具，跳过检查${NC}"
+        echo -e "${YELLOW}[+]未安装 SELinux 工具,跳过检查${NC}"
         printf "\n"
         return
     fi
@@ -2550,12 +2550,12 @@ baselineCheck(){
 	printf "\n"  
 
 
-	#### 【这是一个通用的文件检查，centOS7 和 ubuntu 等系统都适用】
-	# 角色: 这是 GRUB 2 引导加载程序的实际配置文件，包含了启动菜单项和其他引导信息。
-	# 内容: 包含了所有可用操作系统条目、内核版本、启动参数等详细信息。这个文件通常非常复杂，并不适合直接手工编辑。
+	#### 【这是一个通用的文件检查,centOS7 和 ubuntu 等系统都适用】
+	# 角色: 这是 GRUB 2 引导加载程序的实际配置文件,包含了启动菜单项和其他引导信息。
+	# 内容: 包含了所有可用操作系统条目、内核版本、启动参数等详细信息。这个文件通常非常复杂,并不适合直接手工编辑。
 	# 生成方式: 此文件是由 grub2-mkconfig 命令根据 /etc/default/grub 文件中的设置以及其他脚本（如 /etc/grub.d/ 目录下的脚本）自动生成的。
-	# 作用: 在系统启动时，GRUB 2 使用此文件来显示启动菜单并加载选定的操作系统或内核
-	# /etc/grub2.cfg 是 /boot/grub2/grub.cfg 的软链接，如果要修改 grub 行为，应该修改 /etc/default/grub 文件，然后运行 grub2-mkconfig -o /boot/grub2/grub.cfg 来生成 /boot/grub2/grub.cfg 文件。
+	# 作用: 在系统启动时,GRUB 2 使用此文件来显示启动菜单并加载选定的操作系统或内核
+	# /etc/grub2.cfg 是 /boot/grub2/grub.cfg 的软链接,如果要修改 grub 行为,应该修改 /etc/default/grub 文件,然后运行 grub2-mkconfig -o /boot/grub2/grub.cfg 来生成 /boot/grub2/grub.cfg 文件。
 	echo -e "${YELLOW}[2.2.4]正在检查grub2密码策略[/boot/grub2/grub.cfg]:${NC}"
 	echo -e "[+]grub2密码策略如下:"
 
@@ -2563,7 +2563,7 @@ baselineCheck(){
 
 	# 检查文件是否存在
 	if [ ! -f "$GRUB_CFG" ]; then
-		echo -e "${RED}[!]文件 $GRUB_CFG 不存在，无法进行 grub2 密码策略检查${NC}"
+		echo -e "${RED}[!]文件 $GRUB_CFG 不存在,无法进行 grub2 密码策略检查${NC}"
 	else
 		# 检查是否配置了加密密码（推荐使用 password_pbkdf2）
 		if grep -qE '^\s*password_pbkdf2' "$GRUB_CFG"; then
@@ -2578,10 +2578,10 @@ baselineCheck(){
 
 	### 1.3 远程登录限制 
 	#### 1.3.1 远程登录策略 TCP Wrappers
-	# TCP Wrappers 是一种用于增强网络安全性的工具，它通过基于主机的访问控制来限制对网络服务的访问。
+	# TCP Wrappers 是一种用于增强网络安全性的工具,它通过基于主机的访问控制来限制对网络服务的访问。
 	# 一些流行的服务如 SSH (sshd)、FTP (vsftpd) 和 Telnet 默认支持 TCP Wrappers。
-	# 尽管 TCP Wrappers 提供了一种简单的方法来控制对服务的访问，但随着更高级的防火墙和安全技术（例如 iptables、firewalld）的出现，TCP Wrappers 的使用已经不像过去那样普遍。
-	# 然而，在某些环境中，它仍然是一个有效的补充措施。
+	# 尽管 TCP Wrappers 提供了一种简单的方法来控制对服务的访问,但随着更高级的防火墙和安全技术（例如 iptables、firewalld）的出现,TCP Wrappers 的使用已经不像过去那样普遍。
+	# 然而,在某些环境中,它仍然是一个有效的补充措施。
 	echo -e "${YELLOW}正在检查远程登录策略(基于 TCP Wrappers):${NC}"  
 	echo -e "${YELLOW}正在检查远程允许策略[/etc/hosts.allow]:${NC}"  
 	hostsallow=$(cat /etc/hosts.allow | grep -v '#')
@@ -2661,10 +2661,10 @@ baselineCheck(){
 
 
 	# core dump
-	# Core Dump（核心转储） 是操作系统在程序异常崩溃（如段错误、非法指令等）时，自动生成的一个文件，记录了程序崩溃时的内存状态和进程信息
+	# Core Dump（核心转储） 是操作系统在程序异常崩溃（如段错误、非法指令等）时,自动生成的一个文件,记录了程序崩溃时的内存状态和进程信息
 	echo -e "${YELLOW}正在检查 core dump 设置[/etc/security/limits.conf]${NC}"
 	if (grep -qE '^\*\s+soft\s+core\s+0' /etc/security/limits.conf && grep -qE '^\*\s+hard\s+core\s+0' /etc/security/limits.conf); then
-		echo -e "${YELLOW}[+] core dump 已禁用，符合规范${NC}"
+		echo -e "${YELLOW}[+] core dump 已禁用,符合规范${NC}"
 		# 虽然 core dump可以辅助排查系统崩溃,但是在生产和安全敏感场景中,core dump推荐禁用
 	else
 		echo -e "${RED}[!]core dump 未完全禁用,建议添加: * soft core 0 和 * hard core 0 到 limits.conf${NC}"
@@ -2678,15 +2678,15 @@ baselineCheck(){
 
 	#### 2.1.2 系统文件属性
 		# 文件属性检查
-		# 当一个文件或目录具有 "a" 属性时，只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
-		# 其他普通用户在写入文件时只能进行数据的追加操作，而无法对现有数据进行修改或删除。
+		# 当一个文件或目录具有 "a" 属性时,只有特定的用户或具有超级用户权限的用户才能够修改、重命名或删除这个文件。
+		# 其他普通用户在写入文件时只能进行数据的追加操作,而无法对现有数据进行修改或删除。
 		# 属性 "i" 表示文件被设置为不可修改（immutable）的权限。这意味着文件不能被更改、重命名、删除或链接。
-		# 具有 "i" 属性的文件对于任何用户或进程都是只读的，并且不能进行写入操作
+		# 具有 "i" 属性的文件对于任何用户或进程都是只读的,并且不能进行写入操作
 	# check_file_attributes "/etc/shadow" "/etc/shadow 文件属性" "i"
 	check_file_attributes(){
 		local file="$1"            # 要检查的文件路径
 		local desc="$2"            # 描述信息（可选）
-		local required_attr="$3"   # 必须包含的属性，如 "i" 或 "a"（可选）
+		local required_attr="$3"   # 必须包含的属性,如 "i" 或 "a"（可选）
 
 		local yellow='\033[1;33m'
 		local red='\033[0;31m'
@@ -2701,7 +2701,7 @@ baselineCheck(){
 
 		# 检查是否支持 lsattr 命令
 		if ! command -v lsattr &>/dev/null; then
-			echo -e "${red}[-] 未安装 e2fsprogs,无法使用 lsattr 命令，请先安装相关工具包。${nc}"
+			echo -e "${red}[-] 未安装 e2fsprogs,无法使用 lsattr 命令,请先安装相关工具包。${nc}"
 			return 1
 		fi
 
@@ -2744,7 +2744,7 @@ baselineCheck(){
 	echo -e "${YELLOW}正在检测useradd和userdel时间属性:${NC}"  
 	echo -e "${GREEN}Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat${NC}"  
 	echo -e "${GREEN}Modify:修改时间,文件内容改变会导致该时间更新${NC}"  
-	echo -e "${GREEN}Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新，不会导致修改时间更新${NC}"  
+	echo -e "${GREEN}Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新,不会导致修改时间更新${NC}"  
 	echo -e "${YELLOW}正在检查useradd时间属性[/usr/sbin/useradd ]:${NC}"  
 	echo -e "${YELLOW}[+]useradd时间属性:${NC}"  
 	stat /usr/sbin/useradd | egrep "Access|Modify|Change" | grep -v '('  
@@ -2781,7 +2781,7 @@ baselineCheck(){
 
 	## 5. 服务配置策略
 	### 5.1 NIS(网络信息服务) 配置策略
-	# NIS 它允许在网络上的多个系统之间共享一组通用的配置文件，比如密码文件（/etc/passwd）、组文件（/etc/group）和主机名解析文件（/etc/hosts）等
+	# NIS 它允许在网络上的多个系统之间共享一组通用的配置文件,比如密码文件（/etc/passwd）、组文件（/etc/group）和主机名解析文件（/etc/hosts）等
 	# NIS 配置问价的一般格式: database: source1 [source2 ...],示例如下:
 	# passwd: files nis
 	# group: files nis
@@ -2806,7 +2806,7 @@ baselineCheck(){
 		if [ "$public" = "public" ];then
 			echo -e "${YELLOW}发现snmp服务存在默认团体名public,不符合要求${NC}"  
 			# Community String（团体字符串）:这是 SNMPv1 和 SNMPv2c 中用于身份验证的一个明文字符串。
-			# 它类似于密码，用于限制谁可以访问设备的 SNMP 数据。默认情况下，许多设备设置为“public”，这是一个安全隐患，因此建议更改这个值
+			# 它类似于密码,用于限制谁可以访问设备的 SNMP 数据。默认情况下,许多设备设置为“public”,这是一个安全隐患,因此建议更改这个值
 		fi
 		if [ "$private" = "private" ];then
 			echo -e "${YELLOW}发现snmp服务存在默认团体名private,不符合要求${NC}"  
@@ -2825,11 +2825,11 @@ baselineCheck(){
 	if [ -n "$nginx_bin" ];then
 		echo -e "${YELLOW}[+]发现主机存在Nginx服务${NC}"  
 		echo -e "${YELLOW}[+]Nginx服务二进制文件路径为:$nginx_bin${NC}"  
-		# 获取 nginx 配置文件位置，如果 nginx -V 获取不到，则默认为/etc/nginx/nginx.conf
+		# 获取 nginx 配置文件位置,如果 nginx -V 获取不到,则默认为/etc/nginx/nginx.conf
 		config_output="$($nginx_bin -V 2>&1)"
 		config_path=$(echo "$config_output" | awk '/configure arguments:/ {split($0,a,"--conf-path="); if (length(a[2])>0) print a[2]}')  # 获取 nginx 配置文件路径
 
-		# 如果 awk 命令成功返回了配置文件路径，则使用它，否则使用默认路径
+		# 如果 awk 命令成功返回了配置文件路径,则使用它,否则使用默认路径
 		if [ -n "$config_path" ] && [ -f "$config_path" ]; then
 			ngin_conf="$config_path"
 		else
@@ -2871,7 +2871,7 @@ baselineCheck(){
 k8sClusterInfo() {
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
-        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境,退出脚本${NC}"
         exit 0
     fi
 
@@ -2879,20 +2879,20 @@ k8sClusterInfo() {
 
 	# 检查 Kubernetes 版本信息
     echo -e "\n${YELLOW}[+]正在检查 Kubernetes 版本信息:${NC}"
-	# kubectl 命令行工具，通过其向 API server 发送指令
+	# kubectl 命令行工具,通过其向 API server 发送指令
     echo -e "${GREEN}[+] kubectl 版本信息 (客户端/服务端):${NC}"
     if command -v kubectl &>/dev/null; then
         kubectl version 2>&1
     else
-        echo -e "${RED}[!] 警告: kubectl 命令未安装，无法获取版本信息${NC}"
+        echo -e "${RED}[!] 警告: kubectl 命令未安装,无法获取版本信息${NC}"
     fi
 
-	# kubelet 运行在每个node上运行，用于管理容器的生命周期，检查kubelet服务状态
+	# kubelet 运行在每个node上运行,用于管理容器的生命周期,检查kubelet服务状态
     echo -e "${GREEN}[+] kubelet 版本信息:${NC}"
     if command -v kubelet &>/dev/null; then
         kubelet --version 2>&1
     else
-        echo -e "${RED}[!] 警告: kubelet 命令未安装，无法获取版本信息${NC}"
+        echo -e "${RED}[!] 警告: kubelet 命令未安装,无法获取版本信息${NC}"
     fi
 
     # 检查 Kubernetes 服务状态
@@ -2955,7 +2955,7 @@ k8sClusterInfo() {
             echo -e "${GREEN}[+] 关键配置项检查:${NC}"
             grep -E 'client-ca-file|token-auth-file|authorization-mode|secure-port' "$config_file" 2>&1
 
-            # 如果是 kubelet.conf，额外检查是否有 insecure-port 设置为 0
+            # 如果是 kubelet.conf,额外检查是否有 insecure-port 设置为 0
             if [[ "$config_file" == "/etc/kubernetes/kubelet.conf" ]]; then
                 echo -e "${GREEN}[+] 检查 kubelet 是否禁用不安全端口:${NC}"
                 if grep -q 'insecure-port=0' "$config_file"; then
@@ -2976,7 +2976,7 @@ k8sClusterInfo() {
 k8sSecretCheck() {
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
-        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境,退出脚本${NC}"
         exit 0
     fi
 
@@ -3036,7 +3036,7 @@ k8sSecretCheck() {
 k8sSensitiveInfo() { 
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
-        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境,退出脚本${NC}"
         exit 0
     fi
 
@@ -3090,7 +3090,7 @@ k8sSensitiveInfo() {
 
             # 遍历每个文件模式
             for pattern in "${search_patterns[@]}"; do
-                # 使用 find 匹配文件名模式，并安全处理带空格/换行的文件名
+                # 使用 find 匹配文件名模式,并安全处理带空格/换行的文件名
                 find "$path" -type f -name "$pattern" -print0 2>/dev/null | while IFS= read -r -d '' file; do
                     if [ -f "$file" ]; then
                         echo -e "${RED}[!] 发现敏感文件: $file${NC}"
@@ -3117,7 +3117,7 @@ k8sSensitiveInfo() {
 k8sBaselineCheck() {
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
-        echo -e "${RED}[!] 未检测到 Kubernetes 环境，退出脚本${NC}"
+        echo -e "${RED}[!] 未检测到 Kubernetes 环境,退出脚本${NC}"
         exit 0
     fi
 
@@ -3133,7 +3133,7 @@ k8sBaselineCheck() {
             echo -e "${RED}[!] 警告: kubelet 的不安全端口未禁用${NC}"
         fi
     else
-        echo -e "${YELLOW}[i] kubelet.conf 文件不存在，跳过检查${NC}"
+        echo -e "${YELLOW}[i] kubelet.conf 文件不存在,跳过检查${NC}"
     fi
 
     echo -e "\n${BLUE}2. RBAC 授权模式检查:${NC}"
@@ -3145,7 +3145,7 @@ k8sBaselineCheck() {
             echo -e "${RED}[!] 警告: API Server 未启用 RBAC 授权模式${NC}"
         fi
     else
-        echo -e "${YELLOW}[i] apiserver 配置文件不存在，跳过检查${NC}"
+        echo -e "${YELLOW}[i] apiserver 配置文件不存在,跳过检查${NC}"
     fi
 
     echo -e "\n${BLUE}3. Pod 安全策略检查:${NC}"
@@ -3162,7 +3162,7 @@ k8sBaselineCheck() {
     if [ -n "$netpolicy_enabled" ]; then
         echo -e "${GREEN}✓ 网络策略功能已启用${NC}"
     else
-        echo -e "${RED}[!] 警告: 未启用网络策略(NetworkPolicy)，可能导致跨命名空间通信风险${NC}"
+        echo -e "${RED}[!] 警告: 未启用网络策略(NetworkPolicy),可能导致跨命名空间通信风险${NC}"
     fi
 
     echo -e "\n${BLUE}5. Secret 加密存储检查:${NC}"
@@ -3177,7 +3177,7 @@ k8sBaselineCheck() {
     echo -e "\n${BLUE}6. 审计日志检查:${NC}"
     audit_log_path="/var/log/kube-audit/audit.log"
     if [ -f "$audit_log_path" ]; then
-        echo -e "${GREEN}✓ 审计日志已启用，路径为: $audit_log_path${NC}"
+        echo -e "${GREEN}✓ 审计日志已启用,路径为: $audit_log_path${NC}"
     else
         echo -e "${RED}[!] 警告: 未发现审计日志文件${NC}"
     fi
@@ -3187,7 +3187,7 @@ k8sBaselineCheck() {
     if [ "$default_sa" = "false" ]; then
         echo -e "${GREEN}✓ 默认 ServiceAccount 未自动挂载 Token${NC}"
     else
-        echo -e "${RED}[!] 警告: 默认 ServiceAccount 启用了自动挂载 Token，存在提权风险${NC}"
+        echo -e "${RED}[!] 警告: 默认 ServiceAccount 启用了自动挂载 Token,存在提权风险${NC}"
     fi
 
     echo -e "\n${BLUE}8. Etcd 安全配置检查:${NC}"
@@ -3204,10 +3204,10 @@ k8sBaselineCheck() {
         if grep -q '--client-cert-auth' "$etcd_config"; then
             echo -e "${GREEN}✓ Etcd 启用了客户端证书认证${NC}"
         else
-            echo -e "${RED}[!] 警告: Etcd 未启用客户端证书认证，可能存在未授权访问风险${NC}"
+            echo -e "${RED}[!] 警告: Etcd 未启用客户端证书认证,可能存在未授权访问风险${NC}"
         fi
     else
-        echo -e "${YELLOW}[i] etcd.yaml 配置文件不存在，跳过检查${NC}"
+        echo -e "${YELLOW}[i] etcd.yaml 配置文件不存在,跳过检查${NC}"
     fi
 
     echo -e "\n${BLUE}9. 容器运行时安全配置:${NC}"
@@ -3216,7 +3216,7 @@ k8sBaselineCheck() {
     if echo "$pod_runasuser" | grep -v '^$' | grep -q -v '0'; then
         echo -e "${GREEN}✓ 大多数 Pod 未以 root 用户运行${NC}"
     else
-        echo -e "${RED}[!] 警告: 存在以 root 用户运行的容器，请检查 Pod 安全上下文配置${NC}"
+        echo -e "${RED}[!] 警告: 存在以 root 用户运行的容器,请检查 Pod 安全上下文配置${NC}"
     fi
 
     echo -e "\n${BLUE}10. 特权容器检查:${NC}"
@@ -3225,7 +3225,7 @@ k8sBaselineCheck() {
     if [ -z "$privileged_pods" ]; then
         echo -e "${GREEN}✓ 未发现特权容器(privileged)${NC}"
     else
-        echo -e "${RED}[!] 警告: 检测到特权容器，建议禁用或限制特权容器运行${NC}"
+        echo -e "${RED}[!] 警告: 检测到特权容器,建议禁用或限制特权容器运行${NC}"
     fi
 }
 
@@ -3234,7 +3234,7 @@ k8sCheck() {
     echo -e "${YELLOW}正在检查K8s系统信息:${NC}"
     # 判断环境是否使用 k8s 集群
 	if [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; then 
-		echo -e "${YELLOW}[+] 检测到 Kubernetes 环境，开始执行相关检查...${NC}"
+		echo -e "${YELLOW}[+] 检测到 Kubernetes 环境,开始执行相关检查...${NC}"
 		
 		# 调用函数
 		## 1. 集群基础信息
@@ -3246,7 +3246,7 @@ k8sCheck() {
 		## 4. 集群基线检查
 		k8sBaselineCheck
 	else
-		echo -e "${RED}[!] 未检测到 Kubernetes 环境，跳过所有 Kubernetes 相关检查${NC}"
+		echo -e "${RED}[!] 未检测到 Kubernetes 环境,跳过所有 Kubernetes 相关检查${NC}"
 
 	fi
 }
@@ -3429,7 +3429,7 @@ main() {
 	# funcA | log2file "log.txt"
 	# --all 输出的函数后面都带上这个输出
 
-	# 初始化环境【含有一些定义变量，必须放在最开头调用】
+	# 初始化环境【含有一些定义变量,必须放在最开头调用】
 	init_env
 	# 确保 root 权限执行
 	ensure_root
@@ -3554,7 +3554,7 @@ main() {
         esac
     done
 
-    # 如果指定了 --all，则运行所有模块
+    # 如果指定了 --all,则运行所有模块
     if [ "$run_all" = true ]; then
         echo -e "${YELLOW}[+] linuGun 开始执行所有检查项:${NC}"
 		systemCheck  		| log2file "${check_file}/checkresult.txt"
@@ -3571,7 +3571,7 @@ main() {
 		k8sCheck			| log2file "${check_file}/checkresult.txt"
 		performanceCheck	| log2file "${check_file}/checkresult.txt"
 		baselineCheck		| log2file "${check_file}/checkresult.txt"
-		# 日志打包函数【等待 2s 后在进行打包，解决脚本执行过程中，日志文件未生成或被占用问题】
+		# 日志打包函数【等待 2s 后在进行打包,解决脚本执行过程中,日志文件未生成或被占用问题】
 		sleep 2 
 		checkOutlogPack		| log2file "${check_file}/checkresult.txt"
         echo -e "${GREEN}[+] linuGun v6.0 所有检查项已完成${NC}"
