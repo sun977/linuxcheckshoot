@@ -3004,7 +3004,7 @@ findSensitiveFiles() {
 
 	# 定义排除目录
     EXCLUDE_DIRS=(
-        "/root/.vscode-server"
+        "/root/.vscode-server/"
 		"/proc/"
 		"/dev/"
 		"/run/"
