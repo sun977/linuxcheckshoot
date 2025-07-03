@@ -2987,6 +2987,10 @@ attackAngleCheck(){
 
 # 查找敏感配置文件函数（支持多模式定义）【攻击角度通用】
 findSensitiveFiles() {
+	# find "/home/" -type f \
+	# ! -path "/root/.vscode-server/*" \
+	# ! -path "/proc/*" \
+	# \( -name '*Jenkinsfile*' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json'  \)
     echo -e "${YELLOW}正在全盘查找敏感配置文件:${NC}"
 
 	# 定义扫描目录
@@ -3052,8 +3056,8 @@ findSensitiveFiles() {
             while IFS= read -r file; do
                 [ -z "$file" ] && continue
                 echo -e "${RED}[!] 发现敏感文件: $file${NC}"
-                echo -e "${GREEN}[+] 文件内容如下:${NC}"
-                cat "$file"
+                # echo -e "${GREEN}[+] 文件内容如下:${NC}"
+                # cat "$file"
                 filename=$(basename "$file")
                 ts=$(date +%Y%m%d%H%M%S)
                 cp "$file" "$SENSITIVE_DIR/${ts}_${filename}"
