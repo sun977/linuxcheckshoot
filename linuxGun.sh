@@ -2987,8 +2987,9 @@ attackAngleCheck(){
 
 # 查找敏感配置文件函数（支持多模式定义）【攻击角度通用】
 findSensitiveFiles() {
-    echo -e "${YELLOW}正在查找敏感配置文件:${NC}"
+    echo -e "${YELLOW}正在全盘查找敏感配置文件:${NC}"
 
+	# 定义扫描目录
     SCAN_PATHS=(
         "/var/run/secrets/"
         "/etc/kubernetes/"
@@ -2996,9 +2997,21 @@ findSensitiveFiles() {
         "/home/"
         "/tmp/"
         "/opt/"
-        "/usr/local/etc/"
+		"/etc/"
+		"/var/lib/docker/"
+		"/usr/"
     )
 
+	# 定义排除目录
+    EXCLUDE_DIRS=(
+        "/root/.vscode-server"
+		"/proc/"
+		"/dev/"
+		"/run/"
+		"/sys/"
+    )
+
+	# 定义搜索模式(文件名)
     search_patterns=(
         '*Jenkinsfile*'
         'nacos'
@@ -3024,6 +3037,9 @@ findSensitiveFiles() {
         if [ -d "$path" ]; then
             echo -e "${BLUE}[i] 正在扫描路径: $path${NC}"
             find_cmd=(find "$path" -type f)
+            for exdir in "${EXCLUDE_DIRS[@]}"; do
+                find_cmd+=( ! -path "$exdir/*" )
+            done
             for pattern in "${search_patterns[@]}"; do
                 find_cmd+=( -name "$pattern" -o )
             done
@@ -3036,27 +3052,15 @@ findSensitiveFiles() {
                 cat "$file"
                 filename=$(basename "$file")
                 ts=$(date +%Y%m%d%H%M%S)
-                cp "$file" "$SENSITIVE_DIR/${filename}_$ts"
-                echo -e "${GREEN}[+] 已保存副本至: $SENSITIVE_DIR/${filename}_$ts${NC}\n"
+                cp "$file" "$SENSITIVE_DIR/${ts}_${filename}"
+                echo -e "${GREEN}[+] 已保存副本至: $SENSITIVE_DIR/${ts}_${filename}${NC}\n"
             done <<< "$files"
         else
             echo -e "${YELLOW}[i] 路径不存在或无权限访问: $path${NC}"
         fi
     done
 
-    echo -e "${BLUE}[i] 正在检查环境变量中的敏感信息...${NC}"
-    env | grep -iE 'token|password' 2>&1 | tee /tmp/sensitive_env.txt
-    if [ -s /tmp/sensitive_env.txt ]; then
-        echo -e "${RED}[!] 发现环境变量中包含敏感信息:${NC}"
-        cat /tmp/sensitive_env.txt
-        ts=$(date +%Y%m%d%H%M%S)
-        cp /tmp/sensitive_env.txt "$SENSITIVE_DIR/env_sensitive_$ts"
-        rm -f /tmp/sensitive_env.txt
-    else
-        echo -e "${YELLOW}[i] 未发现环境变量中的敏感信息${NC}"
-    fi
 }
-
 
 
 # 日志统一打包 【完成-暂时没有输出检测报告】
