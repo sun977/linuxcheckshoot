@@ -71,6 +71,14 @@ print_summary() {
 		- ps进程分析
 		- top进程分析
 		- 规则匹配敏感进程(自定义进程组)
+		- 异常进程检测
+		- 孤儿进程检测
+		- 网络连接和进程映射
+		- 进程可疑内存映射
+		- 文件描述符异常进程
+		- 系统调用表完整性检测
+		- 进程启动时间异常检测
+		- 进程环境变量异常检测
 	四.文件排查
 		- 系统服务排查
 			- 系统服务收集
@@ -3734,7 +3742,7 @@ usage() {
     echo -e "${YELLOW}    --baseline-selinux      ${GREEN}SeLinux 策略检查${NC}"
 
 	echo -e "${GREEN}  攻击角度信息收集[可选|默认不与--all执行]:${NC}"
-    echo -e "${YELLOW}    --attack-filescan       ${GREEN}攻击角度信息收集默认收集当前系统所有敏感文件信息)${NC}"
+    echo -e "${YELLOW}    --attack-filescan       ${GREEN}攻击角度信息收集(默认收集当前系统所有敏感文件信息)${NC}"
 }
 
 # 主函数执行
