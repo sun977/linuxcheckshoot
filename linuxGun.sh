@@ -2237,7 +2237,7 @@ tunnelSSH(){
 				# 显示进程详细信息
 				ps_info=$(ps -p $pid -o pid,ppid,user,cmd --no-headers 2>/dev/null)
 				if [ -n "$ps_info" ]; then
-					echo -e "${YELLOW}    COLUMN: pid - ppid - user - cmd:${NC}"
+					echo -e "${YELLOW}    COLUMN: pid - ppid - user - cmd ${NC}"
 					echo -e "${YELLOW}    PSINFO: $ps_info${NC}"
 				fi
 				echo ""
