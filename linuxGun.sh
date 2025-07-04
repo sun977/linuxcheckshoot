@@ -2212,10 +2212,186 @@ webshellCheck(){
 	# 访问日志
 }
 
+
+
+# SSH隧道检测
+tunnelSSH(){ 
+	echo -e "${YELLOW}正在检查SSH隧道${NC}"
+	
+	# SSH隧道检测
+	# 检查网络连接的时候发现2个以上的连接是同一个进程PID，且服务是SSHD的大概率是SSH隧道
+	
+	## 1. 检测同一PID的多个sshd连接（主要检测方法）
+	echo -e "${YELLOW}[+]检查同一PID的多个sshd连接:${NC}"
+	ssh_connections=$(netstat -anpo 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
+	if [ -n "$ssh_connections" ]; then
+		echo -e "${RED}[!]发现可疑SSH隧道 - 同一PID存在多个连接:${NC}"
+		echo "$ssh_connections" | while read pid count; do
+			if [ -n "$pid" ] && [ "$pid" != "-" ]; then
+				echo -e "${RED}  PID: $pid, 连接数: $count${NC}"
+				# 显示详细连接信息
+				netstat -anpo 2>/dev/null | grep "$pid/sshd" | while read line; do
+					echo -e "${YELLOW}    $line${NC}"
+				done
+				# 显示进程详细信息
+				ps_info=$(ps -p $pid -o pid,ppid,user,cmd --no-headers 2>/dev/null)
+				if [ -n "$ps_info" ]; then
+					echo -e "${YELLOW}    进程信息: $ps_info${NC}"
+				fi
+				echo ""
+			fi
+		done
+	else
+		echo -e "${GREEN}[+]未发现同一PID的多个sshd连接${NC}"
+	fi
+	printf "\n"
+	
+	## 2. 检测SSH本地转发（Local Port Forwarding）
+	echo -e "${YELLOW}[+]检查SSH本地转发特征:${NC}"
+	# 本地转发命令：ssh -L local_port:target_host:target_port user@ssh_server
+	# 特征：SSH进程监听本地端口，将流量转发到远程
+	local_forward_ports=$(netstat -tlnp 2>/dev/null | grep sshd | awk '{print $4, $7}' | grep -v ':22')
+	if [ -n "$local_forward_ports" ]; then
+		echo -e "${YELLOW}[!]发现SSH进程监听非22端口(可能的本地转发):${NC}"
+		echo "$local_forward_ports"
+		# 检查对应的SSH进程命令行参数
+		echo "$local_forward_ports" | while read port_info; do
+			pid=$(echo "$port_info" | awk '{print $2}' | cut -d'/' -f1)
+			if [ -n "$pid" ] && [ "$pid" != "-" ]; then
+				cmd_line=$(ps -p $pid -o cmd --no-headers 2>/dev/null)
+				if echo "$cmd_line" | grep -q '\-L'; then
+					echo -e "${RED}    [!]确认本地转发: $cmd_line${NC}"
+				fi
+			fi
+		done
+	else
+		echo -e "${GREEN}[+]未发现SSH本地转发特征${NC}"
+	fi
+	printf "\n"
+	
+	## 3. 检测SSH远程转发（Remote Port Forwarding）
+	echo -e "${YELLOW}[+]检查SSH远程转发特征:${NC}"
+	# 远程转发命令：ssh -R remote_port:local_host:local_port user@ssh_server
+	# 特征：SSH客户端连接到远程服务器，远程服务器监听端口
+	
+	### 3.1 检查SSH进程的命令行参数中是否包含-R选项
+	remote_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-R')
+	if [ -n "$remote_forward_processes" ]; then
+		echo -e "${RED}[!]发现SSH远程转发进程:${NC}"
+		echo "$remote_forward_processes"
+	else
+		echo -e "${GREEN}[+]未发现SSH远程转发特征${NC}"
+	fi
+	
+	### 3.2 检查SSH配置文件中的远程转发设置
+	remote_forward_config=$(grep -E '^(AllowTcpForwarding|GatewayPorts)' /etc/ssh/sshd_config 2>/dev/null | grep -v 'no')
+	if [ -n "$remote_forward_config" ]; then
+		echo -e "${YELLOW}[!]SSH配置允许远程转发:${NC}"
+		echo "$remote_forward_config"
+	fi
+	printf "\n"
+	
+	## 4. 检测SSH动态转发（SOCKS代理）
+	echo -e "${YELLOW}[+]检查SSH动态转发(SOCKS代理)特征:${NC}"
+	# 动态转发命令：ssh -D local_port user@ssh_server
+	# 特征：SSH进程创建SOCKS代理，监听本地端口
+	dynamic_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-D')
+	if [ -n "$dynamic_forward_processes" ]; then
+		echo -e "${RED}[!]发现SSH动态转发(SOCKS代理)进程:${NC}"
+		echo "$dynamic_forward_processes"
+	else
+		echo -e "${GREEN}[+]未发现SSH动态转发特征${NC}"
+	fi
+	printf "\n"
+	
+	## 5. 检测SSH多级跳板（ProxyJump/ProxyCommand）
+	echo -e "${YELLOW}[+]检查SSH多级跳板特征:${NC}"
+	# 多级跳板命令：ssh -J jump_host1,jump_host2 target_host
+	# 或使用ProxyCommand: ssh -o ProxyCommand="ssh jump_host nc target_host 22" target_host
+	
+	### 5.1 检查SSH进程的命令行参数
+	jump_processes=$(ps aux | grep ssh | grep -v grep | grep -E '(\-J|ProxyCommand|ProxyJump)')
+	if [ -n "$jump_processes" ]; then
+		echo -e "${RED}[!]发现SSH多级跳板进程:${NC}"
+		echo "$jump_processes"
+	else
+		echo -e "${GREEN}[+]未发现SSH多级跳板进程${NC}"
+	fi
+	
+	### 5.2 检查SSH配置文件中的跳板设置
+	if [ -f ~/.ssh/config ]; then
+		jump_config=$(grep -E '(ProxyJump|ProxyCommand)' ~/.ssh/config 2>/dev/null)
+		if [ -n "$jump_config" ]; then
+			echo -e "${YELLOW}[!]SSH配置文件中发现跳板设置:${NC}"
+			echo "$jump_config"
+		fi
+	fi
+	printf "\n"
+	
+	## 6. 检测SSH隧道的网络流量特征
+	echo -e "${YELLOW}[+]检查SSH隧道网络流量特征:${NC}"
+	# 检查SSH连接的数据传输量异常
+	ssh_traffic=$(netstat -i 2>/dev/null | awk 'NR>2 {rx+=$3; tx+=$7} END {if(rx>1000000 || tx>1000000) print "High traffic detected: RX="rx" TX="tx}')
+	if [ -n "$ssh_traffic" ]; then
+		echo -e "${YELLOW}[!]检测到高网络流量:${NC}"
+		echo "$ssh_traffic"
+	else
+		echo -e "${GREEN}[+]网络流量正常${NC}"
+	fi
+	printf "\n"
+	
+	## 7. 检测SSH隧道持久化特征
+	echo -e "${YELLOW}[+]检查SSH隧道持久化特征:${NC}"
+	
+	### 7.1 检查SSH相关的定时任务
+	ssh_cron=$(crontab -l 2>/dev/null | grep ssh)
+	if [ -n "$ssh_cron" ]; then
+		echo -e "${YELLOW}[!]发现SSH相关的定时任务:${NC}"
+		echo "$ssh_cron"
+	fi
+	
+	### 7.2 检查SSH相关的systemd服务
+	ssh_services=$(systemctl list-units --type=service 2>/dev/null | grep ssh | grep -v sshd)
+	if [ -n "$ssh_services" ]; then
+		echo -e "${YELLOW}[!]发现SSH相关的自定义服务:${NC}"
+		echo "$ssh_services"
+	fi
+	
+	### 7.3 检查SSH相关的启动脚本
+	ssh_startup=$(find /etc/init.d /etc/systemd/system /etc/rc.local 2>/dev/null -exec grep -l "ssh.*-[LRD]" {} \; 2>/dev/null)
+	if [ -n "$ssh_startup" ]; then
+		echo -e "${RED}[!]发现SSH隧道相关的启动脚本:${NC}"
+		echo "$ssh_startup"
+	fi
+	printf "\n"
+	
+	## 8. 检测其他隧道工具
+	echo -e "${YELLOW}[+]检查其他隧道工具:${NC}"
+	# 隧道工具列表定义
+	tunnel_tools="frp nps ngrok chisel socat nc netcat stunnel proxychains"
+	for tool in $tunnel_tools; do
+		tool_process=$(ps aux | grep -v grep | grep "$tool")
+		if [ -n "$tool_process" ]; then
+			echo -e "${RED}[!]发现隧道工具进程: $tool${NC}"
+			echo "$tool_process"
+		fi
+		# 检查工具是否存在于系统中
+		tool_path=$(which "$tool" 2>/dev/null)
+		if [ -n "$tool_path" ]; then
+			echo -e "${YELLOW}[!]系统中存在隧道工具: $tool ($tool_path)${NC}"
+		fi
+	done
+	printf "\n"
+	
+	echo -e "${GREEN}SSH隧道检测完成${NC}"
+
+}
+
+
 # 隧道和反弹shell检查
 tunnelCheck(){ 
 	echo -e "${YELLOW}正在检查隧道和反弹shell${NC}"
-	echo -e "${YELLOW}目前没有针对此漏洞的检测方法,请自行使用相关工具进行排查(后续补充)${NC}"
+	echo -e "待完善"
 }
 
 # 病毒排查 【未完成】
