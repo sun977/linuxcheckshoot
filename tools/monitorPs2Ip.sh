@@ -37,6 +37,11 @@ validate_ip() {
     if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
         IFS='.' read -ra ADDR <<< "$ip"
         for i in "${ADDR[@]}"; do
+            # 检查前导零（除了单独的0）
+            if [[ ${#i} -gt 1 && $i =~ ^0 ]]; then
+                return 1
+            fi
+            # 检查数值范围
             if [[ $i -gt 255 ]]; then
                 return 1
             fi
