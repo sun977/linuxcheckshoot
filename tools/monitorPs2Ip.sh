@@ -115,41 +115,47 @@ get_connections_with_lsof() {
             command = $1
             pid = $2
             user = $3
-            protocol = $5
             
+            # lsof输出格式：COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+            # NAME字段包含连接信息，通常在最后一列
+            name_field = $NF
+            
+            # 提取协议信息（从TYPE字段或NAME字段）
+            if ($5 ~ /TCP/) {
+                proto = "TCP"
+            } else if ($5 ~ /UDP/) {
+                proto = "UDP"
+            } else if ($8 ~ /TCP/) {
+                proto = "TCP"
+            } else if ($8 ~ /UDP/) {
+                proto = "UDP"
+            } else {
+                proto = "UNKNOWN"
+            }
+            
+            # 解析连接信息
             local_addr = ""
             remote_addr = ""
             
-            for (i = 9; i <= NF; i++) {
-                if ($i ~ target) {
-                    if (local_addr == "") {
-                        local_addr = $(i-1)
-                        remote_addr = $i
-                    } else if (remote_addr == "") {
-                        remote_addr = $i
-                    }
+            # NAME字段格式通常是：local_addr->remote_addr 或 local_addr
+            if (name_field ~ /->/) {
+                # 有箭头，表示已建立连接
+                split(name_field, parts, "->")
+                local_addr = parts[1]
+                remote_addr = parts[2]
+            } else if (name_field ~ target) {
+                # 没有箭头，可能是监听状态
+                if (name_field ~ /\*:/) {
+                    local_addr = name_field
+                    remote_addr = "-"
+                } else {
+                    local_addr = "-"
+                    remote_addr = name_field
                 }
             }
             
-            if (local_addr == "" && remote_addr == "") {
-                for (i = 8; i <= NF; i++) {
-                    if ($i ~ target) {
-                        if (i > 8) local_addr = $(i-1)
-                        remote_addr = $i
-                        break
-                    }
-                }
-            }
-            
-            if (protocol ~ /TCP/) {
-                proto = "TCP"
-            } else if (protocol ~ /UDP/) {
-                proto = "UDP"
-            } else {
-                proto = protocol
-            }
-            
-            if (local_addr != "" || remote_addr != "") {
+            # 确保找到了目标IP
+            if (local_addr ~ target || remote_addr ~ target) {
                 printf "%-20s %-8s %-12s %-10s %-25s %-25s\n", command, pid, user, proto, local_addr, remote_addr
             }
         }'
