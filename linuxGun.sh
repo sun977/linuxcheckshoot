@@ -2226,7 +2226,7 @@ tunnelSSH(){
 	echo -e "${YELLOW}[+]检查同一PID的多个sshd连接:${NC}"
 	ssh_connections=$(netstat -anpot 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
 	if [ -n "$ssh_connections" ]; then
-		echo -e "${RED}[!]发现可疑SSH隧道 - 同一PID存在多个连接:${NC}"
+		echo -e "${RED}[!]发现可疑SSH隧道 - 同一PID存在多个SSHD连接:${NC}"
 		echo "$ssh_connections" | while read pid count; do
 			if [ -n "$pid" ] && [ "$pid" != "-" ]; then
 				echo -e "${RED}  PID: $pid, 连接数: $count${NC}"
