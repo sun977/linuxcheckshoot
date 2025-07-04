@@ -2222,19 +2222,20 @@ tunnelSSH(){
 	# 检查网络连接的时候发现2个以上的连接是同一个进程PID，且服务是SSHD的大概率是SSH隧道
 	
 	## 1. 检测同一PID的多个sshd连接（主要检测方法）
+	### [检测的时候发现 unix 连接会干扰判断，所以 netstat 增加-t 参数只显示 tcp 协议的连接(ssh基于tcp)]
 	echo -e "${YELLOW}[+]检查同一PID的多个sshd连接:${NC}"
-	ssh_connections=$(netstat -anpo 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
+	ssh_connections=$(netstat -anpot 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
 	if [ -n "$ssh_connections" ]; then
 		echo -e "${RED}[!]发现可疑SSH隧道 - 同一PID存在多个连接:${NC}"
 		echo "$ssh_connections" | while read pid count; do
 			if [ -n "$pid" ] && [ "$pid" != "-" ]; then
 				echo -e "${RED}  PID: $pid, 连接数: $count${NC}"
 				# 显示详细连接信息
-				netstat -anpo 2>/dev/null | grep "$pid/sshd" | while read line; do
+				netstat -anpot 2>/dev/null | grep "$pid/sshd" | while read line; do
 					echo -e "${YELLOW}    $line${NC}"
 				done
 				# 显示进程详细信息
-				ps_info=$(ps -p $pid -o pid,ppid,user,cmd --no-headers 2>/dev/null)
+				ps_info=$(ps -p $pid -o pid,ppid,user,cmd,args --no-headers 2>/dev/null)
 				if [ -n "$ps_info" ]; then
 					echo -e "${YELLOW}    进程信息: $ps_info${NC}"
 				fi
