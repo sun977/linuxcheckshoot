@@ -54,77 +54,213 @@ validate_ip() {
 
 # 检查必要的命令是否存在
 check_dependencies() {
-    local missing_deps=()
+    local available_tools=()
     
-    if ! command -v lsof >/dev/null 2>&1; then
-        missing_deps+=("lsof")
+    # 检查可用的网络检测工具
+    if command -v lsof >/dev/null 2>&1; then
+        available_tools+=("lsof")
     fi
     
-    if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        echo -e "${RED}错误: 缺少必要的命令:${NC} ${missing_deps[*]}"
-        echo "请安装缺少的工具后重试"
+    if command -v netstat >/dev/null 2>&1; then
+        available_tools+=("netstat")
+    fi
+    
+    if command -v ss >/dev/null 2>&1; then
+        available_tools+=("ss")
+    fi
+    
+    # 至少需要一个网络检测工具
+    if [[ ${#available_tools[@]} -eq 0 ]]; then
+        echo -e "${RED}错误: 未找到可用的网络检测工具${NC}"
+        echo "请安装以下工具之一: lsof, netstat, ss"
         exit 1
     fi
+    
+    # 显示将使用的工具
+    echo -e "${BLUE}可用的网络检测工具:${NC} ${available_tools[*]}"
 }
 
-# 获取与目标IP通信的进程信息
-get_ip_connections() {
+# 检测ICMP连接（ping等）
+get_icmp_connections() {
+    local target_ip="$1"
+    local found=false
+    
+    # 检查是否有ping进程正在运行
+    local ping_processes
+    ping_processes=$(ps aux | grep -E "ping.*${target_ip}" | grep -v grep || true)
+    
+    if [[ -n "$ping_processes" ]]; then
+        echo "$ping_processes" | while read -r line; do
+            local user=$(echo "$line" | awk '{print $1}')
+            local pid=$(echo "$line" | awk '{print $2}')
+            local command=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}')
+            printf "%-20s %-8s %-12s %-10s %-25s %-25s\n" "ping" "$pid" "$user" "ICMP" "-" "$target_ip"
+            found=true
+        done
+    fi
+    
+    return 0
+}
+
+# 使用lsof检测TCP/UDP连接
+get_connections_with_lsof() {
     local target_ip="$1"
     local connections
     
-    # 使用lsof获取连接信息，支持IPv4和IPv6
     connections=$(lsof -i@"${target_ip}" -n -P 2>/dev/null || true)
     
-    if [[ -z "$connections" ]]; then
+    if [[ -n "$connections" ]]; then
+        echo "$connections" | grep -v "COMMAND" | awk -v target="$target_ip" '
+        {
+            command = $1
+            pid = $2
+            user = $3
+            protocol = $5
+            
+            local_addr = ""
+            remote_addr = ""
+            
+            for (i = 9; i <= NF; i++) {
+                if ($i ~ target) {
+                    if (local_addr == "") {
+                        local_addr = $(i-1)
+                        remote_addr = $i
+                    } else if (remote_addr == "") {
+                        remote_addr = $i
+                    }
+                }
+            }
+            
+            if (local_addr == "" && remote_addr == "") {
+                for (i = 8; i <= NF; i++) {
+                    if ($i ~ target) {
+                        if (i > 8) local_addr = $(i-1)
+                        remote_addr = $i
+                        break
+                    }
+                }
+            }
+            
+            if (protocol ~ /TCP/) {
+                proto = "TCP"
+            } else if (protocol ~ /UDP/) {
+                proto = "UDP"
+            } else {
+                proto = protocol
+            }
+            
+            if (local_addr != "" || remote_addr != "") {
+                printf "%-20s %-8s %-12s %-10s %-25s %-25s\n", command, pid, user, proto, local_addr, remote_addr
+            }
+        }'
+    fi
+}
+
+# 使用netstat检测TCP/UDP连接
+get_connections_with_netstat() {
+    local target_ip="$1"
+    local connections
+    
+    # 使用netstat获取连接信息
+    connections=$(netstat -tuln 2>/dev/null | grep "$target_ip" || true)
+    connections+="\n"$(netstat -tun 2>/dev/null | grep "$target_ip" || true)
+    
+    if [[ -n "$connections" ]]; then
+        echo "$connections" | grep -v "^$" | while read -r line; do
+            local proto=$(echo "$line" | awk '{print $1}')
+            local local_addr=$(echo "$line" | awk '{print $4}')
+            local remote_addr=$(echo "$line" | awk '{print $5}')
+            
+            # 尝试通过端口找到对应的进程
+            local port=$(echo "$remote_addr" | sed 's/.*://')
+            local pid_info=$(netstat -tulnp 2>/dev/null | grep ":$port " | head -1 || true)
+            
+            if [[ -n "$pid_info" ]]; then
+                local pid_process=$(echo "$pid_info" | awk '{print $7}' | cut -d'/' -f1)
+                local process_name=$(echo "$pid_info" | awk '{print $7}' | cut -d'/' -f2)
+                local user=$(ps -o user= -p "$pid_process" 2>/dev/null || echo "unknown")
+                
+                printf "%-20s %-8s %-12s %-10s %-25s %-25s\n" "$process_name" "$pid_process" "$user" "$proto" "$local_addr" "$remote_addr"
+            fi
+        done
+    fi
+}
+
+# 使用ss检测TCP/UDP连接
+get_connections_with_ss() {
+    local target_ip="$1"
+    local connections
+    
+    # 使用ss获取连接信息
+    connections=$(ss -tuln 2>/dev/null | grep "$target_ip" || true)
+    connections+="\n"$(ss -tun 2>/dev/null | grep "$target_ip" || true)
+    
+    if [[ -n "$connections" ]]; then
+        echo "$connections" | grep -v "^$" | while read -r line; do
+            local proto=$(echo "$line" | awk '{print $1}')
+            local local_addr=$(echo "$line" | awk '{print $5}')
+            local remote_addr=$(echo "$line" | awk '{print $6}')
+            
+            # ss输出格式可能包含进程信息
+            if echo "$line" | grep -q "users:"; then
+                local process_info=$(echo "$line" | sed 's/.*users:((//' | sed 's/)).*//' | head -1)
+                local process_name=$(echo "$process_info" | cut -d',' -f1 | tr -d '"')
+                local pid=$(echo "$process_info" | cut -d',' -f2)
+                local user=$(ps -o user= -p "$pid" 2>/dev/null || echo "unknown")
+                
+                printf "%-20s %-8s %-12s %-10s %-25s %-25s\n" "$process_name" "$pid" "$user" "$proto" "$local_addr" "$remote_addr"
+            fi
+        done
+    fi
+}
+
+# 获取TCP/UDP连接信息（使用可用的工具）
+get_tcp_udp_connections() {
+    local target_ip="$1"
+    
+    # 按优先级尝试不同的工具
+    if command -v lsof >/dev/null 2>&1; then
+        get_connections_with_lsof "$target_ip"
+    elif command -v ss >/dev/null 2>&1; then
+        get_connections_with_ss "$target_ip"
+    elif command -v netstat >/dev/null 2>&1; then
+        get_connections_with_netstat "$target_ip"
+    fi
+    
+    return 0
+}
+
+# 获取与目标IP通信的进程信息（支持ICMP、TCP、UDP）
+get_ip_connections() {
+    local target_ip="$1"
+    local found_any=false
+    
+    # 格式化输出表头
+    echo -e "${GREEN}与 IP 地址 $target_ip 的连接信息:${NC}"
+    echo "--------------------------------------------------------------------"
+    printf "%-20s %-8s %-12s %-10s %-25s %-25s\n" "进程名" "PID" "用户" "协议" "本地地址" "远程地址"
+    echo "--------------------------------------------------------------------"
+    
+    # 检测ICMP连接
+    local icmp_output
+    icmp_output=$(get_icmp_connections "$target_ip")
+    if [[ -n "$icmp_output" ]]; then
+        echo "$icmp_output"
+        found_any=true
+    fi
+    
+    # 检测TCP/UDP连接
+    local tcp_udp_output
+    tcp_udp_output=$(get_tcp_udp_connections "$target_ip")
+    if [[ -n "$tcp_udp_output" ]]; then
+        echo "$tcp_udp_output"
+        found_any=true
+    fi
+    
+    if [[ "$found_any" == false ]]; then
         echo -e "${YELLOW}未发现与 IP 地址 $target_ip 的活动连接${NC}"
         return 1
     fi
-    
-    # 格式化输出
-    echo -e "${GREEN}与 IP 地址 $target_ip 的连接信息:${NC}"
-    echo "--------------------------------------------------"
-    printf "%-20s %-8s %-12s %-25s %-25s\n" "进程名" "PID" "用户" "本地地址" "远程地址"
-    echo "--------------------------------------------------"
-    
-    echo "$connections" | grep -v "COMMAND" | awk -v target="$target_ip" '
-    {
-        # 提取字段信息
-        command = $1
-        pid = $2
-        user = $3
-        
-        # 处理网络连接信息（第9列通常是本地地址，第10列是远程地址）
-        local_addr = ""
-        remote_addr = ""
-        
-        # 查找包含目标IP的连接
-        for (i = 9; i <= NF; i++) {
-            if ($i ~ target) {
-                if (local_addr == "") {
-                    local_addr = $(i-1)
-                    remote_addr = $i
-                } else if (remote_addr == "") {
-                    remote_addr = $i
-                }
-            }
-        }
-        
-        # 如果没有找到目标IP，检查是否在其他字段中
-        if (local_addr == "" && remote_addr == "") {
-            for (i = 8; i <= NF; i++) {
-                if ($i ~ target) {
-                    if (i > 8) local_addr = $(i-1)
-                    remote_addr = $i
-                    break
-                }
-            }
-        }
-        
-        # 输出格式化结果
-        if (local_addr != "" || remote_addr != "") {
-            printf "%-20s %-8s %-12s %-25s %-25s\n", command, pid, user, local_addr, remote_addr
-        }
-    }'
     
     return 0
 }
