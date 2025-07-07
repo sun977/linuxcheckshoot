@@ -2199,6 +2199,8 @@ backdoorCheck(){
 	# 常见后门目录 /tmp /usr/bin /usr/sbin 
 	echo -e "${YELLOW}正在检查后门文件:${NC}"
 	echo -e "待完善"
+	# 检测进程二进制文件的stat修改时间，如果发现近期修改则判定为可疑后门文件 --- 20250707 待增加
+
 }
 
 # webshell 排查 【未完成】
