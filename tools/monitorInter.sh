@@ -5,7 +5,7 @@
 # Author: Sun977
 # Description: 检测指定网卡的流量情况
 # Update: 2025-07-08
-
+# Usage: ./monitorInter.sh <网卡接口> [选项]
 
 # 脚本配置
 set -euo pipefail  # 严格错误处理
@@ -20,8 +20,6 @@ NC='\033[0m' # No Color
 # 显示使用说明
 show_usage() {
     echo -e "${BLUE}用法:${NC} $0 <网卡接口> [选项]"
-    echo -e "${BLUE}参数:${NC}"
-    echo "  网卡接口        要监控的网络接口名称（如 eth0, wlan0）"
     echo -e "${BLUE}选项:${NC}"
     echo "  -c, --continuous    持续监控模式（默认为单次检测）"
     echo "  -i, --interval N    监控间隔时间（秒，默认1秒）"
@@ -29,16 +27,16 @@ show_usage() {
     echo "  -l, --list          列出所有可用的网络接口"
     echo ""
     echo -e "${BLUE}示例:${NC}"
-    echo "  $0 eth0                             # 单次检测eth0接口（默认1秒间隔）"
-    echo "  $0 eth0 -c                          # 持续监控eth0接口（默认1秒间隔）"
-    echo "  $0 eth0 -c -i 5                     # 持续监控eth0接口，每5秒刷新"
-    echo "  $0 -c -i 5 eth0                     # 同上，参数顺序可调换"
-    echo "  $0 -l                               # 列出所有网络接口"
+    echo "  $0 eth0             # 单次检测eth0接口（默认1秒间隔）"
+    echo "  $0 eth0 -c          # 持续监控eth0接口（默认1秒间隔）"
+    echo "  $0 eth0 -c -i 5     # 持续监控eth0接口，每5秒刷新"
+    # echo "  $0 -c -i 5 eth0   # 同上，参数顺序可调换"
+    echo "  $0 -l               # 列出所有网络接口"
 }
 
 # 列出所有可用的网络接口
 list_interfaces() {
-    echo -e "${BLUE}可用的网络接口:${NC}"
+    echo -e "${BLUE}可用的网卡接口:${NC}"
     echo "--------------------------------------------------------------------"
     printf "%-15s %-10s %-15s %-20s\n" "接口名" "状态" "IP地址" "描述"
     echo "--------------------------------------------------------------------"
@@ -200,9 +198,9 @@ show_interface_info() {
 
 # 监控接口流量
 monitor_interface() {
-    local interface="$1"
-    local interval="$2"
-    local single_mode="$3"
+    local interface="$1"    # 接口名称
+    local interval="$2"     # 监控间隔
+    local single_mode="$3"  # 监控模式
     
     # 显示接口信息
     show_interface_info "$interface"
@@ -336,7 +334,7 @@ main() {
                 if [[ -z "$interface" ]]; then
                     interface="$1"
                 else
-                    echo -e "${RED}错误: 只能指定一个网络接口${NC}"
+                    echo -e "${RED}错误: 只能指定一个网卡接口${NC}"
                     show_usage
                     exit 1
                 fi
@@ -347,7 +345,7 @@ main() {
     
     # 检查必需参数
     if [[ -z "$interface" ]]; then
-        echo -e "${RED}错误: 请指定要监控的网络接口${NC}"
+        echo -e "${RED}错误: 请指定要监控的网卡接口${NC}"
         show_usage
         exit 1
     fi
