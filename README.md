@@ -31,6 +31,10 @@ unzip linuxcheckshoot.zip
 - dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
 - 其他文件若干。
 
+6、tools 存放了一些实用的小脚本工具。
+- monitorInter.sh 是一个用于监控指定网络接口流量的工具。它可以实时显示指定网络接口的入流量和出流量信息。
+- monitorPs2Ip.sh 是一个网络连接检查工具。它可以实时检查与指定 IP 地址的通信的进程的信息(支持TCP/UDP)。
+
 ### 运行检查
 **[!]脚本需要使用 root 权限运行**
 
@@ -50,9 +54,8 @@ bash linuxGun.sh -h
 bash linuxGun.sh --system-user 
 ```
 #### linuxcheck.sh
-一把梭
 ```SHELL
-bash linuxcheck.sh 
+bash linuxcheck.sh # 运行一把梭
 ```
 
 # 贡献指南 Contributing
