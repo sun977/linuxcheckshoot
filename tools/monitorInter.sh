@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 网卡通信监控脚本 - 检测网卡流量(发送和接收字节数)
+# 网落通信监控脚本 - 检测网落流量(发送和接收字节数)
 # Version: 1.0.0
 # Author: Sun977
-# Description: 检测指定网卡的流量情况
+# Description: 检测指定网落的流量情况
 # Update: 2025-07-08
-# Usage: ./monitorInter.sh <网卡接口> [选项]
+# Usage: ./monitorInter.sh <网落接口> [选项]
 
 # 脚本配置
 set -euo pipefail  # 严格错误处理
@@ -19,24 +19,24 @@ NC='\033[0m' # No Color
 
 # 显示使用说明
 show_usage() {
-    echo -e "${BLUE}用法:${NC} $0 <网卡接口> [选项]"
+    echo -e "${BLUE}用法:${NC} $0 <网落接口> [选项]"
     echo -e "${BLUE}选项:${NC}"
-    echo "  -c, --continuous    持续监控模式（默认为单次检测）"
-    echo "  -i, --interval N    监控间隔时间（秒，默认1秒）"
+    echo "  -c, --continuous    持续监控模式(默认为单次检测)"
+    echo "  -i, --interval N    监控间隔时间(秒,默认1秒)"
     echo "  -h, --help          显示此帮助信息"
     echo "  -l, --list          列出所有可用的网络接口"
     echo ""
     echo -e "${BLUE}示例:${NC}"
-    echo "  $0 eth0             # 单次检测eth0接口（默认1秒间隔）"
-    echo "  $0 eth0 -c          # 持续监控eth0接口（默认1秒间隔）"
-    echo "  $0 eth0 -c -i 5     # 持续监控eth0接口，每5秒刷新"
-    # echo "  $0 -c -i 5 eth0   # 同上，参数顺序可调换"
+    echo "  $0 eth0             # 单次检测eth0接口(默认1秒间隔)"
+    echo "  $0 eth0 -c          # 持续监控eth0接口(默认1秒间隔)"
+    echo "  $0 eth0 -c -i 5     # 持续监控eth0接口,每5秒刷新"
+    # echo "  $0 -c -i 5 eth0   # 同上,参数顺序可调换"
     echo "  $0 -l               # 列出所有网络接口"
 }
 
 # 列出所有可用的网络接口
 list_interfaces() {
-    echo -e "${BLUE}可用的网卡接口:${NC}"
+    echo -e "${BLUE}可用的网落接口:${NC}"
     echo "--------------------------------------------------------------------"
     printf "%-15s %-10s %-15s %-20s\n" "接口名" "状态" "IP地址" "描述"
     echo "--------------------------------------------------------------------"
@@ -64,7 +64,7 @@ list_interfaces() {
             ip_addr=$(ip addr show "$int_name" 2>/dev/null | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1 | head -1 || echo "-")
         fi
         
-        # 获取接口描述（如果有的话）
+        # 获取接口描述(如果有的话)
         local description="网络接口"
         if [[ "$int_name" =~ ^eth ]]; then
             description="以太网接口"
@@ -206,14 +206,14 @@ monitor_interface() {
     show_interface_info "$interface"
     
     if [[ "$single_mode" == false ]]; then
-         echo -e "${BLUE}开始持续监控接口 $interface 的流量，每 $interval 秒刷新一次...${NC}"
+         echo -e "${BLUE}开始持续监控接口 $interface 的流量,每 $interval 秒刷新一次...${NC}"
          echo -e "${YELLOW}按 Ctrl+C 停止监控${NC}"
          echo ""
          
          # 设置信号处理
          trap 'echo -e "\n${BLUE}监控已停止${NC}"; exit 0' INT TERM
      else
-         echo -e "${BLUE}单次检测接口 $interface 的流量（间隔 $interval 秒）...${NC}"
+         echo -e "${BLUE}单次检测接口 $interface 的流量(间隔 $interval 秒)...${NC}"
          echo ""
      fi
     
@@ -334,7 +334,7 @@ main() {
                 if [[ -z "$interface" ]]; then
                     interface="$1"
                 else
-                    echo -e "${RED}错误: 只能指定一个网卡接口${NC}"
+                    echo -e "${RED}错误: 只能指定一个网落接口${NC}"
                     show_usage
                     exit 1
                 fi
@@ -345,7 +345,7 @@ main() {
     
     # 检查必需参数
     if [[ -z "$interface" ]]; then
-        echo -e "${RED}错误: 请指定要监控的网卡接口${NC}"
+        echo -e "${RED}错误: 请指定要监控的网落接口${NC}"
         show_usage
         exit 1
     fi
@@ -364,7 +364,7 @@ main() {
         exit 1
     fi
     
-    # 开始监控（注意：这里将continuous_mode取反传递给monitor_interface的single_mode参数）
+    # 开始监控(注意：这里将continuous_mode取反传递给monitor_interface的single_mode参数)
     local single_mode=true
     if [[ "$continuous_mode" == true ]]; then
         single_mode=false
