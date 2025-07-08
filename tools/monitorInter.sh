@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 网落通信监控脚本 - 检测网落流量(发送和接收字节数)
+# 网络通信监控脚本 - 检测网络流量(发送和接收字节数)
 # Version: 1.0.0
 # Author: Sun977
-# Description: 检测指定网落的流量情况
+# Description: 检测指定网络的流量情况
 # Update: 2025-07-08
-# Usage: ./monitorInter.sh <网落接口> [选项]
+# Usage: ./monitorInter.sh <网络接口> [选项]
 
 # 脚本配置
 set -euo pipefail  # 严格错误处理
@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # 显示使用说明
 show_usage() {
-    echo -e "${BLUE}用法:${NC} $0 <网落接口> [选项]"
+    echo -e "${BLUE}用法:${NC} $0 <网络接口> [选项]"
     echo -e "${BLUE}选项:${NC}"
     echo "  -c, --continuous    持续监控模式(默认为单次检测)"
     echo "  -i, --interval N    监控间隔时间(秒,默认1秒)"
@@ -36,7 +36,7 @@ show_usage() {
 
 # 列出所有可用的网络接口
 list_interfaces() {
-    echo -e "${BLUE}可用的网落接口:${NC}"
+    echo -e "${BLUE}可用的网络接口:${NC}"
     echo "--------------------------------------------------------------------"
     printf "%-15s %-10s %-15s %-20s\n" "接口名" "状态" "IP地址" "描述"
     echo "--------------------------------------------------------------------"
@@ -334,7 +334,7 @@ main() {
                 if [[ -z "$interface" ]]; then
                     interface="$1"
                 else
-                    echo -e "${RED}错误: 只能指定一个网落接口${NC}"
+                    echo -e "${RED}错误: 只能指定一个网络接口${NC}"
                     show_usage
                     exit 1
                 fi
@@ -345,7 +345,7 @@ main() {
     
     # 检查必需参数
     if [[ -z "$interface" ]]; then
-        echo -e "${RED}错误: 请指定要监控的网落接口${NC}"
+        echo -e "${RED}错误: 请指定要监控的网络接口${NC}"
         show_usage
         exit 1
     fi
