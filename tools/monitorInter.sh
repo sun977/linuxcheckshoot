@@ -19,19 +19,20 @@ NC='\033[0m' # No Color
 
 # 显示使用说明
 show_usage() {
-    echo -e "${BLUE}用法:${NC} $0 <网卡接口> <监控间隔> [选项]"
+    echo -e "${BLUE}用法:${NC} $0 <网卡接口> [选项]"
     echo -e "${BLUE}参数:${NC}"
     echo "  网卡接口        要监控的网络接口名称（如 eth0, wlan0）"
-    echo "  监控间隔        监控间隔时间（秒）"
     echo -e "${BLUE}选项:${NC}"
-    echo "  -h, --help      显示此帮助信息"
-    echo "  -l, --list      列出所有可用的网络接口"
-    echo "  -s, --single    单次检测模式（默认为持续监控）"
+    echo "  -c, --continuous    持续监控模式（默认为单次检测）"
+    echo "  -i, --interval N    监控间隔时间（秒，默认1秒）"
+    echo "  -h, --help          显示此帮助信息"
+    echo "  -l, --list          列出所有可用的网络接口"
     echo ""
     echo -e "${BLUE}示例:${NC}"
-    echo "  $0 eth0 1                           # 每秒监控eth0接口"
-    echo "  $0 wlan0 5                          # 每5秒监控wlan0接口"
-    echo "  $0 eth0 1 -s                        # 单次检测eth0接口"
+    echo "  $0 eth0                             # 单次检测eth0接口（默认1秒间隔）"
+    echo "  $0 eth0 -c                          # 持续监控eth0接口（默认1秒间隔）"
+    echo "  $0 eth0 -c -i 5                     # 持续监控eth0接口，每5秒刷新"
+    echo "  $0 -c -i 5 eth0                     # 同上，参数顺序可调换"
     echo "  $0 -l                               # 列出所有网络接口"
 }
 
@@ -207,16 +208,16 @@ monitor_interface() {
     show_interface_info "$interface"
     
     if [[ "$single_mode" == false ]]; then
-        echo -e "${BLUE}开始监控接口 $interface 的流量，每 $interval 秒刷新一次...${NC}"
-        echo -e "${YELLOW}按 Ctrl+C 停止监控${NC}"
-        echo ""
-        
-        # 设置信号处理
-        trap 'echo -e "\n${BLUE}监控已停止${NC}"; exit 0' INT TERM
-    else
-        echo -e "${BLUE}检测接口 $interface 的流量...${NC}"
-        echo ""
-    fi
+         echo -e "${BLUE}开始持续监控接口 $interface 的流量，每 $interval 秒刷新一次...${NC}"
+         echo -e "${YELLOW}按 Ctrl+C 停止监控${NC}"
+         echo ""
+         
+         # 设置信号处理
+         trap 'echo -e "\n${BLUE}监控已停止${NC}"; exit 0' INT TERM
+     else
+         echo -e "${BLUE}单次检测接口 $interface 的流量（间隔 $interval 秒）...${NC}"
+         echo ""
+     fi
     
     # 获取初始统计信息
     local stats_old
@@ -299,8 +300,8 @@ monitor_interface() {
 # 主函数
 main() {
     local interface=""
-    local interval=""
-    local single_mode=false
+    local interval="1"  # 默认间隔1秒
+    local continuous_mode=false  # 默认单次检测模式
     
     # 参数解析
     while [[ $# -gt 0 ]]; do
@@ -313,9 +314,18 @@ main() {
                 list_interfaces
                 exit 0
                 ;;
-            -s|--single)
-                single_mode=true
+            -c|--continuous)
+                continuous_mode=true
                 shift
+                ;;
+            -i|--interval)
+                if [[ -n "${2:-}" ]] && [[ "$2" =~ ^[0-9]+$ ]]; then
+                    interval="$2"
+                    shift 2
+                else
+                    echo -e "${RED}错误: -i 选项需要一个数字参数${NC}"
+                    exit 1
+                fi
                 ;;
             -*)
                 echo -e "${RED}错误: 未知选项 $1${NC}"
@@ -325,10 +335,8 @@ main() {
             *)
                 if [[ -z "$interface" ]]; then
                     interface="$1"
-                elif [[ -z "$interval" ]]; then
-                    interval="$1"
                 else
-                    echo -e "${RED}错误: 参数过多${NC}"
+                    echo -e "${RED}错误: 只能指定一个网络接口${NC}"
                     show_usage
                     exit 1
                 fi
@@ -340,12 +348,6 @@ main() {
     # 检查必需参数
     if [[ -z "$interface" ]]; then
         echo -e "${RED}错误: 请指定要监控的网络接口${NC}"
-        show_usage
-        exit 1
-    fi
-    
-    if [[ -z "$interval" ]]; then
-        echo -e "${RED}错误: 请指定监控间隔时间${NC}"
         show_usage
         exit 1
     fi
@@ -364,7 +366,12 @@ main() {
         exit 1
     fi
     
-    # 开始监控
+    # 开始监控（注意：这里将continuous_mode取反传递给monitor_interface的single_mode参数）
+    local single_mode=true
+    if [[ "$continuous_mode" == true ]]; then
+        single_mode=false
+    fi
+    
     monitor_interface "$interface" "$interval" "$single_mode"
 }
 
