@@ -1685,6 +1685,7 @@ sshFileCheck(){
 	sshver=$(ssh -V)
 	echo -e "${YELLOW}[+]ssh版本信息如下:${NC}" && echo "$sshver"
 
+	# 上述光检测了root账户下的相关文件的信息，需要增加机器上其他账号的相关文件检测，比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
 	# 其他
 }
 
