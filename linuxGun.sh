@@ -2244,7 +2244,7 @@ webshellCheck(){
 
 
 
-# SSH隧道检测
+# SSH隧道检测 【完成 -- 未调用】
 tunnelSSH(){ 
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	
@@ -2419,8 +2419,25 @@ tunnelSSH(){
 
 }
 
+# http隧道检测
+tunnelHTTP(){ 
+	echo -e "${YELLOW}正在检查HTTP隧道${NC}"
+	echo -e "待完善"
+}
 
-# 隧道和反弹shell检查
+# dns隧道检测
+tunnelDNS(){ 
+	echo -e "${YELLOW}正在检查DNS隧道${NC}"
+	echo -e "待完善"
+}
+
+# icmp隧道检测
+tunnelICMP(){ 
+	echo -e "${YELLOW}正在检查ICMP隧道${NC}"
+	echo -e "待完善"
+}
+
+# 隧道和反弹shell检查 【隧道检测主函数 -- 未在主函数 main 中调用】
 tunnelCheck(){ 
 	echo -e "${YELLOW}正在检查隧道和反弹shell${NC}"
 	echo -e "待完善"
@@ -2434,7 +2451,7 @@ virusCheck(){
 	echo -e "待完善"
 }
 
-# 内存和VFS排查 【未完成】
+# 内存和VFS排查 【未完成 -- 合并到 processInfo() 中】
 memInfoCheck(){
 	# /proc/<pid>/[cmdline|environ|fd/*]
 	# 如果存在 /proc 目录中有进程文件夹,但是在 ps -aux 命令里没有显示的,就认为可能是异常进程
