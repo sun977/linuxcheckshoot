@@ -710,12 +710,11 @@ processInfo(){
 	
 	# 获取所有ps命令显示的PID
 	ps_pids=$(ps -eo pid --no-headers | tr -d ' ')
-	
 	# 获取/proc目录中的所有数字目录(进程PID)
 	proc_pids=$(ls /proc/ 2>/dev/null | grep '^[0-9]\+$')
 	
 	# 检查异常进程
-	anomalous_processes=()
+	anomalous_processes=()  # 用于存储异常进程的数组
 	for proc_pid in $proc_pids; do
 		# 检查该PID是否在ps命令输出中
 		if ! echo "$ps_pids" | grep -q "^${proc_pid}$"; then
@@ -862,13 +861,20 @@ processInfo(){
 	
 	# 3. 检查进程内存映射异常
 	echo -e "${YELLOW}[+]检查进程内存映射异常:${NC}"
-	suspicious_maps=()
+	suspicious_maps=()  # 存储可疑内存映射
 	for proc_dir in /proc/[0-9]*; do
-		if [ -d "$proc_dir" ] && [ -r "$proc_dir/maps" ]; then
+		if [ -d "$proc_dir" ] && [ -r "$proc_dir/maps" ]; then  # 检查进程目录是否存在和maps文件是否可读
 			pid=$(basename "$proc_dir")
 			# 检查是否有可疑的内存映射(如可执行的匿名映射)
+			## 原理: 通过grep命令匹配maps文件中的rwxp权限的行，并判断是否包含[heap]或[stack]或deleted	
+			## rwxp.*\[heap\]: 堆区域具有读写执行权限(异常|正常堆不应该具有可执行权限，只有 rw-)
+			## rwxp.*\[stack\]: 栈区域具有读写执行权限(异常|正常栈栈不应该具有可执行权限，只有 rw- 可能是栈溢出攻击，或者 shellcode 直接执行机器码)
+			## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
+			## 恶意软件删除自身文件但保持在内存中运行
+			## 无文件攻击的检测 和 rootkit隐藏技术发现
 			suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null)
-			if [ -n "$suspicious_map" ]; then
+			# 根据可疑映射输出进程名称
+			if [ -n "$suspicious_map" ]; then   
 				proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
 				suspicious_maps+=("PID:$pid Name:$proc_name 可疑内存映射")
 			fi
