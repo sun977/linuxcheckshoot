@@ -891,9 +891,9 @@ processInfo(){
 	fi
 	printf "\n"
 	
-	# 4. 检查进程文件描述符异常
-	echo -e "${YELLOW}[+]检查进程文件描述符异常:${NC}"
-	suspicious_fds=()
+	# 4. 检查进程文件描述符异常[(deleted)]
+	echo -e "${YELLOW}[+]检查进程文件描述符异常[(deleted)]:${NC}"
+	suspicious_fds=()  # 用于存储异常文件描述符的数组
 	for proc_dir in /proc/[0-9]*; do
 		if [ -d "$proc_dir/fd" ] && [ -r "$proc_dir/fd" ]; then
 			pid=$(basename "$proc_dir")
@@ -902,12 +902,14 @@ processInfo(){
 			if [ "$deleted_files" -gt 0 ]; then
 				proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
 				suspicious_fds+=("PID:$pid Name:$proc_name 有${deleted_files}个已删除文件的文件描述符")
+				# 输出fd是(deleted)的进程pid和进程名
+				# 检测恶意进程删除自身进程然后在内存里驻留
 			fi
 		fi
 	done
 	
 	if [ ${#suspicious_fds[@]} -gt 0 ]; then
-		echo -e "${RED}[!]发现 ${#suspicious_fds[@]} 个进程存在可疑文件描述符:${NC}"
+		echo -e "${RED}[!]发现 ${#suspicious_fds[@]} 个进程存在可疑文件描述符[(deleted)]:${NC}"
 		for fd in "${suspicious_fds[@]}"; do
 			echo -e "${RED}[!] $fd${NC}"
 		done
@@ -917,7 +919,22 @@ processInfo(){
 	printf "\n"
 	
 	# 5. 检查系统调用表完整性(需要root权限)
-	echo -e "${YELLOW}[+]检查系统调用表完整性:${NC}"
+	echo -e "${YELLOW}[+]检查系统调用表完整性[sys_call_table(/proc/kallsyms)]:${NC}"
+	## 原理: 通过查看系统调用表，判断系统调用表是否被修改[rootkit检测和内核级模块检测常用的技术]
+	# 什么是系统调用表（sys_call_table）
+	# - 定义 ：Linux内核中存储所有系统调用函数指针的数组
+	# - 作用 ：当用户程序调用系统调用时，内核通过这个表找到对应的处理函数
+	# - 位置 ：位于内核内存空间，通过 /proc/kallsyms 可以查看其地址 
+	# 检测系统表的意义：
+	# 1. Rootkit检测
+	# 系统调用表劫持 是rootkit的常用技术：
+	# - 正常情况 ： sys_call_table 符号在 /proc/kallsyms 中可见
+	# - 被攻击 ：rootkit可能隐藏或修改这个符号来逃避检测 
+	# 2. 内核级恶意模块检测
+	# 通过搜索可疑符号名称，可以发现：
+	# - 恶意内核模块 ：包含 "rootkit"、"hide" 等字样的符号
+	# - Hook技术 ：用于拦截和修改系统调用的钩子函数
+	# - 隐蔽功能 ：用于隐藏进程、文件、网络连接的功能
 	if [ "$(id -u)" -eq 0 ]; then
 		if [ -r "/proc/kallsyms" ]; then
 			# 检查sys_call_table符号是否存在
@@ -928,7 +945,7 @@ processInfo(){
 				echo -e "${RED}[!]警告: 无法找到sys_call_table符号,可能被隐藏${NC}"
 			fi
 			
-			# 检查可疑的内核符号
+			# 检查可疑的内核符号[过滤可能恶意的符号(自定义)]
 			suspicious_symbols=$(grep -E "(hide|rootkit|stealth|hook)" /proc/kallsyms 2>/dev/null)
 			if [ -n "$suspicious_symbols" ]; then
 				echo -e "${RED}[!]发现可疑内核符号:${NC}"
@@ -969,6 +986,10 @@ processInfo(){
 	printf "\n"
 	
 	# 7. 检查进程环境变量异常
+	# 这段代码通过以下机制检测潜在威胁：
+	# 1. LD_PRELOAD检测 ：这是最常见的rootkit技术，通过预加载恶意库来劫持系统调用
+	# 2. 动态库路径检测 ：异常的LD_LIBRARY_PATH设置可能指向恶意库
+	# 3. 明显恶意标识 ：直接搜索ROOTKIT、HIDE等明显的恶意软件标识
 	echo -e "${YELLOW}[+]检查进程环境变量异常:${NC}"
 	env_anomalies=()
 	for proc_dir in /proc/[0-9]*; do
