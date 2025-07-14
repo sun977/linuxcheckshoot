@@ -2244,7 +2244,7 @@ webshellCheck(){
 
 
 
-# SSH隧道检测 【完成 -- 未调用】
+# SSH隧道检测 【完成 -- 归档 tunnelCheck】
 tunnelSSH(){ 
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	
@@ -2437,10 +2437,18 @@ tunnelICMP(){
 	echo -e "待完善"
 }
 
-# 隧道和反弹shell检查 【隧道检测主函数 -- 未在主函数 main 中调用】
+# 隧道和反弹shell检查 【隧道检测主函数 -- 在主函数 main 中调用】
 tunnelCheck(){ 
 	echo -e "${YELLOW}正在检查隧道和反弹shell${NC}"
-	echo -e "待完善"
+	echo -e "${YELLOW}正在检查SSH隧道${NC}"
+	tunnelSSH
+	echo -e "${YELLOW}正在检查HTTP隧道${NC}"
+	# tunnelHTTP
+	echo -e "${YELLOW}正在检查DNS隧道${NC}"
+	# tunnelDNS
+	echo -e "${YELLOW}正在检查ICMP隧道${NC}"
+	# tunnelICMP
+	echo -e "${GREEN}正在检测反弹shell${NC}"
 }
 
 # 病毒排查 【未完成】
@@ -3728,6 +3736,12 @@ main() {
 			--backdoor)
 				modules+=("backdoor")
 				;;
+			--tunnel)
+				modules+=("tunnel")
+				;;
+			--tunnel-ssh)
+				modules+=("tunnel-ssh")
+				;;
 			--webshell)
 				modules+=("webshell")
 				;;
@@ -3795,6 +3809,7 @@ main() {
 		processInfo			| log2file "${check_file}/checkresult.txt"
 		fileCheck			| log2file "${check_file}/checkresult.txt"
 		backdoorCheck		| log2file "${check_file}/checkresult.txt"
+		tunnelCheck			| log2file "${check_file}/checkresult.txt"   # 添加tunnelCheck
 		webshellCheck		| log2file "${check_file}/checkresult.txt"
 		virusCheck			| log2file "${check_file}/checkresult.txt"
 		memInfoCheck		| log2file "${check_file}/checkresult.txt"
@@ -3853,6 +3868,12 @@ main() {
 					;;
 				backdoor)
 					backdoorCheck
+					;;
+				tunnel)
+					tunnelCheck
+					;;
+				tunnel-ssh)
+					tunnelSSH
 					;;
 				webshell)
 					webshellCheck
@@ -3944,6 +3965,8 @@ usage() {
 
     echo -e "${GREEN}  后门与攻击痕迹检查:${NC}"
     echo -e "${YELLOW}    --backdoor              ${GREEN}检查后门特征(SUID/SGID/启动项/异常进程)[待完成]${NC}"
+	echo -e "${YELLOW}    --tunnel                ${GREEN}检查隧道特征(sshd/http/dns/icmp等)[部分完成]${NC}"
+	echo -e "${YELLOW}    --tunnel-ssh 			  ${GREEN}检查SSH隧道特征${NC}"           
     echo -e "${YELLOW}    --webshell              ${GREEN}WebShell 排查(关键词匹配/文件特征)[待完成]${NC}"
     echo -e "${YELLOW}    --virus                 ${GREEN}病毒信息排查(已安装可疑软件/RPM检测)[待完成]${NC}"
     echo -e "${YELLOW}    --memInfo               ${GREEN}内存信息排查(内存占用/异常内容)[待完成]${NC}"
