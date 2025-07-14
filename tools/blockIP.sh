@@ -229,7 +229,7 @@ firewall_block_ip() {
     fi
     
     # 检查IP是否已被封禁
-    if firewall-cmd --list-rich-rules | grep -q "source address=$ip"; then
+    if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
         log_message "WARN" "IP $ip 已经被firewall封禁,无需重复封禁"
         return 0
     fi
@@ -259,8 +259,8 @@ firewall_unblock_ip() {
         return 0
     fi
     
-    # 检查IP是否被封禁
-    if ! firewall-cmd --list-rich-rules | grep -q "source address=$ip"; then
+    # 检查IP是否被封禁 rule family="ipv4" source address="10.48.56.136" accept 有双引号,需要转义
+    if ! firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
         log_message "WARN" "IP $ip 未被firewall封禁,无需重复解封"
         return 0
     fi
