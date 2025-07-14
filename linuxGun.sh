@@ -2509,7 +2509,7 @@ tunnelCheck(){
 	tunnelDNS
 	echo -e "${YELLOW}正在检查ICMP隧道${NC}"
 	tunnelICMP
-	echo -e "${GREEN}正在检测反弹shell${NC}"
+	echo -e "${YELLOW}正在检测反弹shell${NC}"
 	echo -e "待完善"
 }
 
