@@ -444,7 +444,7 @@ check_ip_blocked() {
             fi
             ;;
         "firewall")
-            if firewall-cmd --list-rich-rules | grep -q "source address=$ip"; then
+            if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
                 echo -e "${RED}firewall: 已封禁 $ip ${NC}"
                 blocked=true
             else
