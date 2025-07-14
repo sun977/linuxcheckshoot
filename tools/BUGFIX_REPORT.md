@@ -2,26 +2,26 @@
 
 ## 问题描述
 
-在运行 `test_blockIP.sh` 测试时，firewall相关的测试全部失败，错误信息如下：
+在运行 `blockIP.sh` 脚本时，firewall相关的操作失败，错误信息如下：
 
 ```
 usage: see firewall-cmd man page
-firewall-cmd: error: unrecognized arguments: family=ipv4 source address=10.0.0.100 drop'
-[ERROR] 使用firewall封禁IP失败: 10.0.0.100
+firewall-cmd: error: unrecognized arguments: family=ipv4 source address=10.0.0.50 drop'
+[ERROR] 使用firewall封禁IP失败: 10.0.0.50
 ```
 
 ## 根本原因
 
-`blockIP.sh` 脚本中使用的 `firewall-cmd` rich-rule 语法不正确。
+问题出现在 `firewall-cmd` 命令的参数传递中。脚本中使用了单引号包围 `rich-rule` 参数，但在命令执行时，这些单引号被当作了命令参数的一部分，导致 `firewall-cmd` 无法正确解析。
 
-### 错误的语法格式：
+### 错误的命令格式：
 ```bash
 firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=$ip drop'
 ```
 
-### 正确的语法格式：
+### 正确的命令格式：
 ```bash
-firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="$ip" drop'
+firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$ip drop"
 ```
 
 ## 修复内容
@@ -37,7 +37,7 @@ local cmd="firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source add
 
 **修改后**:
 ```bash
-local cmd="firewall-cmd --permanent --add-rich-rule='rule family=\"ipv4\" source address=\"$ip\" drop'"
+local cmd="firewall-cmd --permanent --add-rich-rule=\"rule family=ipv4 source address=$ip drop\""
 ```
 
 ### 2. 修复 firewall_unblock_ip 函数
@@ -51,7 +51,7 @@ local cmd="firewall-cmd --permanent --remove-rich-rule='rule family=ipv4 source 
 
 **修改后**:
 ```bash
-local cmd="firewall-cmd --permanent --remove-rich-rule='rule family=\"ipv4\" source address=\"$ip\" drop'"
+local cmd="firewall-cmd --permanent --remove-rich-rule=\"rule family=ipv4 source address=$ip drop\""
 ```
 
 ### 3. 修复 IP 封禁状态检查
@@ -60,33 +60,48 @@ local cmd="firewall-cmd --permanent --remove-rich-rule='rule family=\"ipv4\" sou
 
 **修改前**:
 ```bash
-firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""
+firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""
 ```
 
 **修改后**:
 ```bash
-firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""
+firewall-cmd --list-rich-rules | grep -q "source address=$ip"
 ```
 
 ### 4. 同步修复测试脚本
 
-**文件**: `test_blockIP.sh` 第118-120行
+**文件**: `test_blockIP.sh` 第117-119行
+
+**修改前**:
+```bash
+firewall-cmd --permanent --remove-rich-rule='rule family="ipv4" source address="$TEST_IP" drop'
+```
+
+**修改后**:
+```bash
+firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 source address=$TEST_IP drop"
+```
 
 更新了清理函数中的 firewall-cmd 命令格式，使其与修复后的 `blockIP.sh` 保持一致。
 
 ## 技术说明
 
-### firewall-cmd rich-rule 语法要求
+问题的根本原因是在 Bash 脚本中，当命令字符串包含单引号时，这些单引号会被当作命令参数的一部分传递给 `firewall-cmd`，导致命令解析失败。
 
-1. **family 参数**: 必须用双引号包围，如 `family="ipv4"`
-2. **source address 参数**: IP地址必须用双引号包围，如 `source address="192.168.1.100"`
-3. **完整格式**: `rule family="ipv4" source address="IP地址" drop`
+修复方法是将命令字符串中的单引号改为转义的双引号，确保 `rich-rule` 参数能够正确传递给 `firewall-cmd`。
+
+正确的命令构建方式：
+```bash
+local cmd="firewall-cmd --permanent --add-rich-rule=\"rule family=ipv4 source address=$ip drop\""
+```
 
 ### Shell 转义说明
 
-在 bash 脚本中，由于需要在字符串中包含双引号，需要进行适当的转义：
-- 在命令字符串中：`\"` 表示一个双引号字符
-- 在 grep 模式中：`\\\"` 表示匹配双引号字符（需要额外转义）
+在 Bash 脚本中，当需要在双引号字符串中包含双引号时，需要使用反斜杠进行转义：
+- `\"` 在双引号字符串中表示转义的双引号
+- 命令执行时，转义的双引号会被正确传递给 `firewall-cmd`
+
+修复后的命令格式确保了 `rich-rule` 参数能够被 `firewall-cmd` 正确解析。
 
 ## 验证方法
 
