@@ -2328,8 +2328,13 @@ tunnelSSH(){
 	## 4. 检测SSH动态转发（SOCKS代理）
 	echo -e "${YELLOW}[+]检查SSH动态转发(SOCKS代理)特征:${NC}"
 	# 动态转发命令：ssh -D local_port user@ssh_server
+	# - 排除 sshd -D （SSH守护进程的调试模式）
+	# - 排除 /usr/sbin/sshd （系统SSH服务）
+	# - 只检测真正的SSH客户端动态转发
 	# 特征：SSH进程创建SOCKS代理，监听本地端口
-	dynamic_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-D')
+	echo -e "${YELLOW}[说明]:检查结果需要排除SSHD系统服务进程${NC}"
+	# dynamic_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-D')
+	dynamic_forward_processes=$(ps aux | grep -E 'ssh.*-D' | grep -v grep | grep -v 'sshd.*-D' | grep -v '/usr/sbin/sshd')
 	if [ -n "$dynamic_forward_processes" ]; then
 		echo -e "${RED}[!]发现SSH动态转发(SOCKS代理)进程:${NC}"
 		echo "$dynamic_forward_processes"
@@ -2342,7 +2347,6 @@ tunnelSSH(){
 	echo -e "${YELLOW}[+]检查SSH多级跳板特征:${NC}"
 	# 多级跳板命令：ssh -J jump_host1,jump_host2 target_host
 	# 或使用ProxyCommand: ssh -o ProxyCommand="ssh jump_host nc target_host 22" target_host
-	
 	### 5.1 检查SSH进程的命令行参数
 	jump_processes=$(ps aux | grep ssh | grep -v grep | grep -E '(\-J|ProxyCommand|ProxyJump)')
 	if [ -n "$jump_processes" ]; then
