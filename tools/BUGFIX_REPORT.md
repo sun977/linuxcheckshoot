@@ -6,22 +6,30 @@
 
 ```
 usage: see firewall-cmd man page
-firewall-cmd: error: unrecognized arguments: family=ipv4 source address=10.0.0.50 drop'
+firewall-cmd: error: unrecognized arguments: family=ipv4 source address=10.0.0.50 drop"
 [ERROR] 使用firewall封禁IP失败: 10.0.0.50
 ```
 
+经过进一步调试发现，即使修复了命令字符串格式，脚本中的命令执行仍然失败，但手动执行相同的命令却能成功。这表明问题出在脚本中的命令执行方式上。
+
 ## 根本原因
 
-问题出现在 `firewall-cmd` 命令的参数传递中。脚本中使用了单引号包围 `rich-rule` 参数，但在命令执行时，这些单引号被当作了命令参数的一部分，导致 `firewall-cmd` 无法正确解析。
+发现了两个相关的问题：
 
-### 错误的命令格式：
+### 1. 命令字符串格式问题
+脚本中使用了单引号包围 `rich-rule` 参数，但在命令执行时，这些单引号被当作了命令参数的一部分传递给 `firewall-cmd`，导致命令解析失败。
+
+### 2. 命令执行方式问题
+更关键的是，脚本中使用 `$cmd` 直接执行包含转义字符的命令字符串，导致 shell 无法正确解析转义的双引号。
+
+错误的执行方式：
 ```bash
-firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=$ip drop'
+if $cmd; then
 ```
 
-### 正确的命令格式：
+正确的执行方式：
 ```bash
-firewall-cmd --permanent --add-rich-rule="rule family=ipv4 source address=$ip drop"
+if eval "$cmd"; then
 ```
 
 ## 修复内容
@@ -84,24 +92,50 @@ firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 source address=$TE
 
 更新了清理函数中的 firewall-cmd 命令格式，使其与修复后的 `blockIP.sh` 保持一致。
 
-## 技术说明
+### 5. 修复命令执行方式
 
-问题的根本原因是在 Bash 脚本中，当命令字符串包含单引号时，这些单引号会被当作命令参数的一部分传递给 `firewall-cmd`，导致命令解析失败。
+**文件**: `blockIP.sh` 第176, 206, 239, 268行
 
-修复方法是将命令字符串中的单引号改为转义的双引号，确保 `rich-rule` 参数能够正确传递给 `firewall-cmd`。
-
-正确的命令构建方式：
+**修改前**:
 ```bash
-local cmd="firewall-cmd --permanent --add-rich-rule=\"rule family=ipv4 source address=$ip drop\""
+if $cmd; then
 ```
 
-### Shell 转义说明
+**修改后**:
+```bash
+if eval "$cmd"; then
+```
 
-在 Bash 脚本中，当需要在双引号字符串中包含双引号时，需要使用反斜杠进行转义：
-- `\"` 在双引号字符串中表示转义的双引号
-- 命令执行时，转义的双引号会被正确传递给 `firewall-cmd`
+修复了所有函数中的命令执行方式，使用 `eval` 来正确执行包含转义字符的命令字符串。
 
-修复后的命令格式确保了 `rich-rule` 参数能够被 `firewall-cmd` 正确解析。
+## 技术说明
+
+### 问题分析
+1. **命令字符串格式**：单引号被当作命令参数的一部分，导致 `firewall-cmd` 无法正确解析
+2. **命令执行方式**：使用 `$cmd` 直接执行包含转义字符的命令时，shell 无法正确处理转义的双引号
+
+### 解决方案
+1. **修复命令格式**：使用转义的双引号替代单引号
+2. **修复执行方式**：使用 `eval` 来执行命令字符串，确保转义字符被正确处理
+
+正确的命令构建和执行方式：
+```bash
+local cmd="firewall-cmd --permanent --add-rich-rule=\"rule family=ipv4 source address=$ip drop\""
+if eval "$cmd"; then
+    # 命令执行成功
+fi
+```
+
+### Shell 转义和执行说明
+
+在 Bash 脚本中处理复杂命令字符串时需要注意：
+
+1. **转义双引号**：在双引号字符串中使用 `\"` 表示字面双引号
+2. **使用 eval**：当命令字符串包含转义字符时，必须使用 `eval` 来执行
+   - `$cmd` 直接执行会导致转义字符被错误处理
+   - `eval "$cmd"` 会先解析转义字符，然后执行命令
+
+这种组合确保了包含复杂参数的命令能够被正确执行。
 
 ## 验证方法
 

@@ -172,7 +172,7 @@ iptables_block_ip() {
     fi
     
     # 执行封禁 ip 的命令
-    if $cmd; then
+    if eval "$cmd"; then
         log_message "INFO" "使用iptables成功封禁IP: $ip"
         return 0
     else
@@ -202,7 +202,7 @@ iptables_unblock_ip() {
     fi
     
     # 使用iptables命令解封IP
-    if $cmd; then
+    if eval "$cmd"; then
         log_message "INFO" "使用iptables成功解封IP: $ip"
         return 0
     else
@@ -216,9 +216,9 @@ firewall_block_ip() {
     local ip="$1"       # IP地址
     local dry_run="$2"  # 是否为预览模式
     
-    # 构建 firrewall 封禁 IP 命令
+    # 构建 firewall 封禁 IP 命令
     local cmd="firewall-cmd --permanent --add-rich-rule=\"rule family=ipv4 source address=$ip drop\""
-    # 重载 firrewall
+    # 重载 firewall
     local reload_cmd="firewall-cmd --reload"
     
     # 判断是否是预览模式,是则只输出命令,不执行,后续逻辑不再继续
@@ -236,7 +236,7 @@ firewall_block_ip() {
     
     # 执行封禁命令
     echo $cmd 
-    if $cmd && $reload_cmd; then
+    if eval "$cmd" && eval "$reload_cmd"; then
         log_message "INFO" "使用firewall成功封禁IP: $ip"
         return 0
     else
@@ -265,7 +265,7 @@ firewall_unblock_ip() {
         return 0
     fi
     
-    if $cmd && $reload_cmd; then
+    if eval "$cmd" && eval "$reload_cmd"; then
         log_message "INFO" "使用firewall成功解封IP: $ip"
         return 0
     else
