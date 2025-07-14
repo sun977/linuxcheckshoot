@@ -2254,6 +2254,8 @@ tunnelSSH(){
 	## 1. 检测同一PID的多个sshd连接（主要检测方法）
 	### [检测的时候发现 unix 连接会干扰判断，所以 netstat 增加-t 参数只显示 tcp 协议的连接(ssh基于tcp)]
 	echo -e "${YELLOW}[+]检查同一PID的多个sshd连接:${NC}"
+	echo -e "${YELLOW}[说明]检测方法: 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道${NC}"
+	echo -e "${YELLOW}[说明]检查结果需要排除父进程 1 的SSHD系统服务进程,例如: PSINFO:  xxx     1 root     /usr/sbin/sshd -D ${NC}"
 	ssh_connections=$(netstat -anpot 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
 	if [ -n "$ssh_connections" ]; then
 		echo -e "${RED}[!]发现可疑SSH隧道 - 同一PID存在多个SSHD连接:${NC}"
@@ -2362,13 +2364,66 @@ tunnelSSH(){
 	
 	## 6. 检测SSH隧道的网络流量特征
 	echo -e "${YELLOW}[+]检查SSH隧道网络流量特征:${NC}"
-	# 检查SSH连接的数据传输量异常
-	ssh_traffic=$(netstat -i 2>/dev/null | awk 'NR>2 {rx+=$3; tx+=$7} END {if(rx>1000000 || tx>1000000) print "High traffic detected: RX="rx" TX="tx}')
+	
+	# 6.1 检查总体网络流量（分级阈值检测）
+	ssh_traffic=$(cat /proc/net/dev 2>/dev/null | awk '
+		NR>2 && !/lo:/ {
+			# $2=接收字节数, $10=发送字节数
+			rx_bytes+=$2; tx_bytes+=$10
+		} 
+		END {
+			rx_mb=rx_bytes/1024/1024; tx_mb=tx_bytes/1024/1024;
+			total_mb=rx_mb+tx_mb;
+			
+			# 分级阈值检测 (MB)
+			if(total_mb>20480) {        # >20GB 极高危
+				printf "CRITICAL|%.2f|%.2f|%.2f|EXTREME_RISK", rx_mb, tx_mb, total_mb
+			} else if(total_mb>5120) {  # >5GB 高危  
+				printf "HIGH|%.2f|%.2f|%.2f|HIGH_RISK", rx_mb, tx_mb, total_mb
+			} else if(total_mb>1024) {  # >1GB 中危
+				printf "MEDIUM|%.2f|%.2f|%.2f|MEDIUM_RISK", rx_mb, tx_mb, total_mb
+			} else if(total_mb>200) {   # >200MB 关注
+				printf "LOW|%.2f|%.2f|%.2f|ATTENTION", rx_mb, tx_mb, total_mb
+			} else {                    # <=200MB 正常
+				printf "NORMAL|%.2f|%.2f|%.2f|NORMAL", rx_mb, tx_mb, total_mb
+			}
+		}')
+	
+	# 解析检测结果
 	if [ -n "$ssh_traffic" ]; then
-		echo -e "${YELLOW}[!]检测到高网络流量:${NC}"
-		echo "$ssh_traffic"
+		level=$(echo "$ssh_traffic" | cut -d'|' -f1)
+		rx_mb=$(echo "$ssh_traffic" | cut -d'|' -f2)
+		tx_mb=$(echo "$ssh_traffic" | cut -d'|' -f3)
+		total_mb=$(echo "$ssh_traffic" | cut -d'|' -f4)
+		risk_level=$(echo "$ssh_traffic" | cut -d'|' -f5)
+		
+		case "$level" in
+			"CRITICAL")
+				echo -e "${RED}[!!!]检测到极高网络流量(>20GB) - 疑似严重安全威胁:${NC}"
+				echo -e "${RED}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
+				echo -e "${RED}[建议]立即断开可疑SSH连接,检查数据泄露风险${NC}"
+				;;
+			"HIGH")
+				echo -e "${RED}[!!]检测到高网络流量(5-20GB) - 需要紧急关注:${NC}"
+				echo -e "${RED}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
+				echo -e "${YELLOW}[建议]检查SSH隧道进程和大文件传输活动${NC}"
+				;;
+			"MEDIUM")
+				echo -e "${YELLOW}[!]检测到中等网络流量(1-5GB) - 建议关注:${NC}"
+				echo -e "${YELLOW}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
+				echo -e "${YELLOW}[建议]确认是否为正常业务操作${NC}"
+				;;
+			"LOW")
+				echo -e "${YELLOW}[+]检测到轻度网络流量(200MB-1GB) - 正常范围:${NC}"
+				echo -e "${GREEN}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
+				;;
+			"NORMAL")
+				echo -e "${GREEN}[+]网络流量正常(<200MB):${NC}"
+				echo -e "${GREEN}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
+				;;
+		esac
 	else
-		echo -e "${GREEN}[+]网络流量正常${NC}"
+		echo -e "${GREEN}[+]无法获取网络流量信息${NC}"
 	fi
 	printf "\n"
 	
