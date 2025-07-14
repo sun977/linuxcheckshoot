@@ -2404,8 +2404,9 @@ tunnelSSH(){
 	for tool in $tunnel_tools; do
 		tool_process=$(ps aux | grep -v grep | grep "$tool")
 		if [ -n "$tool_process" ]; then
-			echo -e "${RED}[!]发现隧道工具进程: $tool${NC}"
-			echo "$tool_process"
+			echo -e "${RED}[!]发现隧道工具: $tool${NC}"
+			echo -e "${RED}[!]发现隧道工具进程:${NC}"
+			echo -e "$tool_process"
 		fi
 		# 检查工具是否存在于系统中
 		tool_path=$(which "$tool" 2>/dev/null)
