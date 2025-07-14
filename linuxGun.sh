@@ -2402,7 +2402,8 @@ tunnelSSH(){
 	# 隧道工具列表定义
 	tunnel_tools="frp nps ngrok chisel socat nc netcat stunnel proxychains"
 	for tool in $tunnel_tools; do
-		tool_process=$(ps aux | grep -v grep | grep "$tool")
+		# 使用单词边界匹配，避免部分匹配导致的误报  (\s|/) 确保工具名前面是空格或路径分隔符  (\s|$) 确保工具名后面是空格或行尾
+		tool_process=$(ps aux | grep -v grep | grep -E "(\s|/)$tool(\s|$)")
 		if [ -n "$tool_process" ]; then
 			echo -e "${RED}[!]发现隧道工具: $tool${NC}"
 			echo -e "${RED}[!]发现隧道工具进程:${NC}"
