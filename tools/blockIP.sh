@@ -460,7 +460,7 @@ check_ip_blocked() {
             fi
             
             if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld 2>/dev/null; then
-                if firewall-cmd --list-rich-rules | grep -q "source address=$ip"; then
+                if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
                     echo -e "${RED}firewall: 已封禁 $ip  ${NC}"
                     blocked=true
                 else
