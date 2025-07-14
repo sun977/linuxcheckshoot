@@ -235,7 +235,7 @@ firewall_block_ip() {
     fi
     
     # 执行封禁命令
-    echo $cmd 
+    echo -e "${YELLOW}[+]CMD:$cmd${NC}" 
     if eval "$cmd" && eval "$reload_cmd"; then
         log_message "INFO" "使用firewall成功封禁IP: $ip"
         return 0
@@ -265,6 +265,7 @@ firewall_unblock_ip() {
         return 0
     fi
     
+    echo -e "${YELLOW}[+]CMD:$cmd${NC}"
     if eval "$cmd" && eval "$reload_cmd"; then
         log_message "INFO" "使用firewall成功解封IP: $ip"
         return 0
