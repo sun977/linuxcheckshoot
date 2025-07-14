@@ -172,6 +172,7 @@ iptables_block_ip() {
     fi
     
     # 执行封禁 ip 的命令
+    echo -e "${YELLOW}[+]CMD:$cmd${NC}"
     if eval "$cmd"; then
         log_message "INFO" "使用iptables成功封禁IP: $ip"
         return 0
@@ -202,6 +203,7 @@ iptables_unblock_ip() {
     fi
     
     # 使用iptables命令解封IP
+    echo -e "${YELLOW}[+]CMD:$cmd${NC}"
     if eval "$cmd"; then
         log_message "INFO" "使用iptables成功解封IP: $ip"
         return 0
