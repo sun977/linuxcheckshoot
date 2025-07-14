@@ -2497,7 +2497,7 @@ tunnelICMP(){
 # 隧道和反弹shell检查 【隧道检测主函数 -- 在主函数 main 中调用】
 tunnelCheck(){ 
 	echo -e "${YELLOW}正在检查隧道和反弹shell${NC}"
-	echo -e "${YELLOW}正在检查SSH隧道${NC}"
+	echo -e "${YELLOW}正在检查SSH隧道(调用检测函数)${NC}"
 	tunnelSSH
 	echo -e "${YELLOW}正在检查HTTP隧道${NC}"
 	# tunnelHTTP
