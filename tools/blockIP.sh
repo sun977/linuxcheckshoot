@@ -5,7 +5,7 @@
 # Author: Sun977
 # Description: 支持iptables和firewall两种工具的IP封禁、解封、批量操作功能
 # Update: 2025-07-14
-# Usage: ./blockIpByIptable.sh [选项] <IP地址|IP文件>
+# Usage: ./blockIP.sh [选项] <IP地址|IP文件>
 
 # 脚本配置
 set -euo pipefail  # 严格错误处理
