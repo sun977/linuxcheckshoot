@@ -2399,8 +2399,8 @@ tunnelSSH(){
 	
 	## 8. 检测其他隧道工具
 	echo -e "${YELLOW}[+]检查其他隧道工具:${NC}"
-	# 隧道工具列表定义
-	tunnel_tools="frp nps ngrok chisel socat nc netcat stunnel proxychains"
+	# 隧道工具列表定义 - 常见隧道工具
+	tunnel_tools="frp nps spp ngrok es suo5 chisel socat nc netcat ncat stunnel proxychains v2ray xray clash lcx portmap autossh"
 	for tool in $tunnel_tools; do
 		# 使用单词边界匹配，避免部分匹配导致的误报  (\s|/) 确保工具名前面是空格或路径分隔符  (\s|$) 确保工具名后面是空格或行尾
 		tool_process=$(ps aux | grep -v grep | grep -E "(\s|/)$tool(\s|$)")
