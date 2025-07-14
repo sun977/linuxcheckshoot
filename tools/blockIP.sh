@@ -217,7 +217,7 @@ firewall_block_ip() {
     local dry_run="$2"  # 是否为预览模式
     
     # 构建 firrewall 封禁 IP 命令
-    local cmd="firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=$ip drop'"
+    local cmd="firewall-cmd --permanent --add-rich-rule='rule family=\"ipv4\" source address=\"$ip\" drop'"
     # 重载 firrewall
     local reload_cmd="firewall-cmd --reload"
     
@@ -229,7 +229,7 @@ firewall_block_ip() {
     fi
     
     # 检查IP是否已被封禁
-    if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
+    if firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""; then
         log_message "WARN" "IP $ip 已经被firewall封禁,无需重复封禁"
         return 0
     fi
@@ -249,7 +249,7 @@ firewall_unblock_ip() {
     local ip="$1"       # IP地址
     local dry_run="$2"  # 是否为预览模式运行
     
-    local cmd="firewall-cmd --permanent --remove-rich-rule='rule family=ipv4 source address=$ip drop'"
+    local cmd="firewall-cmd --permanent --remove-rich-rule='rule family=\"ipv4\" source address=\"$ip\" drop'"
     local reload_cmd="firewall-cmd --reload"
     
     if [[ "$dry_run" == "true" ]]; then
@@ -259,7 +259,7 @@ firewall_unblock_ip() {
     fi
     
     # 检查IP是否被封禁
-    if ! firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
+    if ! firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""; then
         log_message "WARN" "IP $ip 未被firewall封禁,无需重复解封"
         return 0
     fi
@@ -443,7 +443,7 @@ check_ip_blocked() {
             fi
             ;;
         "firewall")
-            if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
+            if firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""; then
                 echo -e "${RED}firewall: 已封禁 $ip ${NC}"
                 blocked=true
             else
@@ -459,7 +459,7 @@ check_ip_blocked() {
             fi
             
             if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld 2>/dev/null; then
-                if firewall-cmd --list-rich-rules | grep -q "source address=\"$ip\""; then
+                if firewall-cmd --list-rich-rules | grep -q "source address=\\\"$ip\\\""; then
                     echo -e "${RED}firewall: 已封禁 $ip  ${NC}"
                     blocked=true
                 else

@@ -114,9 +114,9 @@ cleanup() {
     
     # 清理firewall规则
     if command -v firewall-cmd >/dev/null 2>&1; then
-        firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 source address=$TEST_IP drop" 2>/dev/null || true
-        firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 source address=$TEST_IP2 drop" 2>/dev/null || true
-        firewall-cmd --permanent --remove-rich-rule="rule family=ipv4 source address=172.16.0.100 drop" 2>/dev/null || true
+        firewall-cmd --permanent --remove-rich-rule='rule family="ipv4" source address="$TEST_IP" drop' 2>/dev/null || true
+        firewall-cmd --permanent --remove-rich-rule='rule family="ipv4" source address="$TEST_IP2" drop' 2>/dev/null || true
+        firewall-cmd --permanent --remove-rich-rule='rule family="ipv4" source address="172.16.0.100" drop' 2>/dev/null || true
         firewall-cmd --reload 2>/dev/null || true
     fi
     
