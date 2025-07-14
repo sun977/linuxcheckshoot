@@ -2504,12 +2504,13 @@ tunnelCheck(){
 	echo -e "${YELLOW}正在检查SSH隧道(调用检测函数)${NC}"
 	tunnelSSH
 	echo -e "${YELLOW}正在检查HTTP隧道${NC}"
-	# tunnelHTTP
+	tunnelHTTP
 	echo -e "${YELLOW}正在检查DNS隧道${NC}"
-	# tunnelDNS
+	tunnelDNS
 	echo -e "${YELLOW}正在检查ICMP隧道${NC}"
-	# tunnelICMP
+	tunnelICMP
 	echo -e "${GREEN}正在检测反弹shell${NC}"
+	echo -e "待完善"
 }
 
 # 病毒排查 【未完成】
