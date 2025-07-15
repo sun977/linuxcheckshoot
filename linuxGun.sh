@@ -299,10 +299,10 @@ handle_error() {
     
     # 根据错误代码决定是否退出
     case $error_code in
-        1) # 一般错误，继续执行
+        1) # 一般错误,继续执行
             return 1
             ;;
-        2) # 严重错误，退出脚本
+        2) # 严重错误,退出脚本
             echo -e "${RED}[FATAL] 严重错误: $error_msg${NC}"
             exit $error_code
             ;;
@@ -319,7 +319,7 @@ log_message() {
     local message="$2"
     local timestamp="$3"
     
-    # 如果没有提供时间戳，生成一个
+    # 如果没有提供时间戳,生成一个
     if [ -z "$timestamp" ]; then
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     fi
@@ -348,7 +348,7 @@ log_message() {
         # 输出到终端
         echo -e "${color}[$timestamp] [$level] $message${NC}"
         
-        # 如果日志文件路径已定义，同时写入日志文件
+        # 如果日志文件路径已定义,同时写入日志文件
         if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
             echo "[$timestamp] [$level] $message" >> "$log_file/system.log"
         fi
@@ -407,7 +407,7 @@ init_env(){
 	# 基础变量定义
 	date=$(date +%Y%m%d)
 	# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-	# 优先使用ip命令，如果不存在则使用ifconfig作为备用
+	# 优先使用ip命令,如果不存在则使用ifconfig作为备用
 	if command -v ip >/dev/null 2>&1; then
 		ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
 		log_message "DEBUG" "使用ip命令获取IP地址: $ipadd"
@@ -415,14 +415,14 @@ init_env(){
 		ipadd=$(ifconfig | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#')
 		log_message "DEBUG" "使用ifconfig命令获取IP地址: $ipadd"
 	else
-		# 如果都没有，使用主机名作为标识
+		# 如果都没有,使用主机名作为标识
 		ipadd=$(hostname | tr '.' '_')
-		log_message "WARN" "未找到ip或ifconfig命令，使用主机名作为标识: $ipadd"
+		log_message "WARN" "未找到ip或ifconfig命令,使用主机名作为标识: $ipadd"
 	fi
-	# 如果ipadd为空，使用默认值
+	# 如果ipadd为空,使用默认值
 	if [ -z "$ipadd" ]; then
 		ipadd="unknown_host"
-		log_message "WARN" "无法获取IP地址，使用默认标识: $ipadd"
+		log_message "WARN" "无法获取IP地址,使用默认标识: $ipadd"
 	fi
 
 	# 创建输出目录变量,当前目录下的output目录
@@ -534,7 +534,7 @@ baseInfo(){
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
     echo -e "${YELLOW}[1.0] 获取IP地址信息:${NC}"
-    # 优先使用ip命令，如果不存在则使用ifconfig作为备用
+    # 优先使用ip命令,如果不存在则使用ifconfig作为备用
     if command -v ip >/dev/null 2>&1; then
         ip=$(ip addr | grep -w inet | awk '{print $2}') || handle_error 1 "执行ip命令失败" "baseInfo"
         echo -e "${YELLOW}[INFO] 使用ip命令获取IP地址信息:${NC}"
@@ -660,7 +660,7 @@ networkInfo(){
     arp=$(arp -a -n 2>/dev/null)
     if [ $? -eq 0 ] && [ -n "$arp" ];then
         (echo -e "${YELLOW}[INFO]ARP Table:${NC}" && echo "$arp")  
-        log_message "INFO" "成功获取ARP表，共$(echo "$arp" | wc -l)条记录"
+        log_message "INFO" "成功获取ARP表,共$(echo "$arp" | wc -l)条记录"
     else
         echo -e "${RED}[WARN]未发现ARP表${NC}"  
         log_message "WARN" "未能获取ARP表信息或ARP表为空"
@@ -687,7 +687,7 @@ networkInfo(){
         log_message "ERROR" "检测到可能的ARP攻击: $arpattack"
     else
         echo -e "${YELLOW}[INFO]未发现ARP攻击${NC}"  
-        log_message "INFO" "ARP攻击检测完成，未发现异常"
+        log_message "INFO" "ARP攻击检测完成,未发现异常"
     fi
 
     # 网络连接信息
@@ -779,11 +779,11 @@ networkInfo(){
 
     if [ $tcpCount -eq 0 ]; then
         echo -e "${YELLOW}[INFO]No TCP dangerous ports found${NC}"  
-        log_message "INFO" "TCP高危端口检测完成，未发现高危端口"
+        log_message "INFO" "TCP高危端口检测完成,未发现高危端口"
     else
         echo -e "${RED}[WARN]Total TCP dangerous ports found: $tcpCount ${NC}"    
         echo -e "${RED}[WARN]Please manually associate and confirm the TCP dangerous ports${NC}"    
-        log_message "ERROR" "发现${tcpCount}个TCP高危端口，需要人工确认"
+        log_message "ERROR" "发现${tcpCount}个TCP高危端口,需要人工确认"
     fi
 
     ## 检测 UDP 端口
@@ -854,11 +854,11 @@ networkInfo(){
 
     if [ $udpCount -eq 0 ]; then
         echo -e "${YELLOW}[INFO]No UDP dangerous ports found${NC}"  
-        log_message "INFO" "UDP高危端口检测完成，未发现高危端口"
+        log_message "INFO" "UDP高危端口检测完成,未发现高危端口"
     else
         echo -e "${RED}[WARN]Total UDP dangerous ports found: $udpCount ${NC}"    
         echo -e "${RED}[WARN]Please manually associate and confirm the UDP dangerous ports${NC}"    
-        log_message "ERROR" "发现${udpCount}个UDP高危端口，需要人工确认"
+        log_message "ERROR" "发现${udpCount}个UDP高危端口,需要人工确认"
     fi
 
     # DNS 信息
@@ -903,7 +903,7 @@ networkInfo(){
         log_message "ERROR" "发现网卡处于混杂模式: $Promisc"
     else
         echo -e "${YELLOW}[INFO]未发现网卡处于混杂模式${NC}"  
-        log_message "INFO" "网卡混杂模式检查完成，未发现异常"
+        log_message "INFO" "网卡混杂模式检查完成,未发现异常"
     fi
 
     # 监听模式
@@ -914,7 +914,7 @@ networkInfo(){
         log_message "ERROR" "发现网卡处于监听模式: $Monitor"
     else
         echo -e "${YELLOW}[INFO]未发现网卡处于监听模式${NC}"  
-        log_message "INFO" "网卡监听模式检查完成，未发现异常"
+        log_message "INFO" "网卡监听模式检查完成,未发现异常"
     fi
 
     # 网络路由信息
@@ -929,7 +929,7 @@ networkInfo(){
     
     if [ -n "$route" ];then
         (echo -e "${YELLOW}[INFO]路由表如下:${NC}" && echo "$route")  
-        log_message "INFO" "成功获取路由表，共$(echo "$route" | wc -l)条路由记录"
+        log_message "INFO" "成功获取路由表,共$(echo "$route" | wc -l)条路由记录"
     else
         echo -e "${YELLOW}[INFO]未发现路由器表${NC}"  
         log_message "WARN" "未发现路由表信息"
@@ -946,10 +946,10 @@ networkInfo(){
         # 判断IP转发是否开启
         if [ "$ip_forward" -eq 1 ]; then
             echo -e "${RED}[WARN]该服务器开启路由转发,请注意!${NC}"    
-            log_message "WARN" "检测到IP转发已开启，存在安全风险"
+            log_message "WARN" "检测到IP转发已开启,存在安全风险"
         else
             echo -e "${YELLOW}[INFO]该服务器未开启路由转发${NC}"  
-            log_message "INFO" "IP转发未开启，配置正常"
+            log_message "INFO" "IP转发未开启,配置正常"
         fi
     fi
 
@@ -1199,9 +1199,9 @@ processInfo(){
 		if [ -d "$proc_dir" ] && [ -r "$proc_dir/maps" ]; then  # 检查进程目录是否存在和maps文件是否可读
 			pid=$(basename "$proc_dir")
 			# 检查是否有可疑的内存映射(如可执行的匿名映射)
-			## 原理: 通过grep命令匹配maps文件中的rwxp权限的行，并判断是否包含[heap]或[stack]或deleted	
-			## rwxp.*\[heap\]: 堆区域具有读写执行权限(异常|正常堆不应该具有可执行权限，只有 rw-)
-			## rwxp.*\[stack\]: 栈区域具有读写执行权限(异常|正常栈栈不应该具有可执行权限，只有 rw- 可能是栈溢出攻击，或者 shellcode 直接执行机器码)
+			## 原理: 通过grep命令匹配maps文件中的rwxp权限的行,并判断是否包含[heap]或[stack]或deleted	
+			## rwxp.*\[heap\]: 堆区域具有读写执行权限(异常|正常堆不应该具有可执行权限,只有 rw-)
+			## rwxp.*\[stack\]: 栈区域具有读写执行权限(异常|正常栈栈不应该具有可执行权限,只有 rw- 可能是栈溢出攻击,或者 shellcode 直接执行机器码)
 			## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
 			## 恶意软件删除自身文件但保持在内存中运行
 			## 无文件攻击的检测 和 rootkit隐藏技术发现
@@ -1253,18 +1253,18 @@ processInfo(){
 	
 	# 5. 检查系统调用表完整性(需要root权限)
 	echo -e "${YELLOW}[INFO]检查系统调用表完整性[sys_call_table(/proc/kallsyms)]:${NC}"
-	## 原理: 通过查看系统调用表，判断系统调用表是否被修改[rootkit检测和内核级模块检测常用的技术]
+	## 原理: 通过查看系统调用表,判断系统调用表是否被修改[rootkit检测和内核级模块检测常用的技术]
 	# 什么是系统调用表（sys_call_table）
 	# - 定义 ：Linux内核中存储所有系统调用函数指针的数组
-	# - 作用 ：当用户程序调用系统调用时，内核通过这个表找到对应的处理函数
-	# - 位置 ：位于内核内存空间，通过 /proc/kallsyms 可以查看其地址 
+	# - 作用 ：当用户程序调用系统调用时,内核通过这个表找到对应的处理函数
+	# - 位置 ：位于内核内存空间,通过 /proc/kallsyms 可以查看其地址 
 	# 检测系统表的意义：
 	# 1. Rootkit检测
 	# 系统调用表劫持 是rootkit的常用技术：
 	# - 正常情况 ： sys_call_table 符号在 /proc/kallsyms 中可见
 	# - 被攻击 ：rootkit可能隐藏或修改这个符号来逃避检测 
 	# 2. 内核级恶意模块检测
-	# 通过搜索可疑符号名称，可以发现：
+	# 通过搜索可疑符号名称,可以发现：
 	# - 恶意内核模块 ：包含 "rootkit"、"hide" 等字样的符号
 	# - Hook技术 ：用于拦截和修改系统调用的钩子函数
 	# - 隐蔽功能 ：用于隐藏进程、文件、网络连接的功能
@@ -1320,7 +1320,7 @@ processInfo(){
 	
 	# 7. 检查进程环境变量异常
 	# 这段代码通过以下机制检测潜在威胁：
-	# 1. LD_PRELOAD检测 ：这是最常见的rootkit技术，通过预加载恶意库来劫持系统调用
+	# 1. LD_PRELOAD检测 ：这是最常见的rootkit技术,通过预加载恶意库来劫持系统调用
 	# 2. 动态库路径检测 ：异常的LD_LIBRARY_PATH设置可能指向恶意库
 	# 3. 明显恶意标识 ：直接搜索ROOTKIT、HIDE等明显的恶意软件标识
 	echo -e "${YELLOW}[INFO]检查进程环境变量异常:${NC}"
@@ -2045,7 +2045,7 @@ sshFileCheck(){
 	sshver=$(ssh -V)
 	echo -e "${YELLOW}[INFO]ssh版本信息如下:${NC}" && echo "$sshver"
 
-	# 上述光检测了root账户下的相关文件的信息，需要增加机器上其他账号的相关文件检测，比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
+	# 上述光检测了root账户下的相关文件的信息,需要增加机器上其他账号的相关文件检测,比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
 	# 其他
 }
 
@@ -2560,7 +2560,7 @@ backdoorCheck(){
 	# 常见后门目录 /tmp /usr/bin /usr/sbin 
 	echo -e "${YELLOW}正在检查后门文件:${NC}"
 	echo -e "待完善"
-	# 检测进程二进制文件的stat修改时间，如果发现近期修改则判定为可疑后门文件 --- 20250707 待增加
+	# 检测进程二进制文件的stat修改时间,如果发现近期修改则判定为可疑后门文件 --- 20250707 待增加
 
 }
 
@@ -2582,10 +2582,10 @@ tunnelSSH(){
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	
 	# SSH隧道检测
-	# 检查网络连接的时候发现2个以上的连接是同一个进程PID，且服务是SSHD的大概率是SSH隧道
+	# 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道
 	
 	## 1. 检测同一PID的多个sshd连接（主要检测方法）
-	### [检测的时候发现 unix 连接会干扰判断，所以 netstat 增加-t 参数只显示 tcp 协议的连接(ssh基于tcp)]
+	### [检测的时候发现 unix 连接会干扰判断,所以 netstat 增加-t 参数只显示 tcp 协议的连接(ssh基于tcp)]
 	echo -e "${YELLOW}[INFO]检查同一PID的多个sshd连接:${NC}"
 	echo -e "${YELLOW}[KNOW]检测方法: 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道${NC}"
 	echo -e "${YELLOW}[KNOW]检查结果需要排除父进程 1 的SSHD系统服务进程,例如: PSINFO:  xxx     1 root     /usr/sbin/sshd -D ${NC}"
@@ -2616,7 +2616,7 @@ tunnelSSH(){
 	## 2. 检测SSH本地转发（Local Port Forwarding）
 	echo -e "${YELLOW}[INFO]检查SSH本地转发特征:${NC}"
 	# 本地转发命令：ssh -L local_port:target_host:target_port user@ssh_server
-	# 特征：SSH进程监听本地端口，将流量转发到远程
+	# 特征：SSH进程监听本地端口,将流量转发到远程
 	local_forward_ports=$(netstat -tlnp 2>/dev/null | grep sshd | awk '{print $4, $7}' | grep -v ':22')
 	if [ -n "$local_forward_ports" ]; then
 		echo -e "${YELLOW}[WARN]发现SSH进程监听非22端口(可能的本地转发):${NC}"
@@ -2639,7 +2639,7 @@ tunnelSSH(){
 	## 3. 检测SSH远程转发（Remote Port Forwarding）
 	echo -e "${YELLOW}[INFO]检查SSH远程转发特征:${NC}"
 	# 远程转发命令：ssh -R remote_port:local_host:local_port user@ssh_server
-	# 特征：SSH客户端连接到远程服务器，远程服务器监听端口
+	# 特征：SSH客户端连接到远程服务器,远程服务器监听端口
 	
 	### 3.1 检查SSH进程的命令行参数中是否包含-R选项
 	remote_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-R')
@@ -2664,7 +2664,7 @@ tunnelSSH(){
 	# - 排除 sshd -D （SSH守护进程的调试模式）
 	# - 排除 /usr/sbin/sshd （系统SSH服务）
 	# - 只检测真正的SSH客户端动态转发
-	# 特征：SSH进程创建SOCKS代理，监听本地端口
+	# 特征：SSH进程创建SOCKS代理,监听本地端口
 	echo -e "${YELLOW}[KNOW]:检查结果需要排除SSHD系统服务进程${NC}"
 	# dynamic_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-D')
 	dynamic_forward_processes=$(ps aux | grep -E 'ssh.*-D' | grep -v grep | grep -v 'sshd.*-D' | grep -v '/usr/sbin/sshd')
@@ -2794,7 +2794,7 @@ tunnelSSH(){
 	# 隧道工具列表定义 - 常见隧道工具
 	tunnel_tools="frp nps spp ngrok es suo5 chisel socat nc netcat ncat stunnel proxychains v2ray xray clash lcx portmap autossh"
 	for tool in $tunnel_tools; do
-		# 使用单词边界匹配，避免部分匹配导致的误报  (\s|/) 确保工具名前面是空格或路径分隔符  (\s|$) 确保工具名后面是空格或行尾
+		# 使用单词边界匹配,避免部分匹配导致的误报  (\s|/) 确保工具名前面是空格或路径分隔符  (\s|$) 确保工具名后面是空格或行尾
 		tool_process=$(ps aux | grep -v grep | grep -E "(\s|/)$tool(\s|$)")
 		if [ -n "$tool_process" ]; then
 			echo -e "${RED}[WARN]发现隧道工具: $tool${NC}"
@@ -4078,10 +4078,10 @@ sendFileRemote() {
 		return 1
 	fi
 	
-	# 验证token格式（基本检查：长度至少8位，包含字母数字）
+	# 验证token格式（基本检查：长度至少8位,包含字母数字）
 	if [ ${#token} -lt 8 ]; then
 		echo -e "${RED}[WARN] 错误: token长度至少需要8位字符${NC}"
-		handle_error 1 "token长度不足: ${#token}位，需要至少8位" "sendFileRemote"
+		handle_error 1 "token长度不足: ${#token}位,需要至少8位" "sendFileRemote"
 		return 1
 	fi
 	
@@ -4093,9 +4093,9 @@ sendFileRemote() {
 	
 	log_message "DEBUG" "token验证通过: 长度=${#token}位"
 	
-	# 如果没有指定文件路径，自动查找生成的tar.gz文件
+	# 如果没有指定文件路径,自动查找生成的tar.gz文件
 	if [ -z "$file_path" ]; then
-		echo -e "${YELLOW}[INFO] 未指定文件路径，正在查找自动生成的检查文件...${NC}"
+		echo -e "${YELLOW}[INFO] 未指定文件路径,正在查找自动生成的检查文件...${NC}"
 		
 		# 构造预期的文件名
 		local expected_file="${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz"
@@ -4111,7 +4111,7 @@ sendFileRemote() {
 	else
 		# 将相对路径转换为绝对路径
 		if [[ "$file_path" != /* ]]; then
-			# 如果不是绝对路径（不以/开头），则转换为绝对路径
+			# 如果不是绝对路径（不以/开头）,则转换为绝对路径
 			local original_path="$file_path"
 			local converted_path=""
 			
@@ -4120,15 +4120,15 @@ sendFileRemote() {
 				converted_path=$(realpath "$file_path" 2>/dev/null)
 			fi
 			
-			# 如果realpath失败或不存在，尝试readlink
+			# 如果realpath失败或不存在,尝试readlink
 			if [ -z "$converted_path" ] && command -v readlink >/dev/null 2>&1; then
 				# 备用readlink命令
 				converted_path=$(readlink -f "$file_path" 2>/dev/null)
 			fi
 			
-			# 如果以上方法都失败，手动构造绝对路径
+			# 如果以上方法都失败,手动构造绝对路径
 			if [ -z "$converted_path" ]; then
-				# 手动构造绝对路径，使用脚本启动时的目录而不是当前工作目录
+				# 手动构造绝对路径,使用脚本启动时的目录而不是当前工作目录
 				converted_path="${current_dir}/$file_path"
 			fi
 			
@@ -4150,12 +4150,12 @@ sendFileRemote() {
 	echo -e "${YELLOW}[INFO] 正在发送检查文件到服务器 http://${server_ip}:${server_port}/upload${NC}"
 	echo -e "${YELLOW}[INFO] 文件路径: $file_path${NC}"
 	echo -e "${YELLOW}[INFO] 文件大小: $file_size${NC}"
-	echo -e "${YELLOW}[INFO] 使用认证token: ${token:0:4}****${NC}"  # 只显示前4位，保护token隐私
+	echo -e "${YELLOW}[INFO] 使用认证token: ${token:0:4}****${NC}"  # 只显示前4位,保护token隐私
 	
 	# 构造上传URL
 	local upload_url="http://${server_ip}:${server_port}/upload"  # 路径需要和服务器端(tools/uploadServer/uploadServer.py)一致
 	
-	# 使用curl上传文件，包含Authorization头部
+	# 使用curl上传文件,包含Authorization头部
 	echo -e "${YELLOW}[INFO] 开始上传文件...${NC}"
 	curl_result=$(curl -k -X POST "$upload_url" \
 		-H "Authorization: Bearer $token" \
@@ -4240,7 +4240,7 @@ main() {
         for arg in "$@"; do
             if [[ "$arg" != "--send" ]] && [[ "$arg" =~ ^-- ]]; then
                 has_other_params=true	# 设置标记变量为true
-                break	# 跳出一层循环(如果找到一个--send以外的参数，则跳出循环)
+                break	# 跳出一层循环(如果找到一个--send以外的参数,则跳出循环)
             fi
         done
         
@@ -4248,7 +4248,7 @@ main() {
         if [ "$has_other_params" = true ]; then
             echo -e "${RED}[WARN] 错误: --send参数不能与其他检查参数组合使用${NC}"
             echo -e "${YELLOW}[INFO] --send必须单独使用,格式: ./linuxgun.sh --send <ip> <port> <token> [file]${NC}"
-            echo -e "${YELLOW}[INFO] 推荐用法: 先执行检查，再发送结果${NC}"
+            echo -e "${YELLOW}[INFO] 推荐用法: 先执行检查,再发送结果${NC}"
             echo -e "${YELLOW}[INFO] 示例1: ./linuxgun.sh --all${NC}"
             echo -e "${YELLOW}[INFO] 示例2: ./linuxgun.sh --send 192.168.1.100 8080 your_token${NC}"
             echo ""
@@ -4270,7 +4270,7 @@ main() {
         token="$4"
         file_path="$5"  # 可能为空【为空就默认检测生成的打包文件并发送】
         sendFileRemote "$server_ip" "$server_port" "$token" "$file_path"
-        exit $?		# $? 表示返回上一条命令的退出状态码 sendFileRemote 函数返回值 1 表示失败，0 表示成功
+        exit $?		# $? 表示返回上一条命令的退出状态码 sendFileRemote 函数返回值 1 表示失败,0 表示成功
     fi
 
     # 解析所有参数
@@ -4389,7 +4389,7 @@ main() {
         esac
     done
 
-    # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用，且不包括--send】
+    # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用,且不包括--send】
     if [ "$run_all" = true ]; then
         echo -e "${YELLOW}[INFO] linuGun 开始执行所有检查项:${NC}"
 		systemCheck  		| log2file "${check_file}/checkresult.txt"
@@ -4533,7 +4533,7 @@ main() {
     # 记录脚本执行完成
     local main_end_time=$(date +%s)
     local total_duration=$((main_end_time - main_start_time))
-    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] LinuxGun v${script_version} 执行完成，总耗时: ${total_duration}秒${NC}"
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] LinuxGun v${script_version} 执行完成,总耗时: ${total_duration}秒${NC}"
     log_operation "脚本执行" "LinuxGun v${script_version} 脚本执行完成" "完成"
     log_message "INFO" "脚本总执行时间: ${total_duration}秒"
 }
