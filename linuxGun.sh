@@ -650,14 +650,21 @@ baseInfo(){
 
 # 网络信息【完成】
 networkInfo(){
+    local start_time=$(date +%s)
+    log_operation "网络信息收集" "开始网络信息收集和分析" "开始"
+    
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
     echo -e "${YELLOW}[2.1]Get ARP Table[arp -a -n]:${NC}"  
-    arp=$(arp -a -n)
-    if [ -n "$arp" ];then
+    
+    log_message "INFO" "开始获取ARP表信息"
+    arp=$(arp -a -n 2>/dev/null)
+    if [ $? -eq 0 ] && [ -n "$arp" ];then
         (echo -e "${YELLOW}[+]ARP Table:${NC}" && echo "$arp")  
+        log_message "INFO" "成功获取ARP表，共$(echo "$arp" | wc -l)条记录"
     else
         echo -e "${RED}[!]未发现ARP表${NC}"  
+        log_message "WARN" "未能获取ARP表信息或ARP表为空"
     fi
     # 原理：通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数
     # 该命令用于统计arp表中的MAC地址出现次数,并显示重复的MAC地址及其出现频率。
@@ -673,25 +680,38 @@ networkInfo(){
     # ARP攻击检查
     echo -e "${YELLOW}[2.2]Check ARP Attack[arp -a -n]:${NC}"  
     echo -e "${YELLOW}[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}"  
-    arpattack=$(arp -a -n | awk '{++S[$4]} END {for(a in S) {if($2>1) print $2,a,S[a]}}')
-    if [ -n "$arpattack" ];then
+    
+    log_message "INFO" "开始ARP攻击检测"
+    arpattack=$(arp -a -n 2>/dev/null | awk '{++S[$4]} END {for(a in S) {if(S[a]>1) print S[a],a}}')
+    if [ $? -eq 0 ] && [ -n "$arpattack" ];then
         (echo -e "${RED}[!]发现存在ARP攻击:${NC}" && echo "$arpattack") 
+        log_message "ERROR" "检测到可能的ARP攻击: $arpattack"
     else
         echo -e "${YELLOW}[+]未发现ARP攻击${NC}"  
+        log_message "INFO" "ARP攻击检测完成，未发现异常"
     fi
 
     # 网络连接信息
     echo -e "${YELLOW}[2.3]Get Network Connection Info${NC}"  
     echo -e "${YELLOW}[2.3.1]Check Network Connection[netstat -anlp]:${NC}"  
-    netstat=$(netstat -anlp | grep ESTABLISHED) # 过滤出已经建立的连接 ESTABLISHED
-    netstatnum=$(netstat -n | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
+    
+    log_message "INFO" "开始检查网络连接状态"
+    netstat=$(netstat -anlp 2>/dev/null | grep ESTABLISHED) # 过滤出已经建立的连接 ESTABLISHED
+    if [ $? -ne 0 ]; then
+        handle_error "网络连接检查失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+    fi
+    
+    netstatnum=$(netstat -n 2>/dev/null | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
     if [ -n "$netstat" ];then
         (echo -e "${YELLOW}[+]Established Network Connection:${NC}" && echo "$netstat")  
+        log_message "INFO" "发现$(echo "$netstat" | wc -l)个已建立的网络连接"
         if [ -n "$netstatnum" ];then
             (echo -e "${YELLOW}[+]Number of each state:${NC}" && echo "$netstatnum")  
+            log_message "INFO" "网络连接状态统计完成"
         fi
     else
         echo -e "${YELLOW}[+]No network connection${NC}"  
+        log_message "INFO" "未发现已建立的网络连接"
     fi
 
     # 端口信息
@@ -700,30 +720,53 @@ networkInfo(){
     echo -e "${YELLOW}[说明]TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
     echo -e "${YELLOW}[说明]只有绑定在0.0.0.0上局域网才可以访问${NC}"  
     echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}"  
-    tcpopen=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    
+    log_message "INFO" "开始检查TCP端口信息"
+    tcpopen=$(netstat -anltp 2>/dev/null | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    if [ $? -ne 0 ]; then
+        handle_error "TCP端口检查失败" "netstat -anltp命令执行失败" "请检查netstat命令是否可用"
+    fi
+    
     if [ -n "$tcpopen" ];then
         (echo -e "${YELLOW}[+]Open TCP ports and corresponding services:${NC}" && echo "$tcpopen")  
+        log_message "INFO" "发现$(echo "$tcpopen" | wc -l)个开放的TCP端口"
     else
         echo -e "${RED}[!]No open TCP ports${NC}"  
+        log_message "WARN" "未发现开放的TCP端口"
     fi
 
-    tcpAccessPort=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    tcpAccessPort=$(netstat -anltp 2>/dev/null | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$tcpAccessPort" ];then
         (echo -e "${RED}[!]The following TCP ports are open to the local area network or the Internet, please note!${NC}" && echo "$tcpAccessPort")
+        log_message "WARN" "发现$(echo "$tcpAccessPort" | wc -l)个对外开放的TCP端口"
     else
         echo -e "${YELLOW}[+]The port is not open to the local area network or the Internet${NC}" 
+        log_message "INFO" "未发现对外开放的TCP端口"
     fi
 
     ## 检测 TCP 高危端口
     echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}"  
     echo -e "${YELLOW}[说明]Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    
+    log_message "INFO" "开始TCP高危端口检测"
     declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
+    if [ ! -f "${current_dir}/checkrules/dangerstcpports.txt" ]; then
+        handle_error "TCP高危端口规则文件缺失" "文件${current_dir}/checkrules/dangerstcpports.txt不存在" "请确保规则文件存在"
+        return 1
+    fi
+    
     while IFS=: read -r port description; do
         danger_ports["$port"]="$description"
     done < "${current_dir}/checkrules/dangerstcpports.txt"
+    log_message "INFO" "已加载$(echo "${!danger_ports[@]}" | wc -w)个TCP高危端口规则"
+    
     # 获取所有监听中的TCP端口
-    listening_TCP_ports=$(netstat -anlpt | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的TCP端口
+    listening_TCP_ports=$(netstat -anlpt 2>/dev/null | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的TCP端口
+    if [ $? -ne 0 ]; then
+        handle_error "获取TCP监听端口失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+    fi
+    
     tcpCount=0  # 初始化计数器
     # 遍历所有监听端口
     for port in $listening_TCP_ports; do
@@ -737,43 +780,68 @@ networkInfo(){
 
     if [ $tcpCount -eq 0 ]; then
         echo -e "${YELLOW}[+]No TCP dangerous ports found${NC}"  
+        log_message "INFO" "TCP高危端口检测完成，未发现高危端口"
     else
         echo -e "${RED}[!]Total TCP dangerous ports found: $tcpCount ${NC}"    
         echo -e "${RED}[!]Please manually associate and confirm the TCP dangerous ports${NC}"    
+        log_message "ERROR" "发现${tcpCount}个TCP高危端口，需要人工确认"
     fi
 
     ## 检测 UDP 端口
     echo -e "${YELLOW}[2.3.2.3]Check UDP Port Info[netstat -anlup]:${NC}"  
-    udpopen=$(netstat -anlup | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    
+    log_message "INFO" "开始检查UDP端口信息"
+    udpopen=$(netstat -anlup 2>/dev/null | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
+    if [ $? -ne 0 ]; then
+        handle_error "UDP端口检查失败" "netstat -anlup命令执行失败" "请检查netstat命令是否可用"
+    fi
+    
     if [ -n "$udpopen" ];then
         (echo -e "${YELLOW}[+]Open UDP ports and corresponding services:${NC}" && echo "$udpopen")  
+        log_message "INFO" "发现$(echo "$udpopen" | wc -l)个开放的UDP端口"
     else
         echo -e "${RED}[!]No open UDP ports${NC}"  
+        log_message "WARN" "未发现开放的UDP端口"
     fi
 
-    udpAccessPort=$(netstat -anlup | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
+    udpAccessPort=$(netstat -anlup 2>/dev/null | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
     # 检查是否有UDP端口
     if [ -n "$udpAccessPort" ]; then
         echo -e "${YELLOW}[+]以下UDP端口面向局域网或互联网开放:${NC}"  
+        log_message "WARN" "发现$(echo "$udpAccessPort" | wc -w)个对外开放的UDP端口"
         for port in $udpAccessPort; do
-            if nc -z -w1 127.0.0.1 $port </dev/null; then
+            if nc -z -w1 127.0.0.1 $port </dev/null 2>/dev/null; then
                 echo "$port"  
             fi
         done
     else
         echo -e "${YELLOW}[+]未发现在UDP端口面向局域网或互联网开放.${NC}"  
+        log_message "INFO" "未发现对外开放的UDP端口"
     fi
 
     ## 检测 UDP 高危端口
     echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}"  
     echo -e "${YELLOW}[说明]Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    
+    log_message "INFO" "开始UDP高危端口检测"
     declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
+    if [ ! -f "${current_dir}/checkrules/dangersudpports.txt" ]; then
+        handle_error "UDP高危端口规则文件缺失" "文件${current_dir}/checkrules/dangersudpports.txt不存在" "请确保规则文件存在"
+        return 1
+    fi
+    
     while IFS=: read -r port description; do
         danger_udp_ports["$port"]="$description"
     done < "${current_dir}/checkrules/dangersudpports.txt"
+    log_message "INFO" "已加载$(echo "${!danger_udp_ports[@]}" | wc -w)个UDP高危端口规则"
+    
     # 获取所有监听中的UDP端口
-    listening_UDP_ports=$(netstat -anlup | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的UDP端口
+    listening_UDP_ports=$(netstat -anlup 2>/dev/null | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的UDP端口
+    if [ $? -ne 0 ]; then
+        handle_error "获取UDP监听端口失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+    fi
+    
     udpCount=0  # 初始化计数器
     # 遍历所有监听端口
     for port in $listening_UDP_ports; do
@@ -787,97 +855,152 @@ networkInfo(){
 
     if [ $udpCount -eq 0 ]; then
         echo -e "${YELLOW}[+]No UDP dangerous ports found${NC}"  
+        log_message "INFO" "UDP高危端口检测完成，未发现高危端口"
     else
         echo -e "${RED}[!]Total UDP dangerous ports found: $udpCount ${NC}"    
         echo -e "${RED}[!]Please manually associate and confirm the UDP dangerous ports${NC}"    
+        log_message "ERROR" "发现${udpCount}个UDP高危端口，需要人工确认"
     fi
 
     # DNS 信息
     echo -e "${YELLOW}[2.3.3]Check DNS Info[/etc/resolv.conf]:${NC}"  
-    resolv=$(more /etc/resolv.conf | grep ^nameserver | awk '{print $NF}')
-
-    if [ -n "$resolv" ];then
-        (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv")  
+    
+    log_message "INFO" "开始检查DNS配置信息"
+    if [ ! -f "/etc/resolv.conf" ]; then
+        handle_error "DNS配置文件缺失" "文件/etc/resolv.conf不存在" "请检查系统DNS配置"
     else
-        echo -e "${YELLOW}[+]未发现DNS服务器${NC}"  
+        resolv=$(more /etc/resolv.conf 2>/dev/null | grep ^nameserver | awk '{print $NF}')
+        if [ -n "$resolv" ];then
+            (echo -e "${YELLOW}[+]该服务器使用以下DNS服务器:${NC}" && echo "$resolv")  
+            log_message "INFO" "发现$(echo "$resolv" | wc -l)个DNS服务器配置"
+        else
+            echo -e "${YELLOW}[+]未发现DNS服务器${NC}"  
+            log_message "WARN" "未发现DNS服务器配置"
+        fi
     fi
 
     # 网卡模式
     echo -e "${YELLOW}[2.4]Check Network Card Mode[ip addr]:${NC}"  
-    ifconfigmode=$(ip addr | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
+    
+    log_message "INFO" "开始检查网卡模式信息"
+    ifconfigmode=$(ip addr 2>/dev/null | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
+    if [ $? -ne 0 ]; then
+        handle_error "网卡模式检查失败" "ip addr命令执行失败" "请检查ip命令是否可用"
+    fi
+    
     if [ -n "$ifconfigmode" ];then
         (echo -e "${YELLOW}[+]网卡模式如下:${NC}" && echo "$ifconfigmode")  
+        log_message "INFO" "发现$(echo "$ifconfigmode" | wc -l)个网卡接口"
     else
         echo -e "${RED}[!]未发现网卡模式${NC}"  
+        log_message "WARN" "未发现网卡模式信息"
     fi
 
     # 混杂模式
     echo -e "${YELLOW}[2.4.1]Check Promiscuous Mode[ip addr]:${NC}"  
-    Promisc=$(ip addr | grep -i promisc | awk -F: '{print $2}')
+    Promisc=$(ip addr 2>/dev/null | grep -i promisc | awk -F: '{print $2}')
     if [ -n "$Promisc" ];then
         (echo -e "${RED}[!]网卡处于混杂模式:${NC}" && echo "$Promisc") 
+        log_message "ERROR" "发现网卡处于混杂模式: $Promisc"
     else
         echo -e "${YELLOW}[+]未发现网卡处于混杂模式${NC}"  
+        log_message "INFO" "网卡混杂模式检查完成，未发现异常"
     fi
 
     # 监听模式
     echo -e "${YELLOW}[2.4.2]Check Monitor Mode[ip addr]:${NC}"  
-    Monitor=$(ip addr | grep -i "mode monitor" | awk -F: '{print $2}')
+    Monitor=$(ip addr 2>/dev/null | grep -i "mode monitor" | awk -F: '{print $2}')
     if [ -n "$Monitor" ];then
         (echo -e "${RED}[!]网卡处于监听模式:${NC}" && echo "$Monitor")
+        log_message "ERROR" "发现网卡处于监听模式: $Monitor"
     else
         echo -e "${YELLOW}[+]未发现网卡处于监听模式${NC}"  
+        log_message "INFO" "网卡监听模式检查完成，未发现异常"
     fi
 
     # 网络路由信息
     echo -e "${YELLOW}[2.5]Get Network Route Info${NC}"  
     echo -e "${YELLOW}[2.5.1]Check Route Table[route -n]:${NC}"  
-    route=$(route -n)
+    
+    log_message "INFO" "开始检查路由表信息"
+    route=$(route -n 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        handle_error "路由表检查失败" "route命令执行失败" "请检查route命令是否可用"
+    fi
+    
     if [ -n "$route" ];then
         (echo -e "${YELLOW}[+]路由表如下:${NC}" && echo "$route")  
+        log_message "INFO" "成功获取路由表，共$(echo "$route" | wc -l)条路由记录"
     else
         echo -e "${YELLOW}[+]未发现路由器表${NC}"  
+        log_message "WARN" "未发现路由表信息"
     fi
 
     # 路由转发
     echo -e "${YELLOW}[2.5.2]Check IP Forward[/proc/sys/net/ipv4/ip_forward]:${NC}"  
-    ip_forward=$(cat /proc/sys/net/ipv4/ip_forward)  # 1:开启路由转发 0:未开启路由转发
-    # 判断IP转发是否开启
-    if [ "$ip_forward" -eq 1 ]; then
-        echo -e "${RED}[!]该服务器开启路由转发,请注意!${NC}"    
+    
+    log_message "INFO" "开始检查IP转发配置"
+    if [ ! -f "/proc/sys/net/ipv4/ip_forward" ]; then
+        handle_error "IP转发配置文件缺失" "文件/proc/sys/net/ipv4/ip_forward不存在" "请检查系统内核配置"
     else
-        echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}"  
+        ip_forward=$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)  # 1:开启路由转发 0:未开启路由转发
+        # 判断IP转发是否开启
+        if [ "$ip_forward" -eq 1 ]; then
+            echo -e "${RED}[!]该服务器开启路由转发,请注意!${NC}"    
+            log_message "WARN" "检测到IP转发已开启，存在安全风险"
+        else
+            echo -e "${YELLOW}[+]该服务器未开启路由转发${NC}"  
+            log_message "INFO" "IP转发未开启，配置正常"
+        fi
     fi
 
     # 防火墙策略
     echo -e "${YELLOW}[2.6]Get Firewall Policy${NC}"  
     echo -e "${YELLOW}[2.6.1]Check Firewalld Policy[systemctl status firewalld]:${NC}"  
-    firewalledstatus=$(systemctl status firewalld | grep "active (running)")
-    firewalledpolicy=$(firewall-cmd --list-all)
+    
+    log_message "INFO" "开始检查firewalld防火墙状态"
+    firewalledstatus=$(systemctl status firewalld 2>/dev/null | grep "active (running)")
     if [ -n "$firewalledstatus" ];then
         echo -e "${YELLOW}[+]该服务器防火墙已打开${NC}"  
-        if [ -n "$firewalledpolicy" ];then
+        log_message "INFO" "firewalld防火墙服务正在运行"
+        
+        firewalledpolicy=$(firewall-cmd --list-all 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$firewalledpolicy" ];then
             (echo -e "${YELLOW}[+]防火墙策略如下${NC}" && echo "$firewalledpolicy")  
+            log_message "INFO" "成功获取firewalld防火墙策略"
         else
             echo -e "${RED}[!]防火墙策略未配置,建议配置防火墙策略!${NC}" 
+            log_message "WARN" "firewalld防火墙策略未配置或获取失败"
         fi
     else
         echo -e "${RED}[!]防火墙未开启,建议开启防火墙${NC}" 
+        log_message "WARN" "firewalld防火墙服务未运行"
     fi
 
     echo -e "${YELLOW}[2.6.2]Check Iptables Policy[service iptables status]:${NC}"  
-    firewalledstatus=$(service iptables status | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
-    firewalledpolicy=$(iptables -L)
+    
+    log_message "INFO" "开始检查iptables防火墙状态"
+    firewalledstatus=$(service iptables status 2>/dev/null | grep "Table" | awk '{print $1}')  # 有"Table:",说明开启,没有说明未开启
     if [ -n "$firewalledstatus" ];then
         echo -e "${YELLOW}[+]iptables已打开${NC}"  
-        if [ -n "$firewalledpolicy" ];then
+        log_message "INFO" "iptables防火墙服务正在运行"
+        
+        firewalledpolicy=$(iptables -L 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$firewalledpolicy" ];then
             (echo -e "${YELLOW}[+]iptables策略如下${NC}" && echo "$firewalledpolicy")  
+            log_message "INFO" "成功获取iptables防火墙策略"
         else
             echo -e "${RED}[!]iptables策略未配置,建议配置iptables策略!${NC}" 
+            log_message "WARN" "iptables防火墙策略未配置或获取失败"
         fi
     else
         echo -e "${RED}[!]iptables未开启,建议开启防火墙${NC}" 
+        log_message "WARN" "iptables防火墙服务未运行"
     fi
+    
+    # 记录网络信息收集完成
+    log_operation "网络信息收集" "网络信息收集和分析完成" "完成"
+    log_performance "networkInfo" "网络信息收集" $start_time
     printf "\n"  
 }
 
