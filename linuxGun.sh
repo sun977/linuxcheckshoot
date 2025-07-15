@@ -999,8 +999,9 @@ networkInfo(){
     fi
     
     # 记录网络信息收集完成
+    local end_time=$(date +%s)
     log_operation "网络信息收集" "网络信息收集和分析完成" "完成"
-    log_performance "networkInfo" "网络信息收集" $start_time
+    log_performance "networkInfo" $start_time $end_time
     printf "\n"  
 }
 
@@ -4416,8 +4417,9 @@ main() {
 		echo -e "${GREEN} Date:2025.07.15${NC}"
 		
 		# 记录全量检查完成日志
+		local main_end_time=$(date +%s)
 		log_operation "全量检查" "LinuxGun v${script_version} 全量检查完成" "完成"
-		log_performance "main" "全量检查" $main_start_time  
+		log_performance "main" $main_start_time $main_end_time  
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
@@ -4519,8 +4521,9 @@ main() {
         done
         
         # 记录模块检查完成日志
+        local main_end_time=$(date +%s)
         log_operation "模块检查" "指定模块检查完成: ${modules[*]}" "完成"
-        log_performance "main" "模块检查" $main_start_time
+        log_performance "main" $main_start_time $main_end_time
     else
         echo -e "${RED}[!] 未指定任何有效的检查模块${NC}"
         log_message "ERROR" "未指定任何有效的检查模块"
