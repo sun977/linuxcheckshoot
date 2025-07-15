@@ -3722,6 +3722,103 @@ checkOutlogPack(){
 }
 
 
+# 发送检查文件到指定的服务器
+sendFileRemote() {
+	# 参数说明: sendFileRemote [server_ip] [server_port] [token] [file_path]
+	# 上传方式 curl -k -X POST http://[ip]:[port]/upload -H "Authorization: Bearer [token]" -F "file=@example.txt"
+	
+	local server_ip="$1"
+	local server_port="$2"
+	local token="$3"
+	local file_path="$4"
+	
+	# 检查必需参数
+	if [ -z "$server_ip" ] || [ -z "$server_port" ] || [ -z "$token" ]; then
+		echo -e "${RED}[!] 错误: 必须指定服务器IP、端口和认证token${NC}"
+		echo -e "${YELLOW}[i] 使用方法: sendFileRemote <server_ip> <server_port> <token> [file_path]${NC}"
+		echo -e "${YELLOW}[i] 示例: sendFileRemote 192.168.1.100 8080 your_secret_token${NC}"
+		return 1
+	fi
+	
+	# 验证token格式（基本检查：长度至少8位，包含字母数字）
+	if [ ${#token} -lt 8 ]; then
+		echo -e "${RED}[!] 错误: token长度至少需要8位字符${NC}"
+		return 1
+	fi
+	
+	if ! echo "$token" | grep -q '^[a-zA-Z0-9_-]\+$'; then
+		echo -e "${RED}[!] 错误: token只能包含字母、数字、下划线和连字符${NC}"
+		return 1
+	fi
+	
+	# 如果没有指定文件路径，自动查找生成的tar.gz文件
+	if [ -z "$file_path" ]; then
+		echo -e "${YELLOW}[i] 未指定文件路径，正在查找自动生成的检查文件...${NC}"
+		
+		# 构造预期的文件名
+		local expected_file="${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz"
+		
+		if [ -f "$expected_file" ]; then
+			file_path="$expected_file"
+			echo -e "${GREEN}[+] 找到检查文件: $file_path${NC}"
+		else
+			echo -e "${RED}[!] 错误: 未找到自动生成的检查文件 $expected_file${NC}"
+			echo -e "${YELLOW}[i] 请先运行完整检查或手动指定文件路径${NC}"
+			return 1
+		fi
+	else
+		# 检查指定的文件是否存在
+		if [ ! -f "$file_path" ]; then
+			echo -e "${RED}[!] 错误: 指定的文件不存在: $file_path${NC}"
+			return 1
+		fi
+	fi
+	
+	# 获取文件大小用于显示
+	local file_size=$(du -h "$file_path" | cut -f1)
+	
+	echo -e "${YELLOW}[+] 正在发送检查文件到服务器 $server_ip:$server_port${NC}"
+	echo -e "${YELLOW}[+] 文件路径: $file_path${NC}"
+	echo -e "${YELLOW}[+] 文件大小: $file_size${NC}"
+	echo -e "${YELLOW}[+] 使用认证token: ${token:0:4}****${NC}"  # 只显示前4位，保护token隐私
+	
+	# 构造上传URL
+	local upload_url="http://${server_ip}:${server_port}/upload"
+	
+	# 使用curl上传文件，包含Authorization头部
+	echo -e "${YELLOW}[+] 开始上传文件...${NC}"
+	curl_result=$(curl -k -X POST "$upload_url" \
+		-H "Authorization: Bearer $token" \
+		-H "User-Agent: LinuxGun-Security-Tool/6.0" \
+		-F "file=@$file_path" \
+		--connect-timeout 30 \
+		--max-time 300 \
+		2>&1)
+	curl_exit_code=$?
+	
+	if [ $curl_exit_code -eq 0 ]; then
+		echo -e "${GREEN}[+] 文件上传成功!${NC}"
+		echo -e "${GREEN}[+] 服务器响应: $curl_result${NC}"
+		# 记录上传日志
+		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传成功: $file_path -> $server_ip:$server_port" >> "${check_file}/upload.log" 2>/dev/null
+	else
+		echo -e "${RED}[!] 文件上传失败! (退出码: $curl_exit_code)${NC}"
+		echo -e "${RED}[!] 错误信息: $curl_result${NC}"
+		echo -e "${YELLOW}[i] 请检查:${NC}"
+		echo -e "${YELLOW}    1. 服务器地址和端口是否正确${NC}"
+		echo -e "${YELLOW}    2. 服务器是否正在运行并监听指定端口${NC}"
+		echo -e "${YELLOW}    3. 网络连接是否正常${NC}"
+		echo -e "${YELLOW}    4. 服务器是否支持/upload接口${NC}"
+		echo -e "${YELLOW}    5. 认证token是否正确${NC}"
+		echo -e "${YELLOW}    6. 服务器是否支持Bearer token认证${NC}"
+		# 记录失败日志
+		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传失败: $file_path -> $server_ip:$server_port (错误码: $curl_exit_code)" >> "${check_file}/upload.log" 2>/dev/null
+		return 1
+	fi
+}
+
+
+
 #### 主函数入口 ####
 main() {
 	# 将标准输入的内容同时输出到终端和文件
@@ -3746,6 +3843,46 @@ main() {
 
     local run_all=false
     local modules=()  # 模块列表,参数选定的模块会追加到这个列表中
+
+    # 检查--send参数是否与其他参数组合使用（不允许）
+    if [[ "$*" == *"--send"* ]] && [ $# -gt 1 ]; then
+        # 检查是否有--send以外的其他参数
+        local has_other_params=false 	# 标记变量
+        for arg in "$@"; do
+            if [[ "$arg" != "--send" ]] && [[ "$arg" =~ ^-- ]]; then
+                has_other_params=true	# 设置标记变量为true
+                break	# 跳出一层循环(如果找到一个--send以外的参数，则跳出循环)
+            fi
+        done
+        
+		# 检测信号量 has_other_params 的值
+        if [ "$has_other_params" = true ]; then
+            echo -e "${RED}[!] 错误: --send参数不能与其他检查参数组合使用${NC}"
+            echo -e "${YELLOW}[i] --send必须单独使用,格式: ./linuxgun.sh --send <ip> <port> <token> [file]${NC}"
+            echo -e "${YELLOW}[i] 推荐用法: 先执行检查，再发送结果${NC}"
+            echo -e "${YELLOW}[i] 示例1: ./linuxgun.sh --all${NC}"
+            echo -e "${YELLOW}[i] 示例2: ./linuxgun.sh --send 192.168.1.100 8080 your_token${NC}"
+            echo ""
+            usage
+            exit 1
+        fi
+    fi
+
+    # 检查是否是发送文件命令 【单独检测第一个参数是否是 --send】
+    if [ "$1" = "--send" ]; then
+        if [ $# -lt 4 ]; then	# 后续参数是否小于 4 个
+            echo -e "${RED}[!] --send 参数不足,需要指定服务器IP、端口和认证token${NC}"
+            echo -e "${YELLOW}[i] 使用方法: --send <server_ip> <server_port> <token> [file_path]${NC}"
+            echo -e "${YELLOW}[i] 示例: --send 192.168.1.100 8080 your_secret_token${NC}"
+            exit 1
+        fi
+        server_ip="$2"
+        server_port="$3"
+        token="$4"
+        file_path="$5"  # 可能为空【为空就默认检测生成的打包文件并发送】
+        sendFileRemote "$server_ip" "$server_port" "$token" "$file_path"
+        exit $?		# $? 表示返回上一条命令的退出状态码 sendFileRemote 函数返回值 1 表示失败，0 表示成功
+    fi
 
     # 解析所有参数
     for arg in "$@"; do
@@ -3851,7 +3988,7 @@ main() {
 				;;	
 			--attack-filescan)
 				modules+=("attack-filescan")
-				;;	
+				;;
             --all)
                 run_all=true
                 ;;
@@ -3863,7 +4000,7 @@ main() {
         esac
     done
 
-    # 如果指定了 --all,则运行所有模块
+    # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用，且不包括--send】
     if [ "$run_all" = true ]; then
         echo -e "${YELLOW}[+] linuGun 开始执行所有检查项:${NC}"
 		systemCheck  		| log2file "${check_file}/checkresult.txt"
@@ -3887,7 +4024,7 @@ main() {
         echo -e "${GREEN}[+] linuGun v6.0 所有检查项已完成${NC}"
 		echo -e "${GREEN} Author:sun977${NC}"  
 		echo -e "${GREEN} Mail:jiuwei977@foxmail.com${NC}"  
-		echo -e "${GREEN} Date:2025.07.03${NC}"  
+		echo -e "${GREEN} Date:2025.07.15${NC}"  
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
@@ -3996,14 +4133,14 @@ main() {
 
 # 显示使用帮助
 usage() {
-    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0.2 -- 2025.07.02 ${NC}"
+    echo -e "${GREEN}LinuxGun 安全检查工具 v6.0.5 -- 2025.07.15 ${NC}"
     echo -e "${GREEN}使用方法: bash $0 [选项]${NC}"
     echo -e "${GREEN}可用选项:${NC}"
     echo -e "${YELLOW}    -h, --help             ${GREEN}显示此帮助信息${NC}"
 	echo -e "${YELLOW}    --show             	 ${GREEN}详细显示linuxGun检测大纲${NC}"
 
 	echo -e "${GREEN}  全量检查:${NC}"
-    echo -e "${YELLOW}    --all                   ${GREEN}执行所有检查项(推荐首次运行)${NC}"
+    echo -e "${YELLOW}    --all                   ${GREEN}执行所有检查项并打包检查结果(推荐首次运行)${NC}"
 
     echo -e "${GREEN}  系统相关检查:${NC}"
     echo -e "${YELLOW}    --system                ${GREEN}执行所有系统相关检查(baseinfo/user/crontab/history)${NC}"
@@ -4053,6 +4190,16 @@ usage() {
 
 	echo -e "${GREEN}  攻击角度信息收集[可选|默认不与--all执行]:${NC}"
     echo -e "${YELLOW}    --attack-filescan       ${GREEN}攻击角度信息收集(默认收集当前系统所有敏感文件信息)${NC}"
+
+	echo -e "${GREEN}  文件传输功能:${NC}"
+    echo -e "${YELLOW}    --send <ip> <port> <token> [file] ${GREEN}发送检查结果到远程服务器${NC}"
+    echo -e "${YELLOW}                                  ${GREEN}需要提供认证token以增强安全性${NC}"
+    echo -e "${YELLOW}                                  ${GREEN}如果不指定文件路径,会自动查找生成的tar.gz文件${NC}"
+    echo -e "${RED}                                  ${GREEN}注意: --send必须作为唯一参数使用${NC}"
+    echo -e "${RED}                                  ${GREEN}注意: --send不能与其他检查参数组合使用${NC}"
+    echo -e "${YELLOW}                                  ${GREEN}示例: --send 192.168.1.100 8080 your_secret_token${NC}"
+    echo -e "${YELLOW}                                  ${GREEN}示例: --send 192.168.1.100 8080 your_secret_token /path/to/file.tar.gz${NC}"
+    echo -e "${YELLOW}                                  ${GREEN}推荐用法: 先执行 --all 检查,再使用 --send 发送结果${NC}"
 }
 
 # 主函数执行
