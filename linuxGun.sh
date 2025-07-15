@@ -28,10 +28,9 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #    - handle_error "操作失败" "详细错误描述" "建议解决方案"
 #    - log_message "INFO" "操作成功完成"
 #    - log_operation "模块名" "操作描述" "开始|完成"
-#    - log_performance "函数名" "操作描述" $start_time
+#    - log_performance "函数名" $start_time $end_time
 # ================================
 
-# 更新功能,所有系统通用【等待更新】
 # 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
 # 根据参数执行不同的功能 
 # [INFO] 提示输出 -- 提示     [+]
@@ -41,6 +40,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # [ERRO] 错误输出
 # [i] -- [INFO] 
 # 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
+# --- 20250716 待办: 需要把所有的功能函数使用新的日志和错误处理函数优化一遍
 
 # 大纲输出函数
 print_summary() {
