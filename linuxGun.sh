@@ -2,9 +2,34 @@
 HELL=/bin/bash 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-# Version: 6.0.2
+# Version: 6.0.5
 # Author: Sun977
-# Update: 2025-07-02
+# Update: 2025-07-15
+
+# ========== 新增功能说明 ==========
+# 1. 统一错误处理系统:
+#    - handle_error() 函数提供统一的错误处理和日志记录
+#    - 自动记录错误信息到日志文件和终端
+#    - 支持错误级别和上下文信息
+#
+# 2. 分级日志系统:
+#    - DEBUG: 调试信息 (仅在DEBUG模式下显示)
+#    - INFO:  一般信息 (正常操作记录)
+#    - WARN:  警告信息 (需要注意的情况)
+#    - ERROR: 错误信息 (严重问题)
+#
+# 3. 详细操作日志:
+#    - log_operation() 记录操作的开始和完成
+#    - log_performance() 记录性能统计信息
+#    - 所有日志包含时间戳和上下文信息
+#    - 日志同时输出到终端和文件 (${check_file}/operation.log)
+#
+# 4. 使用示例:
+#    - handle_error "操作失败" "详细错误描述" "建议解决方案"
+#    - log_message "INFO" "操作成功完成"
+#    - log_operation "模块名" "操作描述" "开始|完成"
+#    - log_performance "函数名" "操作描述" $start_time
+# ================================
 
 # 更新功能,所有系统通用【等待更新】
 # 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
@@ -252,46 +277,201 @@ typeset YELLOW='\033[0;33m'
 typeset GREEN='\033[0;32m'
 typeset NC='\033[0m'
 
+# 日志级别定义
+typeset LOG_DEBUG=0
+typeset LOG_INFO=1
+typeset LOG_WARN=2
+typeset LOG_ERROR=3
+
+# 当前日志级别（默认为INFO）
+LOG_LEVEL=${LOG_LEVEL:-$LOG_INFO}
+
+# 统一错误处理函数
+handle_error() {
+    local error_code=$1
+    local error_msg="$2"
+    local context="$3"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # 记录错误日志
+    log_message "ERROR" "[$context] $error_msg (错误代码: $error_code)" "$timestamp"
+    
+    # 根据错误代码决定是否退出
+    case $error_code in
+        1) # 一般错误，继续执行
+            return 1
+            ;;
+        2) # 严重错误，退出脚本
+            echo -e "${RED}[FATAL] 严重错误: $error_msg${NC}"
+            exit $error_code
+            ;;
+        *) # 其他错误
+            echo -e "${RED}[ERROR] $error_msg${NC}"
+            return $error_code
+            ;;
+    esac
+}
+
+# 分级日志系统
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp="$3"
+    
+    # 如果没有提供时间戳，生成一个
+    if [ -z "$timestamp" ]; then
+        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    fi
+    
+    # 确定日志级别数值
+    local level_num
+    case "$level" in
+        "DEBUG") level_num=$LOG_DEBUG ;;
+        "INFO")  level_num=$LOG_INFO ;;
+        "WARN")  level_num=$LOG_WARN ;;
+        "ERROR") level_num=$LOG_ERROR ;;
+        *) level_num=$LOG_INFO ;;
+    esac
+    
+    # 只有当消息级别大于等于当前日志级别时才输出
+    if [ $level_num -ge $LOG_LEVEL ]; then
+        # 根据级别选择颜色
+        local color
+        case "$level" in
+            "DEBUG") color="$NC" ;;      # 无颜色
+            "INFO")  color="$BLUE" ;;    # 蓝色
+            "WARN")  color="$YELLOW" ;;  # 黄色
+            "ERROR") color="$RED" ;;     # 红色
+        esac
+        
+        # 输出到终端
+        echo -e "${color}[$timestamp] [$level] $message${NC}"
+        
+        # 如果日志文件路径已定义，同时写入日志文件
+        if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
+            echo "[$timestamp] [$level] $message" >> "$log_file/system.log"
+        fi
+    fi
+}
+
+# 操作日志记录函数
+log_operation() {
+    local operation="$1"
+    local details="$2"
+    local result="$3"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    local log_entry="[$timestamp] [OPERATION] $operation"
+    if [ -n "$details" ]; then
+        log_entry="$log_entry - 详情: $details"
+    fi
+    if [ -n "$result" ]; then
+        log_entry="$log_entry - 结果: $result"
+    fi
+    
+    log_message "INFO" "$log_entry"
+    
+    # 写入操作日志文件
+    if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
+        echo "$log_entry" >> "$log_file/operations.log"
+    fi
+}
+
+# 性能监控日志函数
+log_performance() {
+    local function_name="$1"
+    local start_time="$2"
+    local end_time="$3"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    if [ -n "$start_time" ] && [ -n "$end_time" ]; then
+        local duration=$((end_time - start_time))
+        log_message "DEBUG" "[$timestamp] [PERFORMANCE] $function_name 执行时间: ${duration}秒"
+        
+        # 写入性能日志文件
+        if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
+            echo "[$timestamp] [PERFORMANCE] $function_name: ${duration}s" >> "$log_file/performance.log"
+        fi
+    fi
+}
+
 # 脚本转换确保可以在Linux下运行
 # dos2unix linuxgun.sh # 将windows格式的脚本转换为Linux格式 不是必须
 
 # 初始化环境
 init_env(){
+	local start_time=$(date +%s)
+	log_operation "环境初始化" "开始初始化LinuxGun运行环境" "开始"
+	
 	# 基础变量定义
 	date=$(date +%Y%m%d)
 	# 取出本机器上第一个非回环地址的IP地址,用于区分导出的文件
-	ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
+	# 优先使用ip命令，如果不存在则使用ifconfig作为备用
+	if command -v ip >/dev/null 2>&1; then
+		ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
+		log_message "DEBUG" "使用ip命令获取IP地址: $ipadd"
+	elif command -v ifconfig >/dev/null 2>&1; then
+		ipadd=$(ifconfig | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#')
+		log_message "DEBUG" "使用ifconfig命令获取IP地址: $ipadd"
+	else
+		# 如果都没有，使用主机名作为标识
+		ipadd=$(hostname | tr '.' '_')
+		log_message "WARN" "未找到ip或ifconfig命令，使用主机名作为标识: $ipadd"
+	fi
+	# 如果ipadd为空，使用默认值
+	if [ -z "$ipadd" ]; then
+		ipadd="unknown_host"
+		log_message "WARN" "无法获取IP地址，使用默认标识: $ipadd"
+	fi
 
 	# 创建输出目录变量,当前目录下的output目录
 	current_dir=$(pwd)  
 	check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
 	log_file="${check_file}/log"
 	k8s_file="${check_file}/k8s"
+	
+	log_message "INFO" "设置输出目录: $check_file"
 
 	# 删除原有的输出目录
-	rm -rf $check_file
-	rm -rf $log_file
-	rm -rf $k8s_file
+	if [ -d "$check_file" ]; then
+		rm -rf $check_file && log_message "INFO" "清理旧的输出目录: $check_file" || handle_error 1 "清理旧输出目录失败" "init_env"
+	fi
+	if [ -d "$log_file" ]; then
+		rm -rf $log_file && log_message "INFO" "清理旧的日志目录: $log_file" || handle_error 1 "清理旧日志目录失败" "init_env"
+	fi
+	if [ -d "$k8s_file" ]; then
+		rm -rf $k8s_file && log_message "INFO" "清理旧的k8s目录: $k8s_file" || handle_error 1 "清理旧k8s目录失败" "init_env"
+	fi
 
 	# 创建新的输出目录 检查目录 日志目录
-	mkdir -p $check_file
-	mkdir -p $log_file
-	mkdir -p $k8s_file  # 20250702 新增 k8s 检查路径
+	mkdir -p $check_file || handle_error 2 "创建检查目录失败: $check_file" "init_env"
+	mkdir -p $log_file || handle_error 2 "创建日志目录失败: $log_file" "init_env"
+	mkdir -p $k8s_file || handle_error 2 "创建k8s目录失败: $k8s_file" "init_env"  # 20250702 新增 k8s 检查路径
+	
+	log_message "INFO" "成功创建输出目录结构"
 
+	# 初始化日志文件
+	echo "LinuxGun v6.0 系统日志" > "$log_file/system.log" || handle_error 1 "初始化系统日志文件失败" "init_env"
+	echo "LinuxGun v6.0 操作日志" > "$log_file/operations.log" || handle_error 1 "初始化操作日志文件失败" "init_env"
+	echo "LinuxGun v6.0 性能日志" > "$log_file/performance.log" || handle_error 1 "初始化性能日志文件失败" "init_env"
+	
 	# 初始化报告文件
-	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt
+	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt || handle_error 2 "初始化检查结果文件失败" "init_env"
 	echo "" >> ${check_file}/checkresult.txt
 	# echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
 	# echo "" >> ${check_file}/dangerlist.txt
 
 	# 判断目录是否存在
 	if [ ! -d "$check_file" ];then
-		echo "检查 ${check_file} 目录不存在,请检查"
-		exit 1
+		handle_error 2 "检查目录不存在: ${check_file}" "init_env"
 	fi
 
 	# 进入到检查目录
-	cd $check_file
+	cd $check_file || handle_error 2 "无法进入检查目录: $check_file" "init_env"
+	
+	local end_time=$(date +%s)
+	log_performance "init_env" "$start_time" "$end_time"
+	log_operation "环境初始化" "LinuxGun运行环境初始化完成" "成功"
 
 }
 
@@ -349,19 +529,38 @@ echoBanner() {
 
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
+    local start_time=$(date +%s)
+    log_operation "系统基础信息采集" "开始采集系统基础环境信息" "开始"
+    
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
-    echo -e "${YELLOW}[1.0] 获取IP地址信息[ip addr]:${NC}"
-    ip=$(ip addr | grep -w inet | awk '{print $2}')
+    echo -e "${YELLOW}[1.0] 获取IP地址信息:${NC}"
+    # 优先使用ip命令，如果不存在则使用ifconfig作为备用
+    if command -v ip >/dev/null 2>&1; then
+        ip=$(ip addr | grep -w inet | awk '{print $2}') || handle_error 1 "执行ip命令失败" "baseInfo"
+        echo -e "${YELLOW}[+] 使用ip命令获取IP地址信息:${NC}"
+        log_message "INFO" "使用ip命令成功获取IP地址信息"
+    elif command -v ifconfig >/dev/null 2>&1; then
+        ip=$(ifconfig | grep -w inet | awk '{print $2}') || handle_error 1 "执行ifconfig命令失败" "baseInfo"
+        echo -e "${YELLOW}[+] 使用ifconfig命令获取IP地址信息:${NC}"
+        log_message "INFO" "使用ifconfig命令成功获取IP地址信息"
+    else
+        ip=""
+        echo -e "${RED}[!] 系统中未找到ip或ifconfig命令${NC}"
+        log_message "ERROR" "系统中未找到ip或ifconfig命令"
+    fi
+    
     if [ -n "$ip" ]; then
         echo -e "${YELLOW}[+] 本机IP地址信息:${NC}" && echo "$ip"
+        log_message "INFO" "成功获取IP地址信息: $(echo "$ip" | wc -l)个地址"
     else
-        echo -e "${RED}[!] 本机未配置IP地址${NC}"
+        echo -e "${RED}[!] 本机未配置IP地址或无法获取IP信息${NC}"
+        log_message "WARN" "无法获取IP地址信息"
     fi
     printf "\n"
 
     echo -e "${YELLOW}[1.1] 系统版本信息[uname -a]:${NC}"
-    unameInfo=$(uname -a)
+    unameInfo=$(uname -a) || handle_error 1 "执行uname命令失败" "baseInfo"
     if [ -n "$unameInfo" ]; then
         osName=$(echo "$unameInfo" | awk '{print $1}')      # 内核名称
         hostName=$(echo "$unameInfo" | awk '{print $2}')    # 主机名
@@ -371,8 +570,10 @@ baseInfo(){
         echo -e "${YELLOW}[+] 主机名: $hostName${NC}"
         echo -e "${YELLOW}[+] 内核版本: $kernelVersion${NC}"
         echo -e "${YELLOW}[+] 系统架构: $arch${NC}"
+        log_message "INFO" "系统版本信息: $osName $kernelVersion $arch"
     else
         echo -e "${RED}[!] 无法获取系统版本信息${NC}"
+        log_message "ERROR" "无法获取系统版本信息"
     fi
     printf "\n"
 
@@ -428,14 +629,23 @@ baseInfo(){
 
     if [ -n "$virtWhat" ]; then
         echo -e "${YELLOW}[+] 虚拟化环境: VirtualBox${NC}"
+        log_message "INFO" "检测到VirtualBox虚拟化环境"
     elif [ -n "$containerCheck" ]; then
         echo -e "${YELLOW}[+] 运行在容器[container|lxc|docker]环境中${NC}"
+        log_message "INFO" "检测到容器环境: $containerCheck"
 	elif [ -n "$k8swhat" ]; then
         echo -e "${YELLOW}[+] 运行在 Kubernetes 集群中${NC}"
+        log_message "INFO" "检测到Kubernetes集群环境: $k8swhat"
     else
         echo -e "${YELLOW}[+] 运行在物理机或未知虚拟化平台${NC}"
+        log_message "INFO" "运行在物理机或未知虚拟化平台"
     fi
     printf "\n"
+    
+    # 记录性能和操作日志
+    local end_time=$(date +%s)
+    log_performance "baseInfo" "$start_time" "$end_time"
+    log_operation "系统基础信息采集" "系统基础环境信息采集完成" "成功"
 }
 
 # 网络信息【完成】
@@ -3727,29 +3937,38 @@ sendFileRemote() {
 	# 参数说明: sendFileRemote [server_ip] [server_port] [token] [file_path]
 	# 上传方式 curl -k -X POST http://[ip]:[port]/upload -H "Authorization: Bearer [token]" -F "file=@example.txt"
 	
+	local start_time=$(date +%s)
 	local server_ip="$1"
 	local server_port="$2"
 	local token="$3"
-	local file_path="$4"
+	local file_path="$4"	
+	
+	log_operation "文件远程发送" "开始发送检查文件到远程服务器" "开始"
+	log_message "INFO" "发送参数: 服务器=${server_ip}:${server_port}, 文件=${file_path:-自动检测}"
 	
 	# 检查必需参数
 	if [ -z "$server_ip" ] || [ -z "$server_port" ] || [ -z "$token" ]; then
 		echo -e "${RED}[!] 错误: 必须指定服务器IP、端口和认证token${NC}"
 		echo -e "${YELLOW}[i] 使用方法: sendFileRemote <server_ip> <server_port> <token> [file_path]${NC}"
 		echo -e "${YELLOW}[i] 示例: sendFileRemote 192.168.1.100 8080 your_token${NC}"
+		handle_error 1 "缺少必需参数: server_ip, server_port, token" "sendFileRemote"
 		return 1
 	fi
 	
 	# 验证token格式（基本检查：长度至少8位，包含字母数字）
 	if [ ${#token} -lt 8 ]; then
 		echo -e "${RED}[!] 错误: token长度至少需要8位字符${NC}"
+		handle_error 1 "token长度不足: ${#token}位，需要至少8位" "sendFileRemote"
 		return 1
 	fi
 	
 	if ! echo "$token" | grep -q '^[a-zA-Z0-9_-]\+$'; then
 		echo -e "${RED}[!] 错误: token只能包含字母、数字、下划线和连字符${NC}"
+		handle_error 1 "token格式无效: 包含非法字符" "sendFileRemote"
 		return 1
 	fi
+	
+	log_message "DEBUG" "token验证通过: 长度=${#token}位"
 	
 	# 如果没有指定文件路径，自动查找生成的tar.gz文件
 	if [ -z "$file_path" ]; then
@@ -3767,6 +3986,34 @@ sendFileRemote() {
 			return 1
 		fi
 	else
+		# 将相对路径转换为绝对路径
+		if [[ "$file_path" != /* ]]; then
+			# 如果不是绝对路径（不以/开头），则转换为绝对路径
+			local original_path="$file_path"
+			local converted_path=""
+			
+			if command -v realpath >/dev/null 2>&1; then
+				# 优先使用realpath命令
+				converted_path=$(realpath "$file_path" 2>/dev/null)
+			fi
+			
+			# 如果realpath失败或不存在，尝试readlink
+			if [ -z "$converted_path" ] && command -v readlink >/dev/null 2>&1; then
+				# 备用readlink命令
+				converted_path=$(readlink -f "$file_path" 2>/dev/null)
+			fi
+			
+			# 如果以上方法都失败，手动构造绝对路径
+			if [ -z "$converted_path" ]; then
+				# 手动构造绝对路径，使用脚本启动时的目录而不是当前工作目录
+				converted_path="${current_dir}/$file_path"
+			fi
+			
+			# 更新file_path
+			file_path="$converted_path"
+			echo -e "${YELLOW}[i] 相对路径已转换为绝对路径: $original_path -> $file_path${NC}"
+		fi
+		
 		# 检查指定的文件是否存在
 		if [ ! -f "$file_path" ]; then
 			echo -e "${RED}[!] 错误: 指定的文件不存在: $file_path${NC}"
@@ -3801,6 +4048,8 @@ sendFileRemote() {
 		echo -e "${GREEN}[+] 服务器响应: $curl_result${NC}"
 		# 记录上传日志
 		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传成功: $file_path -> $server_ip:$server_port" >> "${check_file}/upload.log" 2>/dev/null
+		log_message "INFO" "文件上传成功: $file_path -> $server_ip:$server_port"
+		log_operation "文件远程发送" "文件上传到远程服务器成功" "成功"
 	else
 		echo -e "${RED}[!] 文件上传失败! (退出码: $curl_exit_code)${NC}"
 		echo -e "${RED}[!] 错误信息: $curl_result${NC}"
@@ -3813,14 +4062,26 @@ sendFileRemote() {
 		echo -e "${YELLOW}    6. 网络连接是否正常${NC}"
 		# 记录失败日志 【日志路径: output/linuxcheck_xxx_2025xxxx/upload.log】
 		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传失败: $file_path -> $server_ip:$server_port (错误码: $curl_exit_code)" >> "${check_file}/upload.log" 2>/dev/null
+		handle_error 1 "文件上传失败: 退出码=$curl_exit_code, 错误=$curl_result" "sendFileRemote"
+		log_operation "文件远程发送" "文件上传到远程服务器失败" "失败"
 		return 1
 	fi
+	
+	# 记录性能日志
+	local end_time=$(date +%s)
+	log_performance "sendFileRemote" "$start_time" "$end_time"
 }
 
 
 
 #### 主函数入口 ####
 main() {
+	local main_start_time=$(date +%s)
+	local script_version="6.0"
+	
+	# 记录脚本启动
+	echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] LinuxGun v${script_version} 启动${NC}"
+	
 	# 将标准输入的内容同时输出到终端和文件
 	log2file() {
 		local log_file_path="$1"
@@ -3833,6 +4094,11 @@ main() {
 	init_env
 	# 确保 root 权限执行
 	ensure_root
+	
+	# 记录主函数启动日志
+	log_operation "脚本启动" "LinuxGun v${script_version} 主函数启动" "开始"
+	log_message "INFO" "脚本参数: $*"
+	log_message "INFO" "当前用户: $(whoami), UID: $(id -u)"
 
     # 检查是否提供了参数
     if [ $# -eq 0 ]; then
@@ -4024,7 +4290,11 @@ main() {
         echo -e "${GREEN}[+] linuGun v6.0 所有检查项已完成${NC}"
 		echo -e "${GREEN} Author:sun977${NC}"  
 		echo -e "${GREEN} Mail:jiuwei977@foxmail.com${NC}"  
-		echo -e "${GREEN} Date:2025.07.15${NC}"  
+		echo -e "${GREEN} Date:2025.07.15${NC}"
+		
+		# 记录全量检查完成日志
+		log_operation "全量检查" "LinuxGun v${script_version} 全量检查完成" "完成"
+		log_performance "main" "全量检查" $main_start_time  
     elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
         for module in "${modules[@]}"; do
 			# 模块和执行函数绑定
@@ -4124,11 +4394,23 @@ main() {
 					;;
             esac
         done
+        
+        # 记录模块检查完成日志
+        log_operation "模块检查" "指定模块检查完成: ${modules[*]}" "完成"
+        log_performance "main" "模块检查" $main_start_time
     else
         echo -e "${RED}[!] 未指定任何有效的检查模块${NC}"
+        log_message "ERROR" "未指定任何有效的检查模块"
         usage
         exit 1
     fi
+    
+    # 记录脚本执行完成
+    local main_end_time=$(date +%s)
+    local total_duration=$((main_end_time - main_start_time))
+    echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] LinuxGun v${script_version} 执行完成，总耗时: ${total_duration}秒${NC}"
+    log_operation "脚本执行" "LinuxGun v${script_version} 脚本执行完成" "完成"
+    log_message "INFO" "脚本总执行时间: ${total_duration}秒"
 }
 
 # 显示使用帮助
