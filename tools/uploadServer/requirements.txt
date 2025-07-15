@@ -1,0 +1,28 @@
+# uploadServer.py 依赖包文件
+# File Upload Server Dependencies
+# 
+# 本项目仅使用Python标准库，无需安装额外的第三方依赖包
+# This project only uses Python standard library modules, no additional third-party packages required
+#
+# 使用的标准库模块 / Standard library modules used:
+# - os: 操作系统接口 / Operating system interface
+# - sys: 系统特定参数和函数 / System-specific parameters and functions  
+# - time: 时间相关函数 / Time-related functions
+# - json: JSON编码和解码 / JSON encoder and decoder
+# - signal: 信号处理 / Signal handling
+# - argparse: 命令行参数解析 / Command-line argument parsing
+# - http.server: HTTP服务器 / HTTP server
+# - urllib.parse: URL解析 / URL parsing
+# - cgi: 通用网关接口 / Common Gateway Interface
+# - tempfile: 临时文件和目录 / Temporary files and directories
+# - shutil: 高级文件操作 / High-level file operations
+# - datetime: 日期和时间处理 / Date and time handling
+#
+# Python版本要求 / Python version requirement:
+# Python >= 3.6
+#
+# 安装说明 / Installation instructions:
+# 无需运行 pip install -r requirements.txt
+# No need to run pip install -r requirements.txt
+# 直接运行脚本即可 / Just run the script directly:
+# python3 uploadServer.py <ip> <port> <token>

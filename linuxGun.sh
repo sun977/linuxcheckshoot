@@ -3736,7 +3736,7 @@ sendFileRemote() {
 	if [ -z "$server_ip" ] || [ -z "$server_port" ] || [ -z "$token" ]; then
 		echo -e "${RED}[!] 错误: 必须指定服务器IP、端口和认证token${NC}"
 		echo -e "${YELLOW}[i] 使用方法: sendFileRemote <server_ip> <server_port> <token> [file_path]${NC}"
-		echo -e "${YELLOW}[i] 示例: sendFileRemote 192.168.1.100 8080 your_secret_token${NC}"
+		echo -e "${YELLOW}[i] 示例: sendFileRemote 192.168.1.100 8080 your_token${NC}"
 		return 1
 	fi
 	
@@ -3763,7 +3763,7 @@ sendFileRemote() {
 			echo -e "${GREEN}[+] 找到检查文件: $file_path${NC}"
 		else
 			echo -e "${RED}[!] 错误: 未找到自动生成的检查文件 $expected_file${NC}"
-			echo -e "${YELLOW}[i] 请先运行完整检查或手动指定文件路径${NC}"
+			echo -e "${YELLOW}[i] 请先运行 --all 完整检查或手动指定文件路径${NC}"
 			return 1
 		fi
 	else
@@ -3777,13 +3777,13 @@ sendFileRemote() {
 	# 获取文件大小用于显示
 	local file_size=$(du -h "$file_path" | cut -f1)
 	
-	echo -e "${YELLOW}[+] 正在发送检查文件到服务器 $server_ip:$server_port${NC}"
+	echo -e "${YELLOW}[+] 正在发送检查文件到服务器 http://${server_ip}:${server_port}/upload${NC}"
 	echo -e "${YELLOW}[+] 文件路径: $file_path${NC}"
 	echo -e "${YELLOW}[+] 文件大小: $file_size${NC}"
 	echo -e "${YELLOW}[+] 使用认证token: ${token:0:4}****${NC}"  # 只显示前4位，保护token隐私
 	
 	# 构造上传URL
-	local upload_url="http://${server_ip}:${server_port}/upload"
+	local upload_url="http://${server_ip}:${server_port}/upload"  # 路径需要和服务器端(tools/uploadServer/uploadServer.py)一致
 	
 	# 使用curl上传文件，包含Authorization头部
 	echo -e "${YELLOW}[+] 开始上传文件...${NC}"
@@ -3805,13 +3805,13 @@ sendFileRemote() {
 		echo -e "${RED}[!] 文件上传失败! (退出码: $curl_exit_code)${NC}"
 		echo -e "${RED}[!] 错误信息: $curl_result${NC}"
 		echo -e "${YELLOW}[i] 请检查:${NC}"
-		echo -e "${YELLOW}    1. 服务器地址和端口是否正确${NC}"
-		echo -e "${YELLOW}    2. 服务器是否正在运行并监听指定端口${NC}"
-		echo -e "${YELLOW}    3. 网络连接是否正常${NC}"
-		echo -e "${YELLOW}    4. 服务器是否支持/upload接口${NC}"
+		echo -e "${YELLOW}    1. 此服务需要提前开启远端文件接收服务,请确认远端文件接收服务已运行${NC}"
+		echo -e "${YELLOW}    2. 文件接收服务器工具位置: tools/uploadServer/uploadServer.py ${NC}"
+		echo -e "${YELLOW}    3. 文件接收服务器运行方式: python3 uploadServer.py <IP> <PORT> <Token>)${NC}"
+		echo -e "${YELLOW}    4. 文件接收服务器是否正在运行并监听指定端口${NC}"
 		echo -e "${YELLOW}    5. 认证token是否正确${NC}"
-		echo -e "${YELLOW}    6. 服务器是否支持Bearer token认证${NC}"
-		# 记录失败日志
+		echo -e "${YELLOW}    6. 网络连接是否正常${NC}"
+		# 记录失败日志 【日志路径: output/linuxcheck_xxx_2025xxxx/upload.log】
 		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传失败: $file_path -> $server_ip:$server_port (错误码: $curl_exit_code)" >> "${check_file}/upload.log" 2>/dev/null
 		return 1
 	fi

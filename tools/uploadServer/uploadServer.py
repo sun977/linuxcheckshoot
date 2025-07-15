@@ -25,7 +25,7 @@ from datetime import datetime
 
 # 默认配置
 DEFAULT_UPLOAD_DIR = "./uploads"
-DEFAULT_MAX_SIZE = "100M"
+DEFAULT_MAX_SIZE = "1024M"
 DEFAULT_LOG_FILE = "./uploadServer.log"
 
 # 全局变量
@@ -96,28 +96,53 @@ class UploadHandler(BaseHTTPRequestHandler):
         """重写日志方法，避免默认日志输出"""
         pass
     
+    # 给前端返回json错误信息
+    def send_json_error(self, status_code, error_code, message, details=None):
+        """发送JSON格式的错误响应"""
+        error_response = {
+            'status': 'error',
+            'error_code': error_code,
+            'message': message,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        if details:
+            error_response['details'] = details
+        
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps(error_response, ensure_ascii=False).encode('utf-8'))
+    
     def do_POST(self):
         """处理POST请求 - 文件上传"""
         client_ip = self.client_address[0]
+        
+        # 检查请求路径 # 对 linuxGun.sendFileRemote() 函数兼容【http://${server_ip}:${server_port}/upload】
+        if self.path != '/upload':
+            self.send_json_error(404, 'INVALID_ENDPOINT', 'Upload endpoint is /upload', {'requested_path': self.path})
+            log_message('WARN', f'无效上传路径访问 - IP: {client_ip}, Path: {self.path}')
+            return
         
         try:
             # 检查Authorization头
             auth_header = self.headers.get('Authorization')
             if not auth_header or not auth_header.startswith('Bearer '):
-                self.send_error(401, 'Unauthorized: Missing or invalid token')
+                self.send_json_error(401, 'MISSING_TOKEN', 'Missing or invalid Authorization header', {'expected_format': 'Bearer <token>'})
                 log_message('WARN', f'未授权访问尝试 - IP: {client_ip}')
                 return
             
             provided_token = auth_header[7:]  # 移除'Bearer '前缀
             if provided_token != TOKEN:
-                self.send_error(401, 'Unauthorized: Invalid token')
+                self.send_json_error(401, 'INVALID_TOKEN', 'Invalid authentication token')
                 log_message('WARN', f'无效token访问尝试 - IP: {client_ip}, Token: {provided_token[:8]}***')
                 return
             
             # 检查Content-Type
             content_type = self.headers.get('Content-Type')
             if not content_type or not content_type.startswith('multipart/form-data'):
-                self.send_error(400, 'Bad Request: Expected multipart/form-data')
+                self.send_json_error(400, 'INVALID_CONTENT_TYPE', 'Expected multipart/form-data', {'received_type': content_type, 'expected_type': 'multipart/form-data'})
                 log_message('WARN', f'无效Content-Type - IP: {client_ip}, Type: {content_type}')
                 return
             
@@ -125,7 +150,11 @@ class UploadHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get('Content-Length', 0))
             max_bytes = parse_size(MAX_SIZE)
             if content_length > max_bytes:
-                self.send_error(413, f'File too large: Maximum size is {MAX_SIZE}')
+                self.send_json_error(413, 'FILE_TOO_LARGE', 'File size exceeds maximum limit', {
+                    'file_size': format_size(content_length),
+                    'max_size': MAX_SIZE,
+                    'max_bytes': max_bytes
+                })
                 log_message('WARN', f'文件过大被拒绝 - IP: {client_ip}, Size: {format_size(content_length)}')
                 return
             
@@ -137,13 +166,13 @@ class UploadHandler(BaseHTTPRequestHandler):
             )
             
             if 'file' not in form:
-                self.send_error(400, 'Bad Request: No file field found')
+                self.send_json_error(400, 'NO_FILE_FIELD', 'No file field found in form data', {'expected_field': 'file'})
                 log_message('WARN', f'未找到文件字段 - IP: {client_ip}')
                 return
             
             file_item = form['file']
             if not file_item.filename:
-                self.send_error(400, 'Bad Request: No file selected')
+                self.send_json_error(400, 'NO_FILE_SELECTED', 'No file selected for upload')
                 log_message('WARN', f'未选择文件 - IP: {client_ip}')
                 return
             
@@ -185,8 +214,7 @@ class UploadHandler(BaseHTTPRequestHandler):
             log_message('INFO', f'文件上传成功 - IP: {client_ip}, 原文件名: {original_filename}, 保存为: {safe_filename}, 大小: {format_size(file_size)}')
             
         except Exception as e:
-            error_msg = f'Internal Server Error: {str(e)}'
-            self.send_error(500, error_msg)
+            self.send_json_error(500, 'INTERNAL_ERROR', 'Internal server error occurred', {'error_details': str(e)})
             log_message('ERROR', f'文件上传失败 - IP: {client_ip}, 错误: {str(e)}')
     
     def do_GET(self):
@@ -244,11 +272,14 @@ class UploadHandler(BaseHTTPRequestHandler):
                 log_message('DEBUG', f'状态查询请求 - IP: {client_ip}')
                 
             except Exception as e:
-                self.send_error(500, f'Status query failed: {str(e)}')
+                self.send_json_error(500, 'STATUS_QUERY_ERROR', 'Status query failed', {'error_details': str(e)})
                 log_message('ERROR', f'状态查询失败 - IP: {client_ip}, 错误: {str(e)}')
         else:
             # 其他路径返回404
-            self.send_error(404, 'Not Found')
+            self.send_json_error(404, 'NOT_FOUND', 'Requested path not found', {
+                'requested_path': self.path,
+                'available_endpoints': ['/health', '/status', '/upload']
+            })
             log_message('DEBUG', f'无效路径访问 - IP: {client_ip}, Path: {self.path}')
     
     def do_OPTIONS(self):
@@ -376,6 +407,10 @@ def main():
         # 创建HTTP服务器
         server_address = (ip, int(port))
         httpd = HTTPServer(server_address, UploadHandler)
+        
+        # 设置服务器超时配置
+        httpd.timeout = 60  # 设置服务器超时时间为60秒
+        httpd.socket.settimeout(60)  # 设置socket超时时间
         
         # 显示启动信息
         show_server_info(ip, port, token)
