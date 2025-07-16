@@ -412,7 +412,8 @@ log_performance() {
 # 初始化环境
 init_env(){
 	local start_time=$(date +%s)	# 获取当前时间戳,用于计算函数耗时
-	log_operation "MOUDLE-INIT_ENV()" "开始初始化LinuxGun运行环境" "BEGIN"
+	# 统一函数模块调用的时候添加运行日志输出函数
+	log_operation "MOUDLE:INIT_ENV" "开始初始化LinuxGun运行环境" "BEGIN"
 	
 	# 基础变量定义
 	date=$(date +%Y%m%d)
@@ -442,48 +443,48 @@ init_env(){
 	log_file="${check_file}/log"
 	k8s_file="${check_file}/k8s"
 	
-	log_message "INFO" "设置输出目录: $check_file"
+	log_message "INFO" "OUTPUT DIR: $check_file"
 
 	# 删除原有的输出目录
 	if [ -d "$check_file" ]; then
-		rm -rf $check_file && log_message "INFO" "清理旧的输出目录: $check_file" || handle_error 1 "清理旧输出目录失败" "init_env"
+		rm -rf $check_file && log_message "INFO" "清理旧的输出目录: $check_file" || handle_error 1 "清理旧输出目录失败" "INIT_ENV"
 	fi
 	if [ -d "$log_file" ]; then
-		rm -rf $log_file && log_message "INFO" "清理旧的日志目录: $log_file" || handle_error 1 "清理旧日志目录失败" "init_env"
+		rm -rf $log_file && log_message "INFO" "清理旧的日志目录: $log_file" || handle_error 1 "清理旧日志目录失败" "INIT_ENV"
 	fi
 	if [ -d "$k8s_file" ]; then
-		rm -rf $k8s_file && log_message "INFO" "清理旧的k8s目录: $k8s_file" || handle_error 1 "清理旧k8s目录失败" "init_env"
+		rm -rf $k8s_file && log_message "INFO" "清理旧的k8s目录: $k8s_file" || handle_error 1 "清理旧k8s目录失败" "INIT_ENV"
 	fi
 
 	# 创建新的输出目录 检查目录 日志目录
-	mkdir -p $check_file || handle_error 2 "创建检查目录失败: $check_file" "init_env"
-	mkdir -p $log_file || handle_error 2 "创建日志目录失败: $log_file" "init_env"
-	mkdir -p $k8s_file || handle_error 2 "创建k8s目录失败: $k8s_file" "init_env"  # 20250702 新增 k8s 检查路径
+	mkdir -p $check_file || handle_error 2 "创建检查目录失败: $check_file" "INIT_ENV"
+	mkdir -p $log_file || handle_error 2 "创建日志目录失败: $log_file" "INIT_ENV"
+	mkdir -p $k8s_file || handle_error 2 "创建k8s目录失败: $k8s_file" "INIT_ENV"  # 20250702 新增 k8s 检查路径
 	
-	log_message "INFO" "成功创建输出目录结构"
+	log_message "INFO" "CREATE DIR SUCCESS"
 
 	# 初始化日志文件
-	echo "LinuxGun v6.0 系统日志" > "$log_file/system.log" || handle_error 1 "初始化系统日志文件失败" "init_env"
-	echo "LinuxGun v6.0 操作日志" > "$log_file/operations.log" || handle_error 1 "初始化操作日志文件失败" "init_env"
-	echo "LinuxGun v6.0 性能日志" > "$log_file/performance.log" || handle_error 1 "初始化性能日志文件失败" "init_env"
+	echo "LinuxGun v6.0 系统日志" > "$log_file/message.log" || handle_error 1 "初始化系统日志文件失败" "INIT_ENV"
+	echo "LinuxGun v6.0 操作日志" > "$log_file/operations.log" || handle_error 1 "初始化操作日志文件失败" "INIT_ENV"
+	echo "LinuxGun v6.0 性能日志" > "$log_file/performance.log" || handle_error 1 "初始化性能日志文件失败" "INIT_ENV"
 	
 	# 初始化报告文件
-	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt || handle_error 2 "初始化检查结果文件失败" "init_env"
+	echo "LinuxGun v6.0 检查项日志输出" > ${check_file}/checkresult.txt || handle_error 2 "初始化检查结果文件失败" "INIT_ENV"
 	echo "" >> ${check_file}/checkresult.txt
 	# echo "检查发现危险项,请注意:" > ${check_file}/dangerlist.txt
 	# echo "" >> ${check_file}/dangerlist.txt
 
 	# 判断目录是否存在
 	if [ ! -d "$check_file" ];then
-		handle_error 2 "检查目录不存在: ${check_file}" "init_env"
+		handle_error 2 "检查目录不存在: ${check_file}" "INIT_ENV"
 	fi
 
 	# 进入到检查目录
-	cd $check_file || handle_error 2 "无法进入检查目录: $check_file" "init_env"
+	cd $check_file || handle_error 2 "无法进入检查目录: $check_file" "INIT_ENV"
 	
 	local end_time=$(date +%s)
-	log_performance "init_env" "$start_time" "$end_time"
-	log_operation "环境初始化" "LinuxGun运行环境初始化完成" "成功"
+	log_performance "INIT_ENV" "$start_time" "$end_time"
+	log_operation "MOUDLE:INIT_ENV" "初始化LinuxGun运行环境" "SUCCESS"
 
 }
 
