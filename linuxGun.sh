@@ -41,6 +41,8 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # [i] -- [INFO] 
 # 颜色：检测标题,提示:黄色 通过:绿色(DEBUG)  不通过:红色 调用和说明:蓝色  系统命令输出:白色
 # --- 20250716 待办: 需要把所有的功能函数使用新的日志和错误处理函数优化一遍
+# 执行新函数的时候使用 log_options 函数,除了 main 函数
+# 日常输出使用 log_message 函数
 
 # 大纲输出函数
 print_summary() {
@@ -4200,6 +4202,7 @@ main() {
 	
 	# 记录主函数启动日志
 	log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "BEGIN"
+	log_message "INFO" "LinuxGun v${script_version} CHECKING"
 	log_message "INFO" "OPTIONS: $*"
 	log_message "INFO" "USER: $(whoami), UID: $(id -u)"
 
