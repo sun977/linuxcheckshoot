@@ -491,15 +491,11 @@ init_env(){
 # 确保当前用户是root用户
 ensure_root() {
     if [ "$(id -u)" -ne 0 ]; then
-        echo -e "${RED}[WARN] 请以 root 权限运行此脚本${NC}"
+        # echo -e "${RED}[WARN] 请以 root 权限运行此脚本${NC}"
+		log_message "WORN" "请以 root 权限运行此脚本"
         exit 1
     fi
 }
-
-# 在 check_file 下追加模式打开文件,将输出结果展示在终端且同时保存到对应文件中 
-# cd $check_file  
-# saveCheckResult="tee -a checkresult.txt" 
-# saveDangerResult="tee -a dangerlist.txt"
 
 ################################################################
 
@@ -507,7 +503,7 @@ ensure_root() {
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     local start_time=$(date +%s)
-    log_operation "系统基础信息采集" "开始采集系统基础环境信息" "开始"
+    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "BIGEN"
     
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
@@ -984,347 +980,457 @@ networkInfo(){
 
 # 进程信息分析【完成】
 processInfo(){
-	echo -e "${YELLOW}[INFO]输出所有系统进程[ps -auxww]:${NC}" && ps -auxww
-	echo -e "${YELLOW}[INFO]检查内存占用top5的进程[ps -aux | sort -nr -k 4 | head -5]:${NC}" && ps -aux | sort -nr -k 4 | head -5
-	echo -e "${YELLOW}[INFO]检查内存占用超过20%的进程[ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5]:${NC}" && ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5
-	echo -e "${YELLOW}[INFO]检查CPU占用top5的进程[ps -aux | sort -nr -k 3 | head -5]:${NC}" && ps -aux | sort -nr -k 3 | head -5
-	echo -e "${YELLOW}[INFO]检查CPU占用超过20%的进程[ps -aux | sort -nr -k 3 | awk '{if($3>=20) print }' | head -5]:${NC}" && ps -aux | sort -nr -k 3 | awk '{if($3>=20) print $0}' | head -5
+    local start_time=$(date +%s)
+    log_operation "MOUDLE:PROCESSINFO" "开始进程信息分析和安全检测" "BEGIN"
+    
+    echo -e "${GREEN}==========${YELLOW}3. Process Info Analysis${GREEN}==========${NC}"
+    
+    echo -e "${YELLOW}[3.1] 输出所有系统进程[ps -auxww]:${NC}"
+    log_message "INFO" "开始获取所有系统进程信息"
+    if ps -auxww >/dev/null 2>&1; then
+        ps -auxww
+        local process_count=$(ps -auxww | wc -l)
+        log_message "INFO" "成功获取系统进程信息，共${process_count}个进程"
+    else
+        handle_error 1 "获取系统进程信息失败" "processInfo"
+    fi
+    
+    echo -e "${YELLOW}[3.2] 检查内存占用top5的进程[ps -aux | sort -nr -k 4 | head -5]:${NC}"
+    log_message "INFO" "开始检查内存占用top5进程"
+    if ps -aux | sort -nr -k 4 | head -5 >/dev/null 2>&1; then
+        ps -aux | sort -nr -k 4 | head -5
+        log_message "INFO" "内存占用top5进程检查完成"
+    else
+        handle_error 1 "内存占用进程检查失败" "processInfo"
+    fi
+    
+    echo -e "${YELLOW}[3.3] 检查内存占用超过20%的进程:${NC}"
+    log_message "INFO" "开始检查内存占用超过20%的进程"
+    high_mem_processes=$(ps -aux | sort -nr -k 4 | awk '{if($4>=20) print $0}' | head -5)
+    if [ -n "$high_mem_processes" ]; then
+        echo "$high_mem_processes"
+        local high_mem_count=$(echo "$high_mem_processes" | wc -l)
+        log_message "WARN" "发现${high_mem_count}个内存占用超过20%的进程"
+    else
+        echo -e "${YELLOW}[INFO]未发现内存占用超过20%的进程${NC}"
+        log_message "INFO" "未发现内存占用超过20%的进程"
+    fi
+    
+    echo -e "${YELLOW}[3.4] 检查CPU占用top5的进程[ps -aux | sort -nr -k 3 | head -5]:${NC}"
+    log_message "INFO" "开始检查CPU占用top5进程"
+    if ps -aux | sort -nr -k 3 | head -5 >/dev/null 2>&1; then
+        ps -aux | sort -nr -k 3 | head -5
+        log_message "INFO" "CPU占用top5进程检查完成"
+    else
+        handle_error 1 "CPU占用进程检查失败" "processInfo"
+    fi
+    
+    echo -e "${YELLOW}[3.5] 检查CPU占用超过20%的进程:${NC}"
+    log_message "INFO" "开始检查CPU占用超过20%的进程"
+    high_cpu_processes=$(ps -aux | sort -nr -k 3 | awk '{if($3>=20) print $0}' | head -5)
+    if [ -n "$high_cpu_processes" ]; then
+        echo "$high_cpu_processes"
+        local high_cpu_count=$(echo "$high_cpu_processes" | wc -l)
+        log_message "WARN" "发现${high_cpu_count}个CPU占用超过20%的进程"
+    else
+        echo -e "${YELLOW}[INFO]未发现CPU占用超过20%的进程${NC}"
+        log_message "INFO" "未发现CPU占用超过20%的进程"
+    fi
     # 敏感进程匹配[匹配规则]
-	echo -e "${YELLOW}[INFO]根据规则列表 dangerspslist.txt 匹配检查敏感进程${NC}"
-	danger_ps_list=$(cat ${current_dir}/checkrules/dangerspslist.txt) # 敏感进程程序名列表
-	# 循环输出敏感进程的进程名称和 PID 和 所属用户
-	ps_output=$(ps -auxww)
-	for psname in $danger_ps_list; do
-		filtered_output=$(echo "$ps_output" | awk -v proc="$psname" '
-			BEGIN { found = 0 }
-			{
-				if ($11 ~ proc) {
-					print;
-					found++;
-				}
-			}
-			END {
-				if (found > 0) {
-					printf($0)
-					printf("\n'${YELLOW}'[WARN]发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
-				}
-			}'
-		)
-		# 输出敏感进程
-		# echo -e "${RED}[WARN]敏感进程如下:${NC}" && echo "$filtered_output"
-		echo -e "${RED}$filtered_output${NC}"
-	done
-	printf "\n" 
+    echo -e "${YELLOW}[3.6] 根据规则列表 dangerspslist.txt 匹配检查敏感进程:${NC}"
+    log_message "INFO" "开始敏感进程检测"
+    
+    if [ ! -f "${current_dir}/checkrules/dangerspslist.txt" ]; then
+        echo -e "${RED}[WARN]敏感进程规则文件不存在: ${current_dir}/checkrules/dangerspslist.txt${NC}"
+        log_message "ERROR" "敏感进程规则文件不存在: ${current_dir}/checkrules/dangerspslist.txt"
+    else
+        danger_ps_list=$(cat ${current_dir}/checkrules/dangerspslist.txt) || handle_error 1 "读取敏感进程规则文件失败" "processInfo"
+        ps_output=$(ps -auxww) || handle_error 1 "获取进程列表失败" "processInfo"
+        
+        local total_dangerous_processes=0
+        for psname in $danger_ps_list; do
+            filtered_output=$(echo "$ps_output" | awk -v proc="$psname" '
+                BEGIN { found = 0 }
+                {
+                    if ($11 ~ proc) {
+                        print;
+                        found++;
+                    }
+                }
+                END {
+                    if (found > 0) {
+                        printf($0)
+                        printf("\n'${YELLOW}'[WARN]发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
+                    }
+                }'
+            )
+            if [ -n "$filtered_output" ]; then
+                echo -e "${RED}$filtered_output${NC}"
+                local process_count=$(echo "$filtered_output" | grep -c "$psname" || echo "0")
+                total_dangerous_processes=$((total_dangerous_processes + process_count))
+                log_message "WARN" "发现敏感进程: $psname, 数量: $process_count"
+            fi
+        done
+        
+        if [ $total_dangerous_processes -eq 0 ]; then
+            echo -e "${YELLOW}[INFO]未发现敏感进程${NC}"
+            log_message "INFO" "敏感进程检测完成，未发现异常"
+        else
+            log_message "ERROR" "敏感进程检测完成，共发现${total_dangerous_processes}个敏感进程"
+        fi
+    fi
+    printf "\n" 
 
-	# 异常进程检测：如果存在 /proc 目录中有进程文件夹,但是在 ps -aux 命令里没有显示的,就认为可能是异常进程
-	echo -e "${YELLOW}[INFO]正在检查异常进程(存在于/proc但不在ps命令中显示):${NC}"
-	
-	# 获取所有ps命令显示的PID
-	ps_pids=$(ps -eo pid --no-headers | tr -d ' ')
-	# 获取/proc目录中的所有数字目录(进程PID)
-	proc_pids=$(ls /proc/ 2>/dev/null | grep '^[0-9]\+$')
-	
-	# 检查异常进程
-	anomalous_processes=()  # 用于存储异常进程的数组
-	for proc_pid in $proc_pids; do
-		# 检查该PID是否在ps命令输出中
-		if ! echo "$ps_pids" | grep -q "^${proc_pid}$"; then
-			# 验证/proc/PID目录确实存在且可访问
-			if [ -d "/proc/$proc_pid" ] && [ -r "/proc/$proc_pid/stat" ]; then
-				# 尝试读取进程信息
-				if [ -r "/proc/$proc_pid/comm" ]; then
-					proc_name=$(cat "/proc/$proc_pid/comm" 2>/dev/null || echo "unknown")
-				else
-					proc_name="unknown"
-				fi
-				
-				if [ -r "/proc/$proc_pid/cmdline" ]; then
-					proc_cmdline=$(cat "/proc/$proc_pid/cmdline" 2>/dev/null | tr '\0' ' ' || echo "unknown")
-				else
-					proc_cmdline="unknown"
-				fi
-				
-				# 获取进程状态
-				if [ -r "/proc/$proc_pid/stat" ]; then
-					proc_stat=$(cat "/proc/$proc_pid/stat" 2>/dev/null | awk '{print $3}' || echo "unknown")
-				else
-					proc_stat="unknown"
-				fi
-				
-				# 获取进程启动时间
-				if [ -r "/proc/$proc_pid" ]; then
-					proc_start_time=$(stat -c %Y "/proc/$proc_pid" 2>/dev/null || echo "unknown")
-					if [ "$proc_start_time" != "unknown" ]; then
-						proc_start_time=$(date -d @$proc_start_time 2>/dev/null || echo "unknown")
-					fi
-				else
-					proc_start_time="unknown"
-				fi
-				
-				anomalous_processes+=("PID:$proc_pid | Name:$proc_name | State:$proc_stat | StartTime:$proc_start_time | Cmdline:$proc_cmdline")
-			fi
-		fi
-	done
-	
-	# 输出异常进程结果
-	if [ ${#anomalous_processes[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#anomalous_processes[@]} 个异常进程(存在于/proc但不在ps中显示):${NC}"
-		for anomalous in "${anomalous_processes[@]}"; do
-			echo -e "${RED}[WARN] $anomalous${NC}"
-		done
-		echo -e "${RED}[WARN]建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
-	else
-		echo -e "${YELLOW}[INFO]未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
-	fi
-	printf "\n"
+    # 异常进程检测：如果存在 /proc 目录中有进程文件夹,但是在 ps -aux 命令里没有显示的,就认为可能是异常进程
+    echo -e "${YELLOW}[3.7] 正在检查异常进程(存在于/proc但不在ps命令中显示):${NC}"
+    log_message "INFO" "开始异常进程检测"
+    
+    # 获取所有ps命令显示的PID
+    ps_pids=$(ps -eo pid --no-headers | tr -d ' ') || handle_error 1 "获取ps进程列表失败" "processInfo"
+    # 获取/proc目录中的所有数字目录(进程PID)
+    proc_pids=$(ls /proc/ 2>/dev/null | grep '^[0-9]\+$') || handle_error 1 "获取/proc目录进程列表失败" "processInfo"
+    
+    # 检查异常进程
+    anomalous_processes=()  # 用于存储异常进程的数组
+    for proc_pid in $proc_pids; do
+        # 检查该PID是否在ps命令输出中
+        if ! echo "$ps_pids" | grep -q "^${proc_pid}$"; then
+            # 验证/proc/PID目录确实存在且可访问
+            if [ -d "/proc/$proc_pid" ] && [ -r "/proc/$proc_pid/stat" ]; then
+                # 尝试读取进程信息
+                if [ -r "/proc/$proc_pid/comm" ]; then
+                    proc_name=$(cat "/proc/$proc_pid/comm" 2>/dev/null || echo "unknown")
+                else
+                    proc_name="unknown"
+                fi
+                
+                if [ -r "/proc/$proc_pid/cmdline" ]; then
+                    proc_cmdline=$(cat "/proc/$proc_pid/cmdline" 2>/dev/null | tr '\0' ' ' || echo "unknown")
+                else
+                    proc_cmdline="unknown"
+                fi
+                
+                # 获取进程状态
+                if [ -r "/proc/$proc_pid/stat" ]; then
+                    proc_stat=$(cat "/proc/$proc_pid/stat" 2>/dev/null | awk '{print $3}' || echo "unknown")
+                else
+                    proc_stat="unknown"
+                fi
+                
+                # 获取进程启动时间
+                if [ -r "/proc/$proc_pid" ]; then
+                    proc_start_time=$(stat -c %Y "/proc/$proc_pid" 2>/dev/null || echo "unknown")
+                    if [ "$proc_start_time" != "unknown" ]; then
+                        proc_start_time=$(date -d @$proc_start_time 2>/dev/null || echo "unknown")
+                    fi
+                else
+                    proc_start_time="unknown"
+                fi
+                
+                anomalous_processes+=("PID:$proc_pid | Name:$proc_name | State:$proc_stat | StartTime:$proc_start_time | Cmdline:$proc_cmdline")
+            fi
+        fi
+    done
+    
+    # 输出异常进程结果
+    if [ ${#anomalous_processes[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#anomalous_processes[@]} 个异常进程(存在于/proc但不在ps中显示):${NC}"
+        for anomalous in "${anomalous_processes[@]}"; do
+            echo -e "${RED}[WARN] $anomalous${NC}"
+        done
+        echo -e "${RED}[WARN]建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
+        log_message "ERROR" "发现${#anomalous_processes[@]}个异常进程，可能存在进程隐藏或rootkit感染"
+    else
+        echo -e "${YELLOW}[INFO]未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
+        log_message "INFO" "异常进程检测完成，未发现异常"
+    fi
+    printf "\n"
 
-	# 高级进程隐藏检测技术
-	echo -e "${YELLOW}[INFO]执行高级进程隐藏检测:${NC}"
+    # 高级进程隐藏检测技术
+    echo -e "${YELLOW}[3.8] 执行高级进程隐藏检测:${NC}"
+    log_message "INFO" "开始高级进程隐藏检测"
+    
+    # 1. 检查进程树完整性
+    echo -e "${YELLOW}[3.8.1] 检查进程树完整性(孤儿进程检测):${NC}"
+    log_message "INFO" "开始进程树完整性检查"
+    orphan_processes=()
+    
+    ps_tree_output=$(ps -eo pid,ppid 2>/dev/null | tail -n +2) || handle_error 1 "获取进程树信息失败" "processInfo"
+    while IFS= read -r line; do
+        # 使用更精确的字段提取,处理不同系统的ps输出格式
+        pid=$(echo "$line" | awk '{print $1}')
+        ppid=$(echo "$line" | awk '{print $2}')
+        # 验证PID和PPID都是数字
+        if [[ "$pid" =~ ^[0-9]+$ ]] && [[ "$ppid" =~ ^[0-9]+$ ]]; then
+            # 检查父进程是否存在(除了init进程和内核线程)
+            if [ "$ppid" != "0" ] && [ "$ppid" != "1" ] && [ "$ppid" != "2" ]; then
+                if ! ps -p "$ppid" > /dev/null 2>&1; then
+                    orphan_processes+=("PID:$pid PPID:$ppid (父进程不存在)")
+                fi
+            fi
+        fi
+    done <<< "$ps_tree_output"
+    
+    if [ ${#orphan_processes[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#orphan_processes[@]} 个可疑孤儿进程:${NC}"
+        for orphan in "${orphan_processes[@]}"; do
+            echo -e "${RED}[WARN] $orphan${NC}"
+        done
+        log_message "WARN" "发现${#orphan_processes[@]}个可疑孤儿进程"
+    else
+        echo -e "${YELLOW}[INFO]进程树完整性检查通过${NC}"
+        log_message "INFO" "进程树完整性检查通过"
+    fi
+    printf "\n"
 	
-	# 1. 检查进程树完整性
-	echo -e "${YELLOW}[INFO]检查进程树完整性(孤儿进程检测):${NC}"
-	orphan_processes=()
-	while IFS= read -r line; do
-		# 使用更精确的字段提取,处理不同系统的ps输出格式
-		pid=$(echo "$line" | awk '{print $1}')
-		ppid=$(echo "$line" | awk '{print $2}')
-		# 验证PID和PPID都是数字
-		if [[ "$pid" =~ ^[0-9]+$ ]] && [[ "$ppid" =~ ^[0-9]+$ ]]; then
-			# 检查父进程是否存在(除了init进程和内核线程)
-			if [ "$ppid" != "0" ] && [ "$ppid" != "1" ] && [ "$ppid" != "2" ]; then
-				if ! ps -p "$ppid" > /dev/null 2>&1; then
-					orphan_processes+=("PID:$pid PPID:$ppid (父进程不存在)")
-				fi
-			fi
-		fi
-	done <<< "$(ps -eo pid,ppid 2>/dev/null | tail -n +2)"
+    # 2. 检查网络连接与进程对应关系
+    echo -e "${YELLOW}[3.8.2] 检查网络连接与进程对应关系:${NC}"
+    log_message "INFO" "开始网络连接与进程对应关系检查"
+    unknown_connections=()
+    
+    # 检测操作系统类型并使用相应的命令
+    if [[ "$(uname)" == "Darwin" ]]; then  # macOS
+        # macOS系统使用lsof命令
+        if command -v lsof > /dev/null 2>&1; then
+            lsof_output=$(lsof -i -n -P 2>/dev/null | tail -n +2) || handle_error 1 "lsof命令执行失败" "processInfo"
+            while IFS= read -r line; do
+                # lsof输出格式: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+                if echo "$line" | grep -E "(TCP|UDP)" > /dev/null; then
+                    pid=$(echo "$line" | awk '{print $2}')
+                    # 验证PID是数字且检查进程是否存在
+                    if [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
+                        proc_name=$(echo "$line" | awk '{print $1}')
+                        unknown_connections+=("连接: $line (进程PID:$pid Name:$proc_name 不存在)")
+                    fi
+                fi
+            done <<< "$lsof_output"
+        else
+            echo -e "${YELLOW}[INFO]macOS系统未找到lsof命令,跳过网络连接检查${NC}"
+            log_message "WARN" "macOS系统未找到lsof命令,跳过网络连接检查"
+        fi
+    else
+        # Linux系统使用netstat或ss命令
+        if command -v netstat > /dev/null 2>&1; then
+            netstat_output=$(netstat -tulnp 2>/dev/null | grep -v '^Active') || handle_error 1 "netstat命令执行失败" "processInfo"
+            while IFS= read -r line; do
+                if echo "$line" | grep -q "/"; then
+                    pid_info=$(echo "$line" | awk '{print $NF}')
+                    pid=$(echo "$pid_info" | cut -d'/' -f1)
+                    if [ "$pid" != "-" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
+                        unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
+                    fi
+                fi
+            done <<< "$netstat_output"
+        else
+            # 使用ss命令作为备选
+            if command -v ss > /dev/null 2>&1; then
+                ss_output=$(ss -tulnp 2>/dev/null) || handle_error 1 "ss命令执行失败" "processInfo"
+                while IFS= read -r line; do
+                    if echo "$line" | grep -q "pid="; then
+                        pid=$(echo "$line" | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
+                        if [ -n "$pid" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
+                            unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
+                        fi
+                    fi
+                done <<< "$ss_output"
+            else
+                echo -e "${YELLOW}[INFO]Linux系统未找到netstat或ss命令,跳过网络连接检查${NC}"
+                log_message "WARN" "Linux系统未找到netstat或ss命令,跳过网络连接检查"
+            fi
+        fi
+    fi
+    
+    if [ ${#unknown_connections[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#unknown_connections[@]} 个可疑网络连接:${NC}"
+        for conn in "${unknown_connections[@]}"; do
+            echo -e "${RED}[WARN] $conn${NC}"
+        done
+        log_message "WARN" "发现${#unknown_connections[@]}个可疑网络连接"
+    else
+        echo -e "${YELLOW}[INFO]网络连接与进程对应关系检查通过${NC}"
+        log_message "INFO" "网络连接与进程对应关系检查通过"
+    fi
+    printf "\n"
 	
-	if [ ${#orphan_processes[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#orphan_processes[@]} 个可疑孤儿进程:${NC}"
-		for orphan in "${orphan_processes[@]}"; do
-			echo -e "${RED}[WARN] $orphan${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]进程树完整性检查通过${NC}"
-	fi
-	printf "\n"
+    # 3. 检查进程内存映射异常
+    echo -e "${YELLOW}[3.8.3] 检查进程内存映射异常:${NC}"
+    log_message "INFO" "开始进程内存映射异常检查"
+    suspicious_maps=()  # 存储可疑内存映射
+    for proc_dir in /proc/[0-9]*; do
+        if [ -d "$proc_dir" ] && [ -r "$proc_dir/maps" ]; then  # 检查进程目录是否存在和maps文件是否可读
+            pid=$(basename "$proc_dir")
+            # 检查是否有可疑的内存映射(如可执行的匿名映射)
+            ## 原理: 通过grep命令匹配maps文件中的rwxp权限的行,并判断是否包含[heap]或[stack]或deleted	
+            ## rwxp.*\[heap\]: 堆区域具有读写执行权限(异常|正常堆不应该具有可执行权限,只有 rw-)
+            ## rwxp.*\[stack\]: 栈区域具有读写执行权限(异常|正常栈栈不应该具有可执行权限,只有 rw- 可能是栈溢出攻击,或者 shellcode 直接执行机器码)
+            ## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
+            ## 恶意软件删除自身文件但保持在内存中运行
+            ## 无文件攻击的检测 和 rootkit隐藏技术发现
+            suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程${pid}内存映射失败" "processInfo"
+            # 根据可疑映射输出进程名称
+            if [ -n "$suspicious_map" ]; then   
+                proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
+                suspicious_maps+=("PID:$pid Name:$proc_name 可疑内存映射")
+            fi
+        fi
+    done
+    
+    if [ ${#suspicious_maps[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#suspicious_maps[@]} 个进程存在可疑内存映射:${NC}"
+        for map in "${suspicious_maps[@]}"; do
+            echo -e "${RED}[WARN] $map${NC}"
+        done
+        log_message "WARN" "发现${#suspicious_maps[@]}个进程存在可疑内存映射"
+    else
+        echo -e "${YELLOW}[INFO]进程内存映射检查通过${NC}"
+        log_message "INFO" "进程内存映射检查通过"
+    fi
+    printf "\n"
 	
-	# 2. 检查网络连接与进程对应关系
-	echo -e "${YELLOW}[INFO]检查网络连接与进程对应关系:${NC}"
-	unknown_connections=()
+    # 4. 检查进程文件描述符异常[(deleted)]
+    echo -e "${YELLOW}[3.8.4] 检查进程文件描述符异常[(deleted)]:${NC}"
+    log_message "INFO" "开始进程文件描述符异常检查"
+    suspicious_fds=()  # 用于存储异常文件描述符的数组
+    for proc_dir in /proc/[0-9]*; do
+        if [ -d "$proc_dir/fd" ] && [ -r "$proc_dir/fd" ]; then
+            pid=$(basename "$proc_dir")
+            # 检查是否有指向已删除文件的文件描述符
+            deleted_files=$(ls -l "$proc_dir/fd/" 2>/dev/null | grep "(deleted)" | wc -l) || handle_error 0 "读取进程${pid}文件描述符失败" "processInfo"
+            if [ "$deleted_files" -gt 0 ]; then
+                proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
+                suspicious_fds+=("PID:$pid Name:$proc_name 有${deleted_files}个已删除文件的文件描述符")
+                # 输出fd是(deleted)的进程pid和进程名
+                # 检测恶意进程删除自身进程然后在内存里驻留
+            fi
+        fi
+    done
+    
+    if [ ${#suspicious_fds[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#suspicious_fds[@]} 个进程存在可疑文件描述符[(deleted)]:${NC}"
+        for fd in "${suspicious_fds[@]}"; do
+            echo -e "${RED}[WARN] $fd${NC}"
+        done
+        log_message "WARN" "发现${#suspicious_fds[@]}个进程存在可疑文件描述符"
+    else
+        echo -e "${YELLOW}[INFO]进程文件描述符检查通过${NC}"
+        log_message "INFO" "进程文件描述符检查通过"
+    fi
+    printf "\n"
 	
-	# 检测操作系统类型并使用相应的命令
-	if [[ "$(uname)" == "Darwin" ]]; then  # macOS
-		# macOS系统使用lsof命令
-		if command -v lsof > /dev/null 2>&1; then
-			while IFS= read -r line; do
-				# lsof输出格式: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
-				if echo "$line" | grep -E "(TCP|UDP)" > /dev/null; then
-					pid=$(echo "$line" | awk '{print $2}')
-					# 验证PID是数字且检查进程是否存在
-					if [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
-						proc_name=$(echo "$line" | awk '{print $1}')
-						unknown_connections+=("连接: $line (进程PID:$pid Name:$proc_name 不存在)")
-					fi
-				fi
-			done <<< "$(lsof -i -n -P 2>/dev/null | tail -n +2)"
-		else
-			echo -e "${YELLOW}[INFO]macOS系统未找到lsof命令,跳过网络连接检查${NC}"
-		fi
-	else
-		# Linux系统使用netstat或ss命令
-		if command -v netstat > /dev/null 2>&1; then
-			while IFS= read -r line; do
-				if echo "$line" | grep -q "/"; then
-					pid_info=$(echo "$line" | awk '{print $NF}')
-					pid=$(echo "$pid_info" | cut -d'/' -f1)
-					if [ "$pid" != "-" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
-						unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
-					fi
-				fi
-			done <<< "$(netstat -tulnp 2>/dev/null | grep -v '^Active')"
-		else
-			# 使用ss命令作为备选
-			if command -v ss > /dev/null 2>&1; then
-				while IFS= read -r line; do
-					if echo "$line" | grep -q "pid="; then
-						pid=$(echo "$line" | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
-						if [ -n "$pid" ] && [[ "$pid" =~ ^[0-9]+$ ]] && ! ps -p "$pid" > /dev/null 2>&1; then
-							unknown_connections+=("连接: $line (进程PID:$pid 不存在)")
-						fi
-					fi
-				done <<< "$(ss -tulnp 2>/dev/null)"
-			else
-				echo -e "${YELLOW}[INFO]Linux系统未找到netstat或ss命令,跳过网络连接检查${NC}"
-			fi
-		fi
-	fi
+    # 5. 检查系统调用表完整性(需要root权限)
+    echo -e "${YELLOW}[3.8.5] 检查系统调用表完整性[sys_call_table(/proc/kallsyms)]:${NC}"
+    log_message "INFO" "开始系统调用表完整性检查"
+    ## 原理: 通过查看系统调用表,判断系统调用表是否被修改[rootkit检测和内核级模块检测常用的技术]
+    # 什么是系统调用表（sys_call_table）
+    # - 定义 ：Linux内核中存储所有系统调用函数指针的数组
+    # - 作用 ：当用户程序调用系统调用时,内核通过这个表找到对应的处理函数
+    # - 位置 ：位于内核内存空间,通过 /proc/kallsyms 可以查看其地址 
+    # 检测系统表的意义：
+    # 1. Rootkit检测
+    # 系统调用表劫持 是rootkit的常用技术：
+    # - 正常情况 ： sys_call_table 符号在 /proc/kallsyms 中可见
+    # - 被攻击 ：rootkit可能隐藏或修改这个符号来逃避检测 
+    # 2. 内核级恶意模块检测
+    # 通过搜索可疑符号名称,可以发现：
+    # - 恶意内核模块 ：包含 "rootkit"、"hide" 等字样的符号
+    # - Hook技术 ：用于拦截和修改系统调用的钩子函数
+    # - 隐蔽功能 ：用于隐藏进程、文件、网络连接的功能
+    if [ "$(id -u)" -eq 0 ]; then
+        if [ -r "/proc/kallsyms" ]; then
+            # 检查sys_call_table符号是否存在
+            sys_call_table=$(grep "sys_call_table" /proc/kallsyms 2>/dev/null) || handle_error 0 "读取/proc/kallsyms失败" "processInfo"
+            if [ -n "$sys_call_table" ]; then
+                echo -e "${YELLOW}[INFO]系统调用表符号存在: $sys_call_table ${NC}"
+                log_message "INFO" "系统调用表符号存在"
+            else
+                echo -e "${RED}[WARN]警告: 无法找到sys_call_table符号,可能被隐藏${NC}"
+                log_message "WARN" "无法找到sys_call_table符号,可能被隐藏"
+            fi
+            
+            # 检查可疑的内核符号[过滤可能恶意的符号(自定义)]
+            suspicious_symbols=$(grep -E "(hide|rootkit|stealth|hook)" /proc/kallsyms 2>/dev/null) || handle_error 0 "搜索可疑内核符号失败" "processInfo"
+            if [ -n "$suspicious_symbols" ]; then
+                echo -e "${RED}[WARN]发现可疑内核符号:${NC}"
+                echo "$suspicious_symbols"
+                log_message "WARN" "发现可疑内核符号"
+            else
+                echo -e "${YELLOW}[INFO]未发现可疑内核符号${NC}"
+                log_message "INFO" "未发现可疑内核符号"
+            fi
+        else
+            echo -e "${YELLOW}[INFO]/proc/kallsyms不可读,跳过系统调用表检查${NC}"
+            log_message "WARN" "/proc/kallsyms不可读,跳过系统调用表检查"
+        fi
+    else
+        echo -e "${YELLOW}[INFO]需要root权限进行系统调用表检查${NC}"
+        log_message "WARN" "需要root权限进行系统调用表检查"
+    fi
+    printf "\n"
 	
-	if [ ${#unknown_connections[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#unknown_connections[@]} 个可疑网络连接:${NC}"
-		for conn in "${unknown_connections[@]}"; do
-			echo -e "${RED}[WARN] $conn${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]网络连接与进程对应关系检查通过${NC}"
-	fi
-	printf "\n"
+    # 6. 检查进程启动时间异常
+    echo -e "${YELLOW}[3.8.6] 检查进程启动时间异常:${NC}"
+    log_message "INFO" "开始进程启动时间异常检查"
+    time_anomalies=()
+    current_time=$(date +%s) || handle_error 1 "获取当前时间失败" "processInfo"
+    ps_output=$(ps -eo pid,lstart --no-headers 2>/dev/null) || handle_error 1 "获取进程启动时间失败" "processInfo"
+    while IFS= read -r line; do
+        pid=$(echo "$line" | awk '{print $1}')
+        start_time=$(echo "$line" | awk '{print $2}')
+        # 检查启动时间是否在未来(可能的时间篡改)
+        if [ "$start_time" -gt "$current_time" ]; then
+            proc_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
+            time_anomalies+=("PID:$pid Name:$proc_name 启动时间异常(未来时间)")
+        fi
+    done <<< "$(echo "$ps_output" | while read -r pid lstart_str; do echo "$pid $(date -d \"$lstart_str\" +%s 2>/dev/null || echo 0)"; done)"
+    
+    if [ ${#time_anomalies[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#time_anomalies[@]} 个进程启动时间异常:${NC}"
+        for anomaly in "${time_anomalies[@]}"; do
+            echo -e "${RED}[WARN] $anomaly${NC}"
+        done
+        log_message "WARN" "发现${#time_anomalies[@]}个进程启动时间异常"
+    else
+        echo -e "${YELLOW}[INFO]进程启动时间检查通过${NC}"
+        log_message "INFO" "进程启动时间检查通过"
+    fi
+    printf "\n"
 	
-	# 3. 检查进程内存映射异常
-	echo -e "${YELLOW}[INFO]检查进程内存映射异常:${NC}"
-	suspicious_maps=()  # 存储可疑内存映射
-	for proc_dir in /proc/[0-9]*; do
-		if [ -d "$proc_dir" ] && [ -r "$proc_dir/maps" ]; then  # 检查进程目录是否存在和maps文件是否可读
-			pid=$(basename "$proc_dir")
-			# 检查是否有可疑的内存映射(如可执行的匿名映射)
-			## 原理: 通过grep命令匹配maps文件中的rwxp权限的行,并判断是否包含[heap]或[stack]或deleted	
-			## rwxp.*\[heap\]: 堆区域具有读写执行权限(异常|正常堆不应该具有可执行权限,只有 rw-)
-			## rwxp.*\[stack\]: 栈区域具有读写执行权限(异常|正常栈栈不应该具有可执行权限,只有 rw- 可能是栈溢出攻击,或者 shellcode 直接执行机器码)
-			## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
-			## 恶意软件删除自身文件但保持在内存中运行
-			## 无文件攻击的检测 和 rootkit隐藏技术发现
-			suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null)
-			# 根据可疑映射输出进程名称
-			if [ -n "$suspicious_map" ]; then   
-				proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
-				suspicious_maps+=("PID:$pid Name:$proc_name 可疑内存映射")
-			fi
-		fi
-	done
+    # 7. 检查进程环境变量异常
+    # 这段代码通过以下机制检测潜在威胁：
+    # 1. LD_PRELOAD检测 ：这是最常见的rootkit技术,通过预加载恶意库来劫持系统调用
+    # 2. 动态库路径检测 ：异常的LD_LIBRARY_PATH设置可能指向恶意库
+    # 3. 明显恶意标识 ：直接搜索ROOTKIT、HIDE等明显的恶意软件标识
+    echo -e "${YELLOW}[3.8.7] 检查进程环境变量异常:${NC}"
+    log_message "INFO" "开始进程环境变量异常检查"
+    env_anomalies=()
+    for proc_dir in /proc/[0-9]*; do
+        if [ -r "$proc_dir/environ" ]; then
+            pid=$(basename "$proc_dir")
+            # 检查可疑的环境变量
+            suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程${pid}环境变量失败" "processInfo"
+            if [ -n "$suspicious_env" ]; then
+                proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
+                env_anomalies+=("PID:$pid Name:$proc_name 可疑环境变量: $(echo \"$suspicious_env\" | head -1)")
+            fi
+        fi
+    done
 	
-	if [ ${#suspicious_maps[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#suspicious_maps[@]} 个进程存在可疑内存映射:${NC}"
-		for map in "${suspicious_maps[@]}"; do
-			echo -e "${RED}[WARN] $map${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]进程内存映射检查通过${NC}"
-	fi
-	printf "\n"
-	
-	# 4. 检查进程文件描述符异常[(deleted)]
-	echo -e "${YELLOW}[INFO]检查进程文件描述符异常[(deleted)]:${NC}"
-	suspicious_fds=()  # 用于存储异常文件描述符的数组
-	for proc_dir in /proc/[0-9]*; do
-		if [ -d "$proc_dir/fd" ] && [ -r "$proc_dir/fd" ]; then
-			pid=$(basename "$proc_dir")
-			# 检查是否有指向已删除文件的文件描述符
-			deleted_files=$(ls -l "$proc_dir/fd/" 2>/dev/null | grep "(deleted)" | wc -l)
-			if [ "$deleted_files" -gt 0 ]; then
-				proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
-				suspicious_fds+=("PID:$pid Name:$proc_name 有${deleted_files}个已删除文件的文件描述符")
-				# 输出fd是(deleted)的进程pid和进程名
-				# 检测恶意进程删除自身进程然后在内存里驻留
-			fi
-		fi
-	done
-	
-	if [ ${#suspicious_fds[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#suspicious_fds[@]} 个进程存在可疑文件描述符[(deleted)]:${NC}"
-		for fd in "${suspicious_fds[@]}"; do
-			echo -e "${RED}[WARN] $fd${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]进程文件描述符检查通过${NC}"
-	fi
-	printf "\n"
-	
-	# 5. 检查系统调用表完整性(需要root权限)
-	echo -e "${YELLOW}[INFO]检查系统调用表完整性[sys_call_table(/proc/kallsyms)]:${NC}"
-	## 原理: 通过查看系统调用表,判断系统调用表是否被修改[rootkit检测和内核级模块检测常用的技术]
-	# 什么是系统调用表（sys_call_table）
-	# - 定义 ：Linux内核中存储所有系统调用函数指针的数组
-	# - 作用 ：当用户程序调用系统调用时,内核通过这个表找到对应的处理函数
-	# - 位置 ：位于内核内存空间,通过 /proc/kallsyms 可以查看其地址 
-	# 检测系统表的意义：
-	# 1. Rootkit检测
-	# 系统调用表劫持 是rootkit的常用技术：
-	# - 正常情况 ： sys_call_table 符号在 /proc/kallsyms 中可见
-	# - 被攻击 ：rootkit可能隐藏或修改这个符号来逃避检测 
-	# 2. 内核级恶意模块检测
-	# 通过搜索可疑符号名称,可以发现：
-	# - 恶意内核模块 ：包含 "rootkit"、"hide" 等字样的符号
-	# - Hook技术 ：用于拦截和修改系统调用的钩子函数
-	# - 隐蔽功能 ：用于隐藏进程、文件、网络连接的功能
-	if [ "$(id -u)" -eq 0 ]; then
-		if [ -r "/proc/kallsyms" ]; then
-			# 检查sys_call_table符号是否存在
-			sys_call_table=$(grep "sys_call_table" /proc/kallsyms 2>/dev/null)
-			if [ -n "$sys_call_table" ]; then
-				echo -e "${YELLOW}[INFO]系统调用表符号存在: $sys_call_table ${NC}"
-			else
-				echo -e "${RED}[WARN]警告: 无法找到sys_call_table符号,可能被隐藏${NC}"
-			fi
-			
-			# 检查可疑的内核符号[过滤可能恶意的符号(自定义)]
-			suspicious_symbols=$(grep -E "(hide|rootkit|stealth|hook)" /proc/kallsyms 2>/dev/null)
-			if [ -n "$suspicious_symbols" ]; then
-				echo -e "${RED}[WARN]发现可疑内核符号:${NC}"
-				echo "$suspicious_symbols"
-			else
-				echo -e "${YELLOW}[INFO]未发现可疑内核符号${NC}"
-			fi
-		else
-			echo -e "${YELLOW}[INFO]/proc/kallsyms不可读,跳过系统调用表检查${NC}"
-		fi
-	else
-		echo -e "${YELLOW}[INFO]需要root权限进行系统调用表检查${NC}"
-	fi
-	printf "\n"
-	
-	# 6. 检查进程启动时间异常
-	echo -e "${YELLOW}[INFO]检查进程启动时间异常:${NC}"
-	time_anomalies=()
-	current_time=$(date +%s)
-	while IFS= read -r line; do
-		pid=$(echo "$line" | awk '{print $1}')
-		start_time=$(echo "$line" | awk '{print $2}')
-		# 检查启动时间是否在未来(可能的时间篡改)
-		if [ "$start_time" -gt "$current_time" ]; then
-			proc_name=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
-			time_anomalies+=("PID:$pid Name:$proc_name 启动时间异常(未来时间)")
-		fi
-	done <<< "$(ps -eo pid,lstart --no-headers | while read -r pid lstart_str; do echo "$pid $(date -d \"$lstart_str\" +%s 2>/dev/null || echo 0)"; done)"
-	
-	if [ ${#time_anomalies[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#time_anomalies[@]} 个进程启动时间异常:${NC}"
-		for anomaly in "${time_anomalies[@]}"; do
-			echo -e "${RED}[WARN] $anomaly${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]进程启动时间检查通过${NC}"
-	fi
-	printf "\n"
-	
-	# 7. 检查进程环境变量异常
-	# 这段代码通过以下机制检测潜在威胁：
-	# 1. LD_PRELOAD检测 ：这是最常见的rootkit技术,通过预加载恶意库来劫持系统调用
-	# 2. 动态库路径检测 ：异常的LD_LIBRARY_PATH设置可能指向恶意库
-	# 3. 明显恶意标识 ：直接搜索ROOTKIT、HIDE等明显的恶意软件标识
-	echo -e "${YELLOW}[INFO]检查进程环境变量异常:${NC}"
-	env_anomalies=()
-	for proc_dir in /proc/[0-9]*; do
-		if [ -r "$proc_dir/environ" ]; then
-			pid=$(basename "$proc_dir")
-			# 检查可疑的环境变量
-			suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null)
-			if [ -n "$suspicious_env" ]; then
-				proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
-				env_anomalies+=("PID:$pid Name:$proc_name 可疑环境变量: $(echo \"$suspicious_env\" | head -1)")
-			fi
-		fi
-	done
-	
-	if [ ${#env_anomalies[@]} -gt 0 ]; then
-		echo -e "${RED}[WARN]发现 ${#env_anomalies[@]} 个进程存在可疑环境变量:${NC}"
-		for env in "${env_anomalies[@]}"; do
-			echo -e "${RED}[WARN] $env${NC}"
-		done
-	else
-		echo -e "${YELLOW}[INFO]进程环境变量检查通过${NC}"
-	fi
-	printf "\n"
-	
+    if [ ${#env_anomalies[@]} -gt 0 ]; then
+        echo -e "${RED}[WARN]发现 ${#env_anomalies[@]} 个进程存在可疑环境变量:${NC}"
+        for env in "${env_anomalies[@]}"; do
+            echo -e "${RED}[WARN] $env${NC}"
+        done
+        log_message "WARN" "发现${#env_anomalies[@]}个进程存在可疑环境变量"
+    else
+        echo -e "${YELLOW}[INFO]进程环境变量检查通过${NC}"
+        log_message "INFO" "进程环境变量检查通过"
+    fi
+    printf "\n"
+    
+    # 记录性能和操作日志
+    local end_time=$(date +%s)
+    log_performance "processInfo" "$start_time" "$end_time"
+    log_operation "进程信息分析和安全检测" "进程信息分析和安全检测完成" "成功"
 }
 
 # 计划任务排查【归档 -- systemCheck】
