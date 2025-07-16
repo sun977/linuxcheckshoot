@@ -4201,7 +4201,7 @@ main() {
 	ensure_root
 	
 	# 记录主函数启动日志
-	log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "BEGIN"
+	# log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "BEGIN"
 	log_message "INFO" "LinuxGun v${script_version} CHECKING"
 	log_message "INFO" "OPTIONS: $*"
 	log_message "INFO" "USER: $(whoami), UID: $(id -u)"
