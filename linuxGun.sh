@@ -25,7 +25,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #    - 日志同时输出到终端和文件 (${check_file}/operation.log)
 #
 # 4. 使用示例:
-#    - handle_error "操作失败" "详细错误描述" "建议解决方案"
+#    - handle_error [错误码] "详细错误描述" "建议解决方案"
 #    - log_message "INFO" "操作成功完成"
 #    - log_operation "模块名" "操作描述" "开始|完成"
 #    - log_performance "函数名" $start_time $end_time
@@ -39,7 +39,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # [KNOW] 知识点 -- [说明]
 # [ERRO] 错误输出
 # [i] -- [INFO] 
-# 颜色：分割线:绿色 检查项:黄色 错误项和注意项:红色 输出项:蓝色
+# 颜色：检测标题,提示:黄色 通过:绿色(DEBUG)  不通过:红色 调用和说明:蓝色  系统命令输出:白色
 # --- 20250716 待办: 需要把所有的功能函数使用新的日志和错误处理函数优化一遍
 
 # 大纲输出函数
@@ -288,10 +288,12 @@ typeset LOG_ERROR=3
 LOG_LEVEL=${LOG_LEVEL:-$LOG_INFO}
 
 # 统一错误处理函数
+# 使用方式: handle_error 1 "清理旧k8s目录失败" "init_env"
 handle_error() {
-    local error_code=$1
-    local error_msg="$2"
-    local context="$3"
+	# 使用方式: handle_error 1 "清理旧k8s目录失败" "init_env"
+    local error_code=$1		# 自定义错误码 1 一般错误,继续执行 2 严重错误,退出脚本
+    local error_msg="$2"	# 错误信息
+    local context="$3"		# 错误上下文,用来标注函数位置
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     # 记录错误日志
@@ -314,10 +316,11 @@ handle_error() {
 }
 
 # 分级日志系统
+# 使用方式: log_message <level>(DEBUG|INFO|WARN|ERROR) <message> [timestamp](不提提供默认生成时间戳) message.log
 log_message() {
-    local level="$1"
-    local message="$2"
-    local timestamp="$3"
+    local level="$1"		# 日志等级
+    local message="$2"		# 日志消息
+    local timestamp="$3"	# 时间戳
     
     # 如果没有提供时间戳,生成一个
     if [ -z "$timestamp" ]; then
@@ -339,7 +342,7 @@ log_message() {
         # 根据级别选择颜色
         local color
         case "$level" in
-            "DEBUG") color="$NC" ;;      # 无颜色
+            "DEBUG") color="$GREEN" ;;   # 绿色
             "INFO")  color="$BLUE" ;;    # 蓝色
             "WARN")  color="$YELLOW" ;;  # 黄色
             "ERROR") color="$RED" ;;     # 红色
@@ -350,27 +353,30 @@ log_message() {
         
         # 如果日志文件路径已定义,同时写入日志文件
         if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
-            echo "[$timestamp] [$level] $message" >> "$log_file/system.log"
+			# 格式: [$timestamp] [$level] $message
+            echo "[$timestamp] [$level] $message" >> "$log_file/message.log"		# 写入日志-脚本系统日志
         fi
     fi
 }
 
 # 操作日志记录函数
+# 使用方式: log_operation "功能模块名" "操作描述" "开始|完成(BEGIN|END)"  operations.log
 log_operation() {
-    local operation="$1"
-    local details="$2"
-    local result="$3"
+    local operation="$1"	# 操作名称
+    local details="$2"		# 操作详情
+    local result="$3"		# 操作结果
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
-    local log_entry="[$timestamp] [OPERATION] $operation"
+    local log_entry="[$timestamp] [OPTIN] $operation"
     if [ -n "$details" ]; then
-        log_entry="$log_entry - 详情: $details"
+        log_entry="$log_entry - DETAIL: $details"
     fi
     if [ -n "$result" ]; then
-        log_entry="$log_entry - 结果: $result"
+        log_entry="$log_entry - RESULT: $result"
     fi
     
     log_message "INFO" "$log_entry"
+	# INFO 自带蓝色 输出
     
     # 写入操作日志文件
     if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
@@ -379,19 +385,21 @@ log_operation() {
 }
 
 # 性能监控日志函数
+# 使用方式:  log_performance "函数名称" "开始时间" "结束时间"  performance.log
 log_performance() {
-    local function_name="$1"
-    local start_time="$2"
-    local end_time="$3"
+    local function_name="$1"	# 函数名称
+    local start_time="$2"		# 开始时间
+    local end_time="$3"			# 结束时间
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     
     if [ -n "$start_time" ] && [ -n "$end_time" ]; then
         local duration=$((end_time - start_time))
-        log_message "DEBUG" "[$timestamp] [PERFORMANCE] $function_name 执行时间: ${duration}秒"
+        log_message "DEBUG" "[$timestamp] [PERF] $function_name 执行时间: ${duration}秒"
+		# DEBUG 自带 绿色输出
         
         # 写入性能日志文件
         if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
-            echo "[$timestamp] [PERFORMANCE] $function_name: ${duration}s" >> "$log_file/performance.log"
+            echo "[$timestamp] [PERF] $function_name: ${duration}s" >> "$log_file/performance.log"
         fi
     fi
 }
@@ -401,8 +409,8 @@ log_performance() {
 
 # 初始化环境
 init_env(){
-	local start_time=$(date +%s)
-	log_operation "环境初始化" "开始初始化LinuxGun运行环境" "开始"
+	local start_time=$(date +%s)	# 获取当前时间戳,用于计算函数耗时
+	log_operation "MOUDLE-INIT_ENV()" "开始初始化LinuxGun运行环境" "BEGIN"
 	
 	# 基础变量定义
 	date=$(date +%Y%m%d)
@@ -418,6 +426,7 @@ init_env(){
 		# 如果都没有,使用主机名作为标识
 		ipadd=$(hostname | tr '.' '_')
 		log_message "WARN" "未找到ip或ifconfig命令,使用主机名作为标识: $ipadd"
+		# WARN 自带黄色警告
 	fi
 	# 如果ipadd为空,使用默认值
 	if [ -z "$ipadd" ]; then
@@ -427,7 +436,7 @@ init_env(){
 
 	# 创建输出目录变量,当前目录下的output目录
 	current_dir=$(pwd)  
-	check_file="${current_dir}/output/linuxcheck_${ipadd}_${date}/check_file"
+	check_file="${current_dir}/output/linuxgun_${ipadd}_${date}/check_file"
 	log_file="${check_file}/log"
 	k8s_file="${check_file}/k8s"
 	
@@ -491,40 +500,6 @@ ensure_root() {
 
 ################################################################
 
-# banner 函数 
-echoBanner() {
-    echo -e "${YELLOW}****************************************************************${NC}"
-    echo -e "${BLUE}      __     __                      ______                     ${NC}"
-    echo -e "${BLUE}     / /    /_/____   __  __ _  __ / ____/__  __ ____           ${NC}"
-    echo -e "${BLUE}    / /    / // __ \ / / / /| |/_// / __ / / / // __ \\         ${NC}"
-    echo -e "${BLUE}   / /___ / // / / // /_/ /_>  < / /_/ // /_/ // / / /          ${NC}"
-    echo -e "${BLUE}  /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/           ${NC}"
-    echo -e "${BLUE}                                                                ${NC}" 
-    echo -e "${BLUE}                                     Version:6.0     			${NC}"
-    echo -e "${BLUE}                                     Author:sun977   			${NC}"
-	echo -e "${BLUE}                                     Mail:jiuwei977@foxmail.com ${NC}"
-	echo -e "${YELLOW}****************************************************************${NC}"
-    echo -e "${GREEN}检查内容:${NC}"
-    echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
-	echo -e "${GREEN}    2.网络连接情况分析${NC}"
-	echo -e "${GREEN}    3.系统进程信息分析${NC}"
-	echo -e "${GREEN}    4.系统文件信息分析${NC}"
-	echo -e "${GREEN}    5.后门排查${NC}"
-	echo -e "${GREEN}    6.webshell排查${NC}"
-	echo -e "${GREEN}    7.病毒信息排查${NC}"
-	echo -e "${GREEN}    8.内存信息排查${NC}"
-	echo -e "${GREEN}    9.黑客工具排查${NC}"
-	echo -e "${GREEN}    10.内核信息排查${NC}"
-	echo -e "${GREEN}    11.其他重要排查${NC}"
-	echo -e "${GREEN}    12.kubernets信息排查${NC}"
-	echo -e "${GREEN}    13.系统性能分析${NC}"
-	echo -e "${GREEN}    14.系统基线检查${NC}"
-    echo -e "${GREEN}如何使用:${NC}"
-    echo -e "${GREEN}    1.需要将本脚本上传到相应的服务器中${NC}"
-    echo -e "${GREEN}    2.运行 chmod +x linuxgun.sh 赋予脚本执行权限${NC}"
-    echo -e "${GREEN}    3.运行 ./linuxgun.sh 查看使用说明${NC}"
-	echo -e "${YELLOW}================================================================${NC}"
-}
 
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
@@ -4044,8 +4019,8 @@ checkOutlogPack(){
 
 
 	echo -e "${YELLOW}正在打包linuGun检查日志到/output/目录下:${NC}"  
-	# zip -r /tmp/linuxcheck_${ipadd}_${date}.zip /tmp/linuxcheck_${ipadd}_${date}/*
-	tar -zcvf ${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxcheck_${ipadd}_${date}/* -P >/dev/null 2>&1
+	# zip -r /tmp/linuxgun_${ipadd}_${date}.zip /tmp/linuxgun_${ipadd}_${date}/*
+	tar -zcvf ${current_dir}/output/linuxgun_${ipadd}_${date}.tar.gz  ${current_dir}/output/linuxgun_${ipadd}_${date}/* -P >/dev/null 2>&1
 	if [ $? -eq 0 ];then
 		echo -e "${YELLOW}[INFO]检查文件打包成功${NC}"  
 	else
@@ -4098,7 +4073,7 @@ sendFileRemote() {
 		echo -e "${YELLOW}[INFO] 未指定文件路径,正在查找自动生成的检查文件...${NC}"
 		
 		# 构造预期的文件名
-		local expected_file="${current_dir}/output/linuxcheck_${ipadd}_${date}.tar.gz"
+		local expected_file="${current_dir}/output/linuxgun_${ipadd}_${date}.tar.gz"
 		
 		if [ -f "$expected_file" ]; then
 			file_path="$expected_file"
@@ -4183,7 +4158,7 @@ sendFileRemote() {
 		echo -e "${YELLOW}    4. 文件接收服务器是否正在运行并监听指定端口${NC}"
 		echo -e "${YELLOW}    5. 认证token是否正确${NC}"
 		echo -e "${YELLOW}    6. 网络连接是否正常${NC}"
-		# 记录失败日志 【日志路径: output/linuxcheck_xxx_2025xxxx/upload.log】
+		# 记录失败日志 【日志路径: output/linuxgun_xxx_2025xxxx/upload.log】
 		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传失败: $file_path -> $server_ip:$server_port (错误码: $curl_exit_code)" >> "${check_file}/upload.log" 2>/dev/null
 		handle_error 1 "文件上传失败: 退出码=$curl_exit_code, 错误=$curl_result" "sendFileRemote"
 		log_operation "文件远程发送" "文件上传到远程服务器失败" "失败"
@@ -4202,8 +4177,13 @@ main() {
 	local main_start_time=$(date +%s)
 	local script_version="6.0"
 	
-	# 记录脚本启动
-	echo -e "${GREEN}[$(date '+%Y-%m-%d %H:%M:%S')] LinuxGun v${script_version} 启动${NC}"
+	# 检查是否提供了参数
+    if [ $# -eq 0 ]; then
+		# 没有参数时显示logo和使用说明
+		echoBanner
+        usage
+        exit 1
+    fi
 	
 	# 将标准输入的内容同时输出到终端和文件
 	log2file() {
@@ -4219,16 +4199,9 @@ main() {
 	ensure_root
 	
 	# 记录主函数启动日志
-	log_operation "脚本启动" "LinuxGun v${script_version} 主函数启动" "开始"
-	log_message "INFO" "脚本参数: $*"
-	log_message "INFO" "当前用户: $(whoami), UID: $(id -u)"
-
-    # 检查是否提供了参数
-    if [ $# -eq 0 ]; then
-		echoBanner
-        usage
-        exit 1
-    fi
+	log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "BEGIN"
+	log_message "INFO" "OPTIONS: $*"
+	log_message "INFO" "USER: $(whoami), UID: $(id -u)"
 
     local run_all=false
     local modules=()  # 模块列表,参数选定的模块会追加到这个列表中
@@ -4391,7 +4364,8 @@ main() {
 
     # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用,且不包括--send】
     if [ "$run_all" = true ]; then
-        echo -e "${YELLOW}[INFO] linuGun 开始执行所有检查项:${NC}"
+        # echo -e "${YELLOW}[INFO] linuGun 开始执行所有检查项:${NC}"
+		log_operation "全量检查" "LinuxGun v${script_version} 全量检查开始" "开始"
 		systemCheck  		| log2file "${check_file}/checkresult.txt"
 		networkInfo	 		| log2file "${check_file}/checkresult.txt"
 		processInfo			| log2file "${check_file}/checkresult.txt"
@@ -4537,6 +4511,43 @@ main() {
     log_operation "脚本执行" "LinuxGun v${script_version} 脚本执行完成" "完成"
     log_message "INFO" "脚本总执行时间: ${total_duration}秒"
 }
+
+
+# banner 函数 
+echoBanner() {
+    echo -e "${YELLOW}****************************************************************${NC}"
+    echo -e "${BLUE}      __     __                      ______                     ${NC}"
+    echo -e "${BLUE}     / /    /_/____   __  __ _  __ / ____/__  __ ____           ${NC}"
+    echo -e "${BLUE}    / /    / // __ \ / / / /| |/_// / __ / / / // __ \\         ${NC}"
+    echo -e "${BLUE}   / /___ / // / / // /_/ /_>  < / /_/ // /_/ // / / /          ${NC}"
+    echo -e "${BLUE}  /_____//_//_/ /_/ \__,_//_/|_| \____/ \__,_//_/ /_/           ${NC}"
+    echo -e "${BLUE}                                                                ${NC}" 
+    echo -e "${BLUE}                                     Version:6.0     			${NC}"
+    echo -e "${BLUE}                                     Author:sun977   			${NC}"
+	echo -e "${BLUE}                                     Mail:jiuwei977@foxmail.com ${NC}"
+	echo -e "${YELLOW}****************************************************************${NC}"
+    echo -e "${GREEN}检查内容:${NC}"
+    echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
+	echo -e "${GREEN}    2.网络连接情况分析${NC}"
+	echo -e "${GREEN}    3.系统进程信息分析${NC}"
+	echo -e "${GREEN}    4.系统文件信息分析${NC}"
+	echo -e "${GREEN}    5.后门排查${NC}"
+	echo -e "${GREEN}    6.webshell排查${NC}"
+	echo -e "${GREEN}    7.病毒信息排查${NC}"
+	echo -e "${GREEN}    8.内存信息排查${NC}"
+	echo -e "${GREEN}    9.黑客工具排查${NC}"
+	echo -e "${GREEN}    10.内核信息排查${NC}"
+	echo -e "${GREEN}    11.其他重要排查${NC}"
+	echo -e "${GREEN}    12.kubernets信息排查${NC}"
+	echo -e "${GREEN}    13.系统性能分析${NC}"
+	echo -e "${GREEN}    14.系统基线检查${NC}"
+    echo -e "${GREEN}如何使用:${NC}"
+    echo -e "${GREEN}    1.需要将本脚本上传到相应的服务器中${NC}"
+    echo -e "${GREEN}    2.运行 chmod +x linuxgun.sh 赋予脚本执行权限${NC}"
+    echo -e "${GREEN}    3.运行 ./linuxgun.sh 查看使用说明${NC}"
+	echo -e "${YELLOW}================================================================${NC}"
+}
+
 
 # 显示使用帮助
 usage() {
