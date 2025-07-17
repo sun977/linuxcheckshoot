@@ -4315,6 +4315,7 @@ main() {
 
     local run_all=false
     local modules=()  # 模块列表,参数选定的模块会追加到这个列表中
+    local interactive_mode=false
 
     # 检查--send参数是否与其他参数组合使用（不允许）
     if [[ "$*" == *"--send"* ]] && [ $# -gt 1 ]; then
@@ -4461,6 +4462,9 @@ main() {
 			--attack-filescan)
 				modules+=("attack-filescan")
 				;;
+            --inter)
+                interactive_mode=true
+                ;;
             --all)
                 run_all=true
                 ;;
@@ -4472,137 +4476,49 @@ main() {
         esac
     done
 
+    # 定义所有一级模块
+    local all_modules=(system network psinfo file backdoor tunnel webshell virus memInfo hackerTools kernel other k8s performance baseline)
+
     # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用,且不包括--send】
     if [ "$run_all" = true ]; then
-        # echo -e "${YELLOW}[INFO] linuGun 开始执行所有检查项:${NC}"
-		log_operation "全量检查" "LinuxGun v${script_version} 全量检查开始" "开始"
-		systemCheck  		| log2file "${check_file}/checkresult.txt"
-		networkInfo	 		| log2file "${check_file}/checkresult.txt"
-		processInfo			| log2file "${check_file}/checkresult.txt"
-		fileCheck			| log2file "${check_file}/checkresult.txt"
-		backdoorCheck		| log2file "${check_file}/checkresult.txt"
-		tunnelCheck			| log2file "${check_file}/checkresult.txt"   # 添加tunnelCheck
-		webshellCheck		| log2file "${check_file}/checkresult.txt"
-		virusCheck			| log2file "${check_file}/checkresult.txt"
-		memInfoCheck		| log2file "${check_file}/checkresult.txt"
-		hackerToolsCheck	| log2file "${check_file}/checkresult.txt"
-		kernelCheck			| log2file "${check_file}/checkresult.txt"
-		otherCheck			| log2file "${check_file}/checkresult.txt"
-		k8sCheck			| log2file "${check_file}/checkresult.txt"
-		performanceCheck	| log2file "${check_file}/checkresult.txt"
-		baselineCheck		| log2file "${check_file}/checkresult.txt"
-		# 日志打包函数【等待 2s 后在进行打包,解决脚本执行过程中,日志文件未生成或被占用问题】
-		sleep 2 
-		checkOutlogPack		| log2file "${check_file}/checkresult.txt"
-        echo -e "${GREEN}[INFO] linuGun v6.0 所有检查项已完成${NC}"
-		echo -e "${GREEN} Author:sun977${NC}"  
-		echo -e "${GREEN} Mail:jiuwei977@foxmail.com${NC}"  
-		echo -e "${GREEN} Date:2025.07.15${NC}"
-		
-		# 记录全量检查完成日志
-		local main_end_time=$(date +%s)
-		log_operation "全量检查" "LinuxGun v${script_version} 全量检查完成" "完成"
-		log_performance "main" $main_start_time $main_end_time  
-    elif [ ${#modules[@]} -gt 0 ]; then  # 模块不为空【需要修改】
-        for module in "${modules[@]}"; do
-			# 模块和执行函数绑定
-            case "$module" in
-				system)
-					systemCheck
-					;;
-				system-baseinfo)
-					baseInfo
-					;;
-				system-user)
-					userInfoCheck
-					;;
-				system-crontab)
-					crontabCheck
-					;;
-				system-history)
-					historyCheck
-					;;
-				network)
-					networkInfo
-					;;	
-				psinfo)
-					processInfo
-					;;
-				file)
-					fileCheck
-					;;
-				file-systemservice)
-					systemServiceCheck
-					;;
-				file-dir)
-					dirFileCheck
-					;;
-				file-keyfiles)
-					specialFileCheck
-					;;
-				file-systemlog)
-					systemLogCheck
-					;;
-				backdoor)
-					backdoorCheck
-					;;
-				tunnel)
-					tunnelCheck
-					;;
-				tunnel-ssh)
-					tunnelSSH
-					;;
-				webshell)
-					webshellCheck
-					;;
-				virus)
-					virusCheck
-					;;
-				memInfo)
-					memInfoCheck
-					;;
-				hackerTools)
-					hackerToolsCheck
-					;;
-				kernel)
-					kernelCheck
-					;;
-				other)
-					otherCheck
-					;;
-				k8s)
-					k8sCheck
-					;;
-				k8s-cluster)
-					k8sClusterInfo
-					;;
-				k8s-secret)
-					k8sSecretCheck
-					;;
-				k8s-fscan)
-					k8sSensitiveInfo
-					;;
-				k8s-baseline)
-					k8sBaselineCheck
-					;;
-				performance)
-					performanceCheck
-					;;
-				baseline)
-					baselineCheck
-					;;
-				baseline-firewall)
-					firewallRulesCheck
-					;;
-				baseline-selinux)
-					selinuxStatusCheck
-					;;
-				attack-filescan)
-					attackAngleCheck
-					;;
-            esac
-        done
-        
+        modules=("${all_modules[@]}")  # 参数 --all 所有的模块加载进 modules 数组中
+    fi
+
+    if [ ${#modules[@]} -gt 0 ]; then
+        if [ "$interactive_mode" = true ]; then  # 判断信号量是否进入交互模式【--inter 交互模式】
+            log_message "INFO" "进入交互模式"
+            declare -A module_functions  # 创建一个关联数组，用于存储模块对应的函数名
+            module_functions=( [system]="systemCheck" [network]="networkInfo" [psinfo]="processInfo" [file]="fileCheck" [backdoor]="backdoorCheck" [tunnel]="tunnelCheck" [webshell]="webshellCheck" [virus]="virusCheck" [memInfo]="memInfoCheck" [hackerTools]="hackerToolsCheck" [kernel]="kernelCheck" [other]="otherCheck" [k8s]="k8sCheck" [performance]="performanceCheck" [baseline]="baselineCheck" )
+            for module in "${modules[@]}"; do
+                read -p "是否执行模块 $module? (y/n): " choice
+                choice=${choice,,}
+                if [[ ! "$choice" =~ ^(y|n)$ ]]; then
+                    echo "无效输入，跳过模块 $module"
+                    log_message "WARN" "Invalid input for $module, skipping."
+                    continue
+                fi
+                if [[ "$choice" == "y" ]]; then
+                    log_message "INFO" "User chose to execute $module."
+                    ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                else
+                    echo "跳过模块 $module"
+                    log_message "INFO" "User chose to skip $module."
+                fi
+            done
+            # 日志打包函数
+            sleep 2
+            checkOutlogPack | log2file "${check_file}/checkresult.txt"
+        else  # 非交互模式
+            for module in "${modules[@]}"; do
+                log_message "INFO" "Executing $module in non-interactive mode."
+                ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"  
+				# ${module_functions[$module]}  含义: 执行模块列表组里的每一个函数
+            done
+            # 日志打包函数
+            sleep 2
+            checkOutlogPack | log2file "${check_file}/checkresult.txt"
+        fi
+
         # 记录模块检查完成日志
         local main_end_time=$(date +%s)
         log_operation "模块检查" "指定模块检查完成: ${modules[*]}" "完成"
@@ -4613,6 +4529,7 @@ main() {
         usage
         exit 1
     fi
+
     
     # 记录脚本执行完成
     local main_end_time=$(date +%s)
@@ -4636,21 +4553,6 @@ echoBanner() {
     echo -e "${BLUE}                                     Author:sun977   			${NC}"
 	echo -e "${BLUE}                                     Mail:jiuwei977@foxmail.com ${NC}"
 	echo -e "${YELLOW}****************************************************************${NC}"
-    echo -e "${GREEN}检查内容:${NC}"
-    echo -e "${GREEN}    1.采集系统基础环境信息${NC}"
-	echo -e "${GREEN}    2.网络连接情况分析${NC}"
-	echo -e "${GREEN}    3.系统进程信息分析${NC}"
-	echo -e "${GREEN}    4.系统文件信息分析${NC}"
-	echo -e "${GREEN}    5.后门排查${NC}"
-	echo -e "${GREEN}    6.webshell排查${NC}"
-	echo -e "${GREEN}    7.病毒信息排查${NC}"
-	echo -e "${GREEN}    8.内存信息排查${NC}"
-	echo -e "${GREEN}    9.黑客工具排查${NC}"
-	echo -e "${GREEN}    10.内核信息排查${NC}"
-	echo -e "${GREEN}    11.其他重要排查${NC}"
-	echo -e "${GREEN}    12.kubernets信息排查${NC}"
-	echo -e "${GREEN}    13.系统性能分析${NC}"
-	echo -e "${GREEN}    14.系统基线检查${NC}"
     echo -e "${GREEN}如何使用:${NC}"
     echo -e "${GREEN}    1.需要将本脚本上传到相应的服务器中${NC}"
     echo -e "${GREEN}    2.运行 chmod +x linuxgun.sh 赋予脚本执行权限${NC}"
@@ -4669,6 +4571,7 @@ usage() {
 
 	echo -e "${GREEN}  全量检查:${NC}"
     echo -e "${YELLOW}    --all                   ${GREEN}执行所有检查项并打包检查结果(推荐首次运行)${NC}"
+    echo -e "${YELLOW}    --inter                 ${GREEN}启用交互模式，在执行每个模块前询问用户${NC}"
 
     echo -e "${GREEN}  系统相关检查:${NC}"
     echo -e "${YELLOW}    --system                ${GREEN}执行所有系统相关检查(baseinfo/user/crontab/history)${NC}"
