@@ -4485,10 +4485,12 @@ main() {
     fi
 
     if [ ${#modules[@]} -gt 0 ]; then
+        # 创建一个关联数组，用于存储模块对应的函数名（在交互和非交互模式中都需要使用）
+        declare -A module_functions
+        module_functions=( [system]="systemCheck" [network]="networkInfo" [psinfo]="processInfo" [file]="fileCheck" [backdoor]="backdoorCheck" [tunnel]="tunnelCheck" [webshell]="webshellCheck" [virus]="virusCheck" [memInfo]="memInfoCheck" [hackerTools]="hackerToolsCheck" [kernel]="kernelCheck" [other]="otherCheck" [k8s]="k8sCheck" [performance]="performanceCheck" [baseline]="baselineCheck" )
+        
         if [ "$interactive_mode" = true ]; then  # 判断信号量是否进入交互模式【--inter 交互模式】
             log_message "INFO" "进入交互模式"
-            declare -A module_functions  # 创建一个关联数组，用于存储模块对应的函数名
-            module_functions=( [system]="systemCheck" [network]="networkInfo" [psinfo]="processInfo" [file]="fileCheck" [backdoor]="backdoorCheck" [tunnel]="tunnelCheck" [webshell]="webshellCheck" [virus]="virusCheck" [memInfo]="memInfoCheck" [hackerTools]="hackerToolsCheck" [kernel]="kernelCheck" [other]="otherCheck" [k8s]="k8sCheck" [performance]="performanceCheck" [baseline]="baselineCheck" )
             for module in "${modules[@]}"; do
                 read -p "是否执行模块 $module? (y/n): " choice
                 choice=${choice,,}
@@ -4498,21 +4500,37 @@ main() {
                     continue
                 fi
                 if [[ "$choice" == "y" ]]; then
-                    log_message "INFO" "User chose to execute $module."
-                    ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                    log_message "INFO" "用户选择执行模块: $module"
+                    # 检查模块函数是否存在
+                    if [[ -n "${module_functions[$module]}" ]]; then
+                        log_message "INFO" "正在执行模块: $module (函数: ${module_functions[$module]})"
+                        # 执行对应的模块函数并将输出重定向到结果文件
+                        ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                        log_message "INFO" "模块 $module 执行完成"
+                    else
+                        echo "错误: 模块 $module 对应的函数未找到"
+                        log_message "ERROR" "模块 $module 对应的函数未找到，跳过执行"
+                    fi
                 else
                     echo "跳过模块 $module"
-                    log_message "INFO" "User chose to skip $module."
+                    log_message "INFO" "用户选择跳过模块: $module"
                 fi
             done
             # 日志打包函数
             sleep 2
             checkOutlogPack | log2file "${check_file}/checkresult.txt"
-        else  # 非交互模式
+        else  # 非交互模式 - 自动执行所有指定的模块
+            log_message "INFO" "进入非交互模式，自动执行所有模块"
             for module in "${modules[@]}"; do
-                log_message "INFO" "Executing $module in non-interactive mode."
-                ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"  
-				# ${module_functions[$module]}  含义: 执行模块列表组里的每一个函数
+                # 检查模块函数是否存在
+                if [[ -n "${module_functions[$module]}" ]]; then
+                    log_message "INFO" "正在执行模块: $module (函数: ${module_functions[$module]})"
+                    # 执行对应的模块函数并将输出重定向到结果文件
+                    ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                    log_message "INFO" "模块 $module 执行完成"
+                else
+                    log_message "ERROR" "模块 $module 对应的函数未找到，跳过执行"
+                fi
             done
             # 日志打包函数
             sleep 2
