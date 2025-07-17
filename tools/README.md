@@ -1,12 +1,15 @@
 # Linux 系统监控与安全工具集
 
-本目录包含了一系列用于Linux系统监控和安全管理的Shell脚本工具。这些工具可以帮助系统管理员进行网络监控、进程分析和IP封禁管理。
+本目录包含了一系列用于Linux系统监控和安全管理的工具。这些工具可以帮助系统管理员进行网络监控、进程分析、IP封禁管理和文件传输等功能。工具集包含Shell脚本和Python脚本，为应急响应和系统安全管理提供全面支持。
 
 ## 工具列表
 
-### 1. blockIP.sh - IP封禁管理脚本
+### 1. blockIP/ - IP封禁管理工具目录
 
-**更新时间**: 2025-07-14 (今日更新)
+#### blockIP.sh - IP封禁管理脚本
+
+**更新时间**: 2025-07-14
+**位置**: `blockIP/blockIP.sh`
 
 **脚本特点**:
 - 支持iptables和firewall两种防火墙工具
@@ -57,9 +60,94 @@
 - 支持IPv4地址格式验证
 - 日志文件默认保存在当前目录的outBlockIP.log
 
+#### example_ip_list.txt - IP列表示例文件
+
+**位置**: `blockIP/example_ip_list.txt`
+
+**文件说明**:
+- 提供IP地址列表的标准格式示例
+- 用于批量IP操作的参考模板
+- 每行一个IP地址，支持注释行(以#开头)
+
+**使用方法**:
+```bash
+# 复制示例文件并编辑
+cp blockIP/example_ip_list.txt my_ip_list.txt
+# 编辑文件添加需要处理的IP地址
+vim my_ip_list.txt
+# 使用文件进行批量操作
+./blockIP/blockIP.sh -f my_ip_list.txt
+```
+
 ---
 
-### 2. monitorInter.sh - 网络接口流量监控脚本
+### 2. uploadServer/ - 文件上传服务器工具目录
+
+#### uploadServer.py - HTTP文件上传服务器
+
+**更新时间**: 2025-07-15
+**位置**: `uploadServer/uploadServer.py`
+
+**脚本特点**:
+- HTTP文件上传服务器，专门用于接收linuxGun.sh发送的检查结果文件
+- 支持Bearer Token认证，确保传输安全性
+- 文件大小限制和格式验证
+- 详细的访问日志和错误日志记录
+- 支持自定义上传目录、端口和文件大小限制
+- 防止目录遍历攻击的安全文件名处理
+
+**主要功能**:
+- 接收HTTP POST文件上传请求
+- Token认证验证
+- 文件大小和格式检查
+- 安全的文件存储和命名
+- 详细的操作日志记录
+- JSON格式的响应信息
+
+**使用说明**:
+```bash
+# 基本用法
+python3 uploadServer.py <IP地址> <端口> <认证Token>
+
+# 使用示例
+python3 uploadServer/uploadServer.py 192.168.1.100 8080 your_secret_token
+
+# 配合linuxGun.sh使用
+./linuxGun.sh --all                                    # 先执行检查
+./linuxGun.sh --send 192.168.1.100 8080 your_secret_token  # 发送结果
+```
+
+**配置选项**:
+- 默认上传目录: `./uploads`
+- 默认最大文件大小: `1024M`
+- 默认日志文件: `./uploadServer.log`
+- 支持的文件格式: 所有格式(主要用于tar.gz压缩包)
+
+**安全特性**:
+- Bearer Token认证机制
+- 文件大小限制防止DoS攻击
+- 安全的文件名处理防止路径遍历
+- 详细的访问日志记录
+- IP地址和操作时间记录
+
+#### requirements.txt - Python依赖文件
+
+**位置**: `uploadServer/requirements.txt`
+
+**文件说明**:
+- 列出uploadServer.py所需的Python依赖包
+- 当前版本使用Python标准库，无额外依赖
+- 为未来功能扩展预留依赖管理
+
+**安装依赖**:
+```bash
+cd uploadServer
+pip3 install -r requirements.txt
+```
+
+---
+
+### 3. monitorInter.sh - 网络接口流量监控脚本
 
 **更新时间**: 2025-07-08
 
@@ -104,7 +192,7 @@
 
 ---
 
-### 3. monitorPs2Ip.sh - IP通信进程监控脚本
+### 4. monitorPs2Ip.sh - IP通信进程监控脚本
 
 **更新时间**: 2025-07-02
 
@@ -157,19 +245,27 @@
 
 ## 系统要求
 
+### 基础环境
 - Linux操作系统
-- Bash shell环境
+- Bash shell环境 (Shell脚本)
+- Python 3.6+ (uploadServer.py)
 - 相应的系统权限(某些功能需要root权限)
-- 网络监控工具(lsof/netstat/ss等)
+
+### 依赖工具
+- 网络监控工具: lsof/netstat/ss等
+- 防火墙工具: iptables/firewalld (blockIP.sh)
+- Python标准库 (uploadServer.py)
 
 ## 安装和使用
 
+### Shell脚本工具
 1. 确保脚本具有执行权限:
 ```bash
 chmod +x *.sh
+chmod +x blockIP/*.sh
 ```
 
-2. 根据需要运行相应的脚本:
+2. 运行Shell脚本:
 ```bash
 # 查看帮助信息
 ./scriptname.sh -h
@@ -178,27 +274,98 @@ chmod +x *.sh
 ./scriptname.sh [参数]
 ```
 
+### Python工具
+1. 安装Python依赖(如需要):
+```bash
+cd uploadServer
+pip3 install -r requirements.txt
+```
+
+2. 运行Python脚本:
+```bash
+python3 uploadServer/uploadServer.py <IP> <端口> <Token>
+```
+
 ## 注意事项
 
 1. **权限要求**: blockIP.sh需要root权限运行
 2. **备份建议**: 使用blockIP.sh前建议手动备份防火墙配置
 3. **网络工具**: 确保系统安装了必要的网络监控工具
 4. **IP格式**: 所有脚本都支持IPv4地址格式验证
-5. **日志记录**: blockIP.sh会生成详细的操作日志
+5. **日志记录**: blockIP.sh和uploadServer.py都会生成详细的操作日志
+6. **安全性**: uploadServer.py使用Token认证，请妥善保管认证令牌
+7. **文件传输**: 建议在安全的网络环境中使用文件上传功能
 
 ## 故障排除
 
+### 通用问题
 - 如果遇到权限问题，请使用sudo运行脚本
-- 如果网络监控工具不可用，请安装相应的软件包
 - 查看脚本的帮助信息了解详细用法
 - 检查日志文件获取错误信息
 
+### Shell脚本问题
+- 如果网络监控工具不可用，请安装相应的软件包
+- blockIP.sh权限问题：确保以root权限运行
+- 防火墙工具检测失败：检查iptables或firewalld是否安装
+
+### Python脚本问题
+- Python版本兼容性：确保使用Python 3.6+
+- 端口占用问题：检查指定端口是否被其他程序占用
+- Token认证失败：确保客户端和服务端使用相同的Token
+- 文件上传失败：检查文件大小是否超过限制
+
+## 工具集集成使用
+
+### 典型应急响应流程
+1. **系统检查**: 使用linuxGun.sh进行全面安全检查
+```bash
+./linuxGun.sh --all
+```
+
+2. **启动接收服务**: 在分析机器上启动文件接收服务
+```bash
+python3 tools/uploadServer/uploadServer.py 192.168.1.100 8080 emergency_token_2025
+```
+
+3. **传输检查结果**: 将检查结果发送到分析机器
+```bash
+./linuxGun.sh --send 192.168.1.100 8080 emergency_token_2025 [FILE_PATH]
+```
+
+4. **实时监控**: 根据需要使用监控工具
+```bash
+# 监控网络接口
+./tools/monitorInter.sh eth0 -c
+
+# 监控特定IP通信
+./tools/monitorPs2Ip.sh 192.168.1.200 -c
+```
+
+5. **IP封禁**: 发现恶意IP时进行封禁
+```bash
+# 封禁单个IP
+./tools/blockIP/blockIP.sh 192.168.1.200
+
+# 批量封禁
+echo "192.168.1.200\n192.168.1.201" > malicious_ips.txt
+./tools/blockIP/blockIP.sh -f malicious_ips.txt
+```
+
 ## 作者信息
 
-- 作者: Sun977
-- 项目: LinuxCheckShoot - 安全检测工具集
-- 更新: 持续维护和功能增强
+- **作者**: Sun977
+- **邮箱**: jiuwei977@foxmail.com
+- **项目**: LinuxCheckShoot - Linux安全检测工具集
+- **版本**: v6.0.5 (2025-07-15)
+- **维护**: 持续更新和功能增强
+
+## 版本历史
+
+- **v6.0.5 (2025-07-15)**: 新增uploadServer.py文件传输功能
+- **v6.0.4 (2025-07-14)**: 完善blockIP.sh IP封禁管理功能
+- **v6.0.3 (2025-07-08)**: 优化monitorInter.sh网络监控功能
+- **v6.0.2 (2025-07-02)**: 新增monitorPs2Ip.sh进程监控功能
 
 ---
 
-*本工具集旨在提供便捷的Linux系统监控和安全管理功能，请在了解脚本功能的前提下谨慎使用。*
+*本工具集旨在为Linux系统管理员和安全从业者提供便捷的系统监控和安全管理功能。请在充分了解各工具功能的前提下谨慎使用，特别是涉及防火墙规则修改的操作。*
