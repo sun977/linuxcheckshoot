@@ -9,12 +9,13 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # 根据参数执行不同的功能 
 # 模块化：linuxgun.sh [option] 
-# [INFO] 提示输出 -- 提示     [+]
-# [NOTE] 注意输出 -- 需要注意  [注意]
-# [WARN] 警告输出 -- 重点关注  [!]
-# [KNOW] 知识点 -- [说明]
-# [ERRO] 错误输出
-# [i] -- [INFO]
+# 蓝色 [KNOW] 知识点 -- [说明]
+# 黄色 [INFO] 提示输出 -- 提示    
+# 黄色 [NOTE] 注意输出 -- 需要注意
+# 红色 [WARN] 警告输出 -- 重点关注 
+# 绿色 [SUCC] 成功输出 
+# 红色 [ERRO] 错误输出
+# 白色 原生命令输出
 
 # 大纲输出函数
 print_summary() {
