@@ -387,7 +387,7 @@ baseInfo(){
         if [ -n "$distro" ]; then
             echo -e "${YELLOW}[INFO] 系统发行版本: $distro${NC}"
         else
-            echo -e "${RED}[WARN] 未找到有效的系统发行版本信息${NC}"
+            echo -e "${YELLOW}[WARN] 未找到有效的系统发行版本信息${NC}"
         fi
     elif [ -f "/etc/redhat-release" ]; then
         distro=$(cat /etc/redhat-release)
@@ -408,7 +408,7 @@ baseInfo(){
         distro=$(lsb_release -d | cut -f2)
         echo -e "${YELLOW}[INFO] 系统发行版本: $distro${NC}"
     else
-        echo -e "${RED}[WARN] 系统发行版本信息未找到,请手动检查${NC}"
+        echo -e "${YELLOW}[WARN] 系统发行版本信息未找到,请手动检查${NC}"
     fi
     printf "\n"
 
@@ -488,8 +488,8 @@ networkInfo(){
     # 端口信息
     ## 检测 TCP 端口
     echo -e "${YELLOW}[2.3.2]Check Port Info[netstat -anlp]:${NC}"  
-    echo -e "${BLUE}[KNOW] TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
-    echo -e "${BLUE}[KNOW] 只有绑定在0.0.0.0上局域网才可以访问${NC}"  
+    echo -e "${YELLOW}[KNOW] TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
+    echo -e "${YELLOW}[KNOW] 只有绑定在0.0.0.0上局域网才可以访问${NC}"  
     echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}"  
     tcpopen=$(netstat -anltp | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ -n "$tcpopen" ];then
@@ -507,7 +507,7 @@ networkInfo(){
 
     ## 检测 TCP 高危端口
     echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}"  
-    echo -e "${BLUE}[KNOW] Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    echo -e "${YELLOW}[KNOW] Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     while IFS=: read -r port description; do
@@ -557,7 +557,7 @@ networkInfo(){
 
     ## 检测 UDP 高危端口
     echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}"  
-    echo -e "${BLUE}[KNOW] Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    echo -e "${YELLOW}[KNOW] Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     while IFS=: read -r port description; do
@@ -1134,7 +1134,7 @@ historyCheck(){
 	fi
 
 	## 检查是否存在黑客命令 
-	echo -e "${BLUE}[KNOW] 匹配规则可自行维护,列表如下:id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get${NC}"
+	echo -e "${YELLOW}[KNOW] 匹配规则可自行维护,列表如下:id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get${NC}"
 	hackCommand=$(cat /root/.bash_history | grep -E "id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get" | grep -v grep)
 	if [ -n "$hackCommand" ]; then
 		(echo -e "${RED}[WARN] 发现黑客命令,请注意!${NC}" && echo "$hackCommand") 
@@ -1192,7 +1192,7 @@ userInfoCheck(){
 	echo -e "${YELLOW}[INFO] 输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
 	# 检查用户信息/etc/passwd
 	echo -e "${YELLOW}[INFO] 检查用户信息[/etc/passwd]${NC}"
-	echo -e "${BLUE}[KNOW] 用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]${NC}"
+	echo -e "${YELLOW}[KNOW] 用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]${NC}"
 	echo -e "${YELLOW}[INFO] show /etc/passwd:${NC}" && cat /etc/passwd
 	# 检查可登录用户
 	echo -e "${YELLOW}[INFO] 检查可登录用户[cat /etc/passwd | grep -E '/bin/bash$' | awk -F: '{print \$1}']${NC}"
@@ -1204,7 +1204,7 @@ userInfoCheck(){
 	fi
 	# 检查超级用户[除了 root 外的超级用户]
 	echo -e "${YELLOW}[INFO] 检查除root外超级用户[cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if(\$3==0) print \$1}'] ${NC}"
-	echo -e "${BLUE}[KNOW] UID=0的为超级用户,系统默认root的UID为0 ${NC}"
+	echo -e "${YELLOW}[KNOW] UID=0的为超级用户,系统默认root的UID为0 ${NC}"
 	superUser=$(cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}')
 	if [ -n "$superUser" ]; then
 		echo -e "${RED}[WARN] 发现其他超级用户,请注意!${NC}" && echo "$superUser"
@@ -1213,7 +1213,7 @@ userInfoCheck(){
 	fi
 	# 检查克隆用户
 	echo -e "${YELLOW}[INFO] 检查克隆用户[awk -F: '{a[\$3]++}END{for(i in a)if(a[INFO] >1)print i}' /etc/passwd] ${NC}"
-	echo -e "${BLUE}[KNOW] UID相同为克隆用户${NC}"
+	echo -e "${YELLOW}[KNOW] UID相同为克隆用户${NC}"
 	cloneUserUid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd)
 	if [ -n "$cloneUserUid" ]; then
 		echo -e "${RED}[WARN] 发现克隆用户,请注意!${NC}" && (cat /etc/passwd | grep $cloneUserUid | awk -F: '{print $1}') 
@@ -1223,7 +1223,7 @@ userInfoCheck(){
 	# 检查非系统自带用户
 	## 原理：从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,找出非系统自带用户
 	echo -e "${YELLOW}[INFO] 检查非系统自带用户[awk -F: '{if (\$3>='\$defaultUid' && \$3!=65534) {print }}' /etc/passwd] ${NC}"
-	echo -e "${BLUE}[KNOW] 从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
+	echo -e "${YELLOW}[KNOW] 从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
 	if [ -f /etc/login.defs ]; then
 		defaultUid=$(grep -E "^UID_MIN" /etc/login.defs | awk '{print $2}')
 		noSystemUser=$(awk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd)
@@ -1236,7 +1236,7 @@ userInfoCheck(){
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
 	echo -e "${YELLOW}[INFO] 检查空口令用户[awk -F: '(\$2=="") {print \$1}' /etc/shadow] ${NC}"
-	echo -e "${BLUE}[KNOW] 用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]${NC}"
+	echo -e "${YELLOW}[KNOW] 用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]${NC}"
 	echo -e "${YELLOW}[INFO] show /etc/shadow:${NC}" && cat /etc/shadow 
 	echo -e "${YELLOW}[原理]shadow文件中密码字段(第2个字段)为空的用户即为空口令用户 ${NC}"
 	emptyPasswdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
@@ -1286,11 +1286,11 @@ userInfoCheck(){
 	fi
 	# 检查用户组信息/etc/group
 	echo -e "${YELLOW}[INFO] 检查用户组信息[/etc/group] ${NC}"
-	echo -e "${BLUE}[KNOW] 组名:组密码:GID:组成员列表[共4个字段] ${NC}"
+	echo -e "${YELLOW}[KNOW] 组名:组密码:GID:组成员列表[共4个字段] ${NC}"
 	echo -e "${YELLOW}[INFO] show /etc/group:${NC}" && cat /etc/group
 	# - 检查特权用户组[除root组之外]
 	echo -e "${YELLOW}[INFO] 检查特权用户组[cat /etc/group | grep -v '^#' | awk -F: '{if (\$1!="root"&&\$3==0) print \$1}'] ${NC}"
-	echo -e "${BLUE}[KNOW] GID=0的为超级用户组,系统默认root组的GID为0 ${NC}"
+	echo -e "${YELLOW}[KNOW] GID=0的为超级用户组,系统默认root组的GID为0 ${NC}"
 	privGroupUsers=$(cat /etc/group | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}')
 	if [ -n "$privGroupUsers" ]; then
 		echo -e "${RED}[WARN] 发现特权用户组,请注意!${NC}" && echo "$privGroupUsers"
@@ -1348,8 +1348,8 @@ systemEnabledServiceCheck(){
 				# 分析系统启动项 【这里只是启动服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd启动项
 				echo -e "${YELLOW}[INFO] 正在分析危险systemd启动项[systemctl list-unit-files]:${NC}"
-				echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
-				echo -e "${BLUE}[KNOW] 根据服务文件位置找到服务文件并匹配敏感命令${NC}"
+				echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+				echo -e "${YELLOW}[KNOW] 根据服务文件位置找到服务文件并匹配敏感命令${NC}"
 				# 循环
 				for service in $systemdList; do
 					echo -e "${YELLOW}[INFO] 正在分析systemd启动项:$service${NC}"
@@ -1380,7 +1380,7 @@ systemEnabledServiceCheck(){
 				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
 				# 分析sysvinit启动项
 				echo -e "${YELLOW}[INFO] 正在分析危险init自启动项[chkconfig --list| awk '{print \$1}' | grep -E '\.(sh|pl|py|exe)$']:${NC}"
-				echo -e "${BLUE}[KNOW] 只根据服务启动名后缀检查可疑服务,并未匹配服务文件内容${NC}"
+				echo -e "${YELLOW}[KNOW] 只根据服务启动名后缀检查可疑服务,并未匹配服务文件内容${NC}"
 				dangerServiceInit=$(chkconfig --list| awk '{print $1}' | grep -E "\.(sh|pl|py|exe)$") 
 				if [ -n "$dangerServiceInit" ];then
 					echo -e "${RED}[WARN] 发现敏感init自启动项:${NC}" && echo "$dangerServiceInit"
@@ -1393,7 +1393,7 @@ systemEnabledServiceCheck(){
 			fi
 		else
 			echo -e "${RED}[WARN] 系统使用初始化程序本程序不适配,请手动检查${NC}"
-			echo -e "${BLUE}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			echo -e "${YELLOW}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
 		fi
 	else
 		echo -e "${RED}[WARN] 未识别到系统初始化程序,请手动检查${NC}"
@@ -1421,8 +1421,8 @@ systemRunningServiceCheck(){
 				# 分析系统启动项 【这里只是运行中服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd运行中的服务
 				echo -e "${YELLOW}[INFO] 正在分析危险systemd运行中服务项[systemctl list-unit-files]:${NC}"
-				echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
-				echo -e "${BLUE}[KNOW] 根据服务文件位置找到服务文件并匹配敏感命令${NC}"
+				echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+				echo -e "${YELLOW}[KNOW] 根据服务文件位置找到服务文件并匹配敏感命令${NC}"
 				# 循环
 				for service in $systemRunningServiceList; do
 					echo -e "${YELLOW}[INFO] 正在分析systemd运行中服务项:$service${NC}"
@@ -1446,7 +1446,7 @@ systemRunningServiceCheck(){
 			fi
 		else
 			echo -e "${RED}[WARN] 系统使用初始化程序本程序不适配,请手动检查${NC}"
-			echo -e "${BLUE}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			echo -e "${YELLOW}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
 		fi
 	else
 		echo -e "${RED}[WARN] 未识别到系统初始化程序,请手动检查${NC}"
@@ -1457,7 +1457,7 @@ systemRunningServiceCheck(){
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
-	echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+	echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
 	echo -e "${YELLOW}[INFO] 正在辨认系统使用的初始化程序${NC}"
 	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
 	if [ -n "$systemInit" ];then
