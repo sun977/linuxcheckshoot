@@ -484,7 +484,7 @@ init_env(){
 	
 	local end_time=$(date +%s)
 	log_performance "INIT_ENV" "$start_time" "$end_time"
-	log_operation "MOUDLE:INIT_ENV" "初始化LinuxGun运行环境" "SUCCESS"
+	log_operation "MOUDLE:INIT_ENV" "初始化LinuxGun运行环境" "END"
 
 }
 
@@ -503,7 +503,7 @@ ensure_root() {
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "BIGEN"
+    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "BEGIN"
     
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
@@ -618,13 +618,13 @@ baseInfo(){
     # 记录性能和操作日志
     local end_time=$(date +%s)
     log_performance "baseInfo" "$start_time" "$end_time"
-    log_operation "系统基础信息采集" "系统基础环境信息采集完成" "成功"
+	log_operation "MOUDLE:BASEINFO" "系统基础环境信息采集完成" "END"
 }
 
 # 网络信息【完成】
 networkInfo(){
     local start_time=$(date +%s)
-    log_operation "网络信息收集" "开始网络信息收集和分析" "开始"
+    log_operation "MOUDLE:NETWORKINFO" "开始网络信息收集和分析" "BEGIN"
     
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
@@ -973,7 +973,7 @@ networkInfo(){
     
     # 记录网络信息收集完成
     local end_time=$(date +%s)
-    log_operation "网络信息收集" "网络信息收集和分析完成" "完成"
+    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析完成" "END"
     log_performance "networkInfo" $start_time $end_time
     printf "\n"  
 }
@@ -1430,236 +1430,541 @@ processInfo(){
     # 记录性能和操作日志
     local end_time=$(date +%s)
     log_performance "processInfo" "$start_time" "$end_time"
-    log_operation "进程信息分析和安全检测" "进程信息分析和安全检测完成" "成功"
+    log_operation "MOUDLE:PROCESSINFO" "进程信息分析和安全检测完成" "END"
 }
 
 # 计划任务排查【归档 -- systemCheck】
 crontabCheck(){
-	# 系统计划任务收集
-	echo -e "${YELLOW}输出系统计划任务[/etc/crontab | /etc/cron*/* ]:${NC}" 
-	echo -e "${YELLOW}[INFO]系统计划任务[/etc/crontab]:${NC}" && (cat /etc/crontab | grep -v "^$")  # 去除空行
-	echo -e "${YELLOW}[INFO]系统计划任务[/etc/cron*/*]:${NC}" && (cat /etc/cron*/* | grep -v "^$")
+    local start_time=$(date +%s)
+    log_operation "MOUDLE:CRONTABCHECK" "开始计划任务分析和安全检测" "BEGIN"
+    
+    echo -e "${GREEN}==========${YELLOW}Crontab Analysis${GREEN}==========${NC}"
+    
+    # 系统计划任务收集
+    echo -e "${YELLOW}[INFO]输出系统计划任务[/etc/crontab | /etc/cron*/* ]:${NC}" 
+    log_message "INFO" "开始收集系统计划任务信息"
+    
+    # 检查系统计划任务文件
+    echo -e "${YELLOW}[INFO]系统计划任务[/etc/crontab]:${NC}"
+    if [ -f "/etc/crontab" ]; then
+        if cat /etc/crontab | grep -v "^$" >/dev/null 2>&1; then
+            cat /etc/crontab | grep -v "^$"  # 去除空行
+            log_message "INFO" "成功读取/etc/crontab文件"
+        else
+            handle_error 1 "读取/etc/crontab文件失败" "crontabCheck"
+        fi
+    else
+        echo -e "${YELLOW}[INFO]/etc/crontab文件不存在${NC}"
+        log_message "WARN" "/etc/crontab文件不存在"
+    fi
+    
+    echo -e "${YELLOW}[INFO]系统计划任务[/etc/cron*/*]:${NC}"
+    if ls /etc/cron*/* >/dev/null 2>&1; then
+        if cat /etc/cron*/* 2>/dev/null | grep -v "^$" >/dev/null 2>&1; then
+            cat /etc/cron*/* 2>/dev/null | grep -v "^$"
+            log_message "INFO" "成功读取/etc/cron*/目录下的计划任务文件"
+        else
+            echo -e "${YELLOW}[INFO]/etc/cron*/目录下无有效计划任务${NC}"
+            log_message "INFO" "/etc/cron*/目录下无有效计划任务"
+        fi
+    else
+        echo -e "${YELLOW}[INFO]/etc/cron*/目录下无计划任务文件${NC}"
+        log_message "INFO" "/etc/cron*/目录下无计划任务文件"
+    fi
 
-	# 用户计划任务收集
-	echo -e "${YELLOW}[INFO]输出用户计划任务[/var/spool/cron/*]:${NC}" 
-	for user_cron in $(ls /var/spool/cron); do
-		echo -e "${YELLOW}Cron tasks for user: $user_cron ${NC}"
-		cat /var/spool/cron/$user_cron
-	done
+    # 用户计划任务收集
+    echo -e "${YELLOW}[INFO]输出用户计划任务[/var/spool/cron/*]:${NC}" 
+    log_message "INFO" "开始收集用户计划任务信息"
+    
+    if [ -d "/var/spool/cron" ]; then
+        local user_cron_count=0
+        for user_cron in $(ls /var/spool/cron 2>/dev/null); do
+            if [ -f "/var/spool/cron/$user_cron" ]; then
+                echo -e "${YELLOW}Cron tasks for user: $user_cron ${NC}"
+                if cat "/var/spool/cron/$user_cron" >/dev/null 2>&1; then
+                    cat "/var/spool/cron/$user_cron"
+                    user_cron_count=$((user_cron_count + 1))
+                    log_message "INFO" "成功读取用户${user_cron}的计划任务"
+                else
+                    handle_error 1 "读取用户${user_cron}的计划任务失败" "crontabCheck"
+                fi
+            fi
+        done
+        
+        if [ $user_cron_count -eq 0 ]; then
+            echo -e "${YELLOW}[INFO]未发现用户计划任务${NC}"
+            log_message "INFO" "未发现用户计划任务"
+        else
+            log_message "INFO" "共发现${user_cron_count}个用户的计划任务"
+        fi
+    else
+        echo -e "${YELLOW}[INFO]/var/spool/cron目录不存在${NC}"
+        log_message "WARN" "/var/spool/cron目录不存在"
+    fi
 
-	# 用户/系统计划任务分析
-	hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))"  /etc/crontab /etc/cron*/* /var/spool/cron/*)  # 输出所有可疑计划任务
-	if [ $? -eq 0 ];then
-		(echo "${RED}[WARN]发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
-	else
-		echo "${YELLOW}[INFO]未发现可疑系统定时任务${NC}" 
-	fi
+    # 用户/系统计划任务分析
+    echo -e "${YELLOW}[INFO]开始分析可疑计划任务:${NC}"
+    log_message "INFO" "开始分析可疑计划任务"
+    
+    local cron_files=""
+    [ -f "/etc/crontab" ] && cron_files="$cron_files /etc/crontab"
+    [ -n "$(ls /etc/cron*/* 2>/dev/null)" ] && cron_files="$cron_files /etc/cron*/*"
+    [ -n "$(ls /var/spool/cron/* 2>/dev/null)" ] && cron_files="$cron_files /var/spool/cron/*"
+    
+    if [ -n "$cron_files" ]; then
+        hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" $cron_files 2>/dev/null)  # 输出所有可疑计划任务
+        if [ $? -eq 0 ] && [ -n "$hackCron" ]; then
+            (echo "${RED}[WARN]发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
+            log_message "WARN" "发现可疑计划任务: $hackCron"
+        else
+            echo "${YELLOW}[INFO]未发现可疑系统定时任务${NC}" 
+            log_message "INFO" "未发现可疑系统定时任务"
+        fi
+    else
+        echo "${YELLOW}[INFO]无计划任务文件可供分析${NC}"
+        log_message "INFO" "无计划任务文件可供分析"
+    fi
 
-	# 系统计划任务状态分析
-	echo -e "${YELLOW}[INFO]检测定时任务访问信息:${NC}" 
-	echo -e "${YELLOW}[INFO]检测定时任务访问信息[stat /etc/crontab | /etc/cron*/* | /var/spool/cron/*]:${NC}" 
-	for cronfile in /etc/crontab /etc/cron*/* /var/spool/cron/*; do
-		if [ -f "$cronfile" ]; then
-			echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}" && (cat "$cronfile" | grep -v "^$")  # 去除空行
-			echo -e "${YELLOW}stat [${cronfile}] ${NC}" && stat "$cronfile" | grep -E "Access|Modify|Change" | grep -v "("
-			# 从这里可以看到计划任务的状态[最近修改时间等]
-			# "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
+    # 系统计划任务状态分析
+    echo -e "${YELLOW}[INFO]检测定时任务访问信息:${NC}" 
+    echo -e "${YELLOW}[INFO]检测定时任务访问信息[stat /etc/crontab | /etc/cron*/* | /var/spool/cron/*]:${NC}" 
+    log_message "INFO" "开始检测计划任务文件状态信息"
+    
+    local analyzed_files=0
+    for cronfile in /etc/crontab /etc/cron*/* /var/spool/cron/*; do
+        if [ -f "$cronfile" ]; then
+            echo -e "${YELLOW}Target cron Info [${cronfile}]:${NC}"
+            if cat "$cronfile" | grep -v "^$" >/dev/null 2>&1; then
+                cat "$cronfile" | grep -v "^$"  # 去除空行
+            else
+                handle_error 1 "读取计划任务文件${cronfile}失败" "crontabCheck"
+                continue
+            fi
+            
+            echo -e "${YELLOW}stat [${cronfile}] ${NC}"
+            if stat "$cronfile" | grep -E "Access|Modify|Change" | grep -v "(" >/dev/null 2>&1; then
+                stat "$cronfile" | grep -E "Access|Modify|Change" | grep -v "("
+                analyzed_files=$((analyzed_files + 1))
+                log_message "INFO" "成功分析计划任务文件${cronfile}的状态信息"
+            else
+                handle_error 1 "获取计划任务文件${cronfile}状态信息失败" "crontabCheck"
+            fi
+            
+            # 从这里可以看到计划任务的状态[最近修改时间等]
+            # "Access:访问时间,每次访问文件时都会更新这个时间,如使用more、cat" 
             # "Modify:修改时间,文件内容改变会导致该时间更新" 
             # "Change:改变时间,文件属性变化会导致该时间更新,当文件修改时也会导致该时间更新;但是改变文件的属性,如读写权限时只会导致该时间更新,不会导致修改时间更新
-
-			# # 检测可疑计划任务[可以写在内部,但是颜色有点问题]
-			# echo -e "${YELLOW}[INFO]检测可疑计划任务:${NC}"
-			# hackCron=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$cronfile")
-			# if [ $? -eq 0 ];then
-			# 	(echo "${RED}[WARN]发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
-			# else
-			# 	echo "${YELLOW}[INFO]未发现可疑系统定时任务${NC}" 
-			# fi
-		fi
-	done
-	printf "\n"
+        fi
+    done
+    
+    if [ $analyzed_files -eq 0 ]; then
+        echo -e "${YELLOW}[INFO]未发现可分析的计划任务文件${NC}"
+        log_message "WARN" "未发现可分析的计划任务文件"
+    else
+        log_message "INFO" "共分析了${analyzed_files}个计划任务文件的状态信息"
+    fi
+    
+    # 记录计划任务检查完成
+    local end_time=$(date +%s)
+    log_operation "MOUDLE:CRONTABCHECK" "计划任务分析和安全检测完成" "END"
+    log_performance "crontabCheck" $start_time $end_time
+    printf "\n"
 }
 
 # 历史命令排查【归档 -- systemCheck】
 historyCheck(){
-	# history 和 cat /[user]/.bash_history 的区别
-	# history:
-	# - 实时历史: history 命令显示的是当前 shell 会话中已经执行过的命令历史,包括那些在当前会话中输入的命令。默认显示 500 条命令,可以通过 -c 参数清除历史记录。
-	# - 动态更新: 当你在 shell 会话中执行命令时,这些命令会被实时添加到历史记录中,因此 history 命令的输出会随着你的命令输入而不断更新。
-	# - 受限于当前会话: history 命令只显示当前 shell 会话的历史记录。如果关闭了终端再重新打开,history 命令将只显示新会话中的命令历史,除非你使用了历史文件共享设置。
-	# - 命令编号: history 命令的输出带有命令编号,这使得引用特定历史命令变得容易。你可以使用 !number 形式来重新执行历史中的任意命令
-	# cat /[user]/.bash_history:
-	# - 持久化历史: /[user]/.bash_history 文件是 bash shell 保存的命令历史文件,它保存了用户过去执行的命令,即使在关闭终端或注销后,这些历史记录也会被保留下来。
-	# - 静态文件: /[user]/.bash_history 是一个文件,它的内容不会随着你当前会话中的命令输入而实时更新。文件的内容会在你退出终端会话时更新,bash 会把当前会话的命令追加到这个文件中。
-	# - 不受限于当前会话: cat /[user]/.bash_history 可以显示用户的所有历史命令,包括以前会话中的命令,而不只是当前会话的命令。
-	# - 无命令编号: 由于 /[user]/.bash_history 是一个普通的文本文件,它的输出没有命令编号,你不能直接使用 !number 的方式来引用历史命令。
-	# 注意: 大多数情况下 linux 系统会为每个用户创建一个 .bash_history 文件。
-	# 		set +o history 是关闭命令历史记录功能,set -o history 重新打开[只影响当前的 shell 会话]
-	
-	# 输出 root 历史命令[history]
-	echo -e "${YELLOW}[INFO]输出当前shell下历史命令[history]:${NC}"
-	historyTmp=$(history)
-	if [ -n "$historyTmp" ];then
-		(echo -e "${YELLOW}[INFO]当前shell下history历史命令如下:${NC}" && echo "$historyTmp") 
-	else
-		echo -e "${RED}[WARN]未发现历史命令,请检查是否记录及已被清除${NC}" 
-	fi
+    local start_time=$(date +%s)
+    log_operation "MOUDLE:HISTORYCHECK" "开始历史命令分析和安全检测" "BEGIN"
+    
+    echo -e "${GREEN}==========${YELLOW}History Analysis${GREEN}==========${NC}"
+    
+    # history 和 cat /[user]/.bash_history 的区别
+    # history:
+    # - 实时历史: history 命令显示的是当前 shell 会话中已经执行过的命令历史,包括那些在当前会话中输入的命令。默认显示 500 条命令,可以通过 -c 参数清除历史记录。
+    # - 动态更新: 当你在 shell 会话中执行命令时,这些命令会被实时添加到历史记录中,因此 history 命令的输出会随着你的命令输入而不断更新。
+    # - 受限于当前会话: history 命令只显示当前 shell 会话的历史记录。如果关闭了终端再重新打开,history 命令将只显示新会话中的命令历史,除非你使用了历史文件共享设置。
+    # - 命令编号: history 命令的输出带有命令编号,这使得引用特定历史命令变得容易。你可以使用 !number 形式来重新执行历史中的任意命令
+    # cat /[user]/.bash_history:
+    # - 持久化历史: /[user]/.bash_history 文件是 bash shell 保存的命令历史文件,它保存了用户过去执行的命令,即使在关闭终端或注销后,这些历史记录也会被保留下来。
+    # - 静态文件: /[user]/.bash_history 是一个文件,它的内容不会随着你当前会话中的命令输入而实时更新。文件的内容会在你退出终端会话时更新,bash 会把当前会话的命令追加到这个文件中。
+    # - 不受限于当前会话: cat /[user]/.bash_history 可以显示用户的所有历史命令,包括以前会话中的命令,而不只是当前会话的命令。
+    # - 无命令编号: 由于 /[user]/.bash_history 是一个普通的文本文件,它的输出没有命令编号,你不能直接使用 !number 的方式来引用历史命令。
+    # 注意: 大多数情况下 linux 系统会为每个用户创建一个 .bash_history 文件。
+    #       set +o history 是关闭命令历史记录功能,set -o history 重新打开[只影响当前的 shell 会话]
+    
+    # 输出 root 历史命令[history]
+    echo -e "${YELLOW}[INFO]输出当前shell下历史命令[history]:${NC}"
+    log_message "INFO" "开始获取当前shell历史命令"
+    
+    if historyTmp=$(history 2>/dev/null); then
+        if [ -n "$historyTmp" ]; then
+            (echo -e "${YELLOW}[INFO]当前shell下history历史命令如下:${NC}" && echo "$historyTmp") 
+            local history_count=$(echo "$historyTmp" | wc -l)
+            log_message "INFO" "成功获取当前shell历史命令，共${history_count}条"
+        else
+            echo -e "${RED}[WARN]未发现历史命令,请检查是否记录及已被清除${NC}" 
+            log_message "WARN" "当前shell历史命令为空"
+        fi
+    else
+        echo -e "${RED}[WARN]获取历史命令失败${NC}"
+        handle_error 1 "获取当前shell历史命令失败" "historyCheck"
+    fi
 
-	# 读取/root/.bash_history文件的内容到变量history中
-	echo -e "${YELLOW}[INFO]输出操作系统历史命令[cat /root/.bash_history]:${NC}"
-	if [ -f /root/.bash_history ]; then
-		history=$(cat /root/.bash_history)
-		if [ -n "$history" ]; then
-			# 如果文件非空,输出历史命令
-			(echo -e "${YELLOW}[INFO]操作系统历史命令如下:${NC}" && echo "$history") 
-		else
-			# 如果文件为空,输出警告信息
-			echo -e "${RED}[WARN]未发现历史命令,请检查是否记录及已被清除${NC}" 
-		fi
-	else
-		# 如果文件不存在,同样输出警告信息
-		echo -e "${RED}[WARN]未发现历史命令文件,请检查/root/.bash_history是否存在${NC}" 
-	fi
+    # 读取/root/.bash_history文件的内容到变量history中
+    echo -e "${YELLOW}[INFO]输出操作系统历史命令[cat /root/.bash_history]:${NC}"
+    log_message "INFO" "开始读取/root/.bash_history文件"
+    
+    if [ -f /root/.bash_history ]; then
+        if history=$(cat /root/.bash_history 2>/dev/null); then
+            if [ -n "$history" ]; then
+                # 如果文件非空,输出历史命令
+                (echo -e "${YELLOW}[INFO]操作系统历史命令如下:${NC}" && echo "$history") 
+                local file_history_count=$(echo "$history" | wc -l)
+                log_message "INFO" "成功读取/root/.bash_history文件，共${file_history_count}条历史命令"
+            else
+                # 如果文件为空,输出警告信息
+                echo -e "${RED}[WARN]未发现历史命令,请检查是否记录及已被清除${NC}" 
+                log_message "WARN" "/root/.bash_history文件为空"
+            fi
+        else
+            handle_error 1 "读取/root/.bash_history文件失败" "historyCheck"
+        fi
+    else
+        # 如果文件不存在,同样输出警告信息
+        echo -e "${RED}[WARN]未发现历史命令文件,请检查/root/.bash_history是否存在${NC}" 
+        log_message "WARN" "/root/.bash_history文件不存在"
+    fi
 
 	# 历史命令分析
+	echo -e "${YELLOW}[INFO]开始历史命令安全分析:${NC}"
+	log_message "INFO" "开始历史命令安全分析和威胁检测"
+	
 	## 检查是否下载过脚本
 	echo -e "${YELLOW}[INFO]检查是否下载过脚本[cat /root/.bash_history | grep -E '((wget|curl|yum|apt-get|python).*\.(sh|pl|py|exe)$)']:${NC}"
-	scripts=$(cat /root/.bash_history | grep -E "((wget|curl|yum|apt-get|python).*\.(sh|pl|py|exe)$)" | grep -v grep)
-	if [ -n "$scripts" ]; then
-		(echo -e "${RED}[WARN]发现下载过脚本,请注意!${NC}" && echo "$scripts") 
+	log_message "INFO" "检查历史命令中的脚本下载行为"
+	
+	if [ -f /root/.bash_history ]; then
+		if scripts=$(cat /root/.bash_history 2>/dev/null | grep -E "((wget|curl|yum|apt-get|python).*\.(sh|pl|py|exe)$)" | grep -v grep 2>/dev/null); then
+			if [ -n "$scripts" ]; then
+				(echo -e "${RED}[WARN]发现下载过脚本,请注意!${NC}" && echo "$scripts") 
+				local script_count=$(echo "$scripts" | wc -l)
+				log_message "WARN" "发现${script_count}条脚本下载记录"
+			else
+				echo -e "${YELLOW}[INFO]未发现下载过脚本${NC}" 
+				log_message "INFO" "未发现脚本下载行为"
+			fi
+		else
+			handle_error 1 "检查脚本下载历史失败" "historyCheck"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现下载过脚本${NC}" 
+		log_message "WARN" "/root/.bash_history文件不存在，跳过脚本下载检查"
 	fi
 
 	## 检查是否通过主机下载/传输过文件
 	echo -e "${YELLOW}[INFO]检查是否通过主机下载/传输过文件[cat /root/.bash_history | grep -E '(sz|rz|scp)']:${NC}"
-	fileTransfer=$(cat /root/.bash_history | grep -E "(sz|rz|scp)" | grep -v grep)
-	if [ -n "$fileTransfer" ]; then
-		(echo -e "${RED}[WARN]发现通过主机下载/传输过文件,请注意!${NC}" && echo "$fileTransfer") 
-	else
-		echo -e "${YELLOW}[INFO]未发现通过主机下载/传输过文件${NC}" 
+	log_message "INFO" "检查历史命令中的文件传输行为"
+	
+	if [ -f /root/.bash_history ]; then
+		if fileTransfer=$(cat /root/.bash_history 2>/dev/null | grep -E "(sz|rz|scp)" | grep -v grep 2>/dev/null); then
+			if [ -n "$fileTransfer" ]; then
+				(echo -e "${RED}[WARN]发现通过主机下载/传输过文件,请注意!${NC}" && echo "$fileTransfer") 
+				local transfer_count=$(echo "$fileTransfer" | wc -l)
+				log_message "WARN" "发现${transfer_count}条文件传输记录"
+			else
+				echo -e "${YELLOW}[INFO]未发现通过主机下载/传输过文件${NC}" 
+				log_message "INFO" "未发现文件传输行为"
+			fi
+		else
+			handle_error 1 "检查文件传输历史失败" "historyCheck"
+		fi
 	fi
 
 	## 检查是否增加/删除过账号
 	echo -e "${YELLOW}[INFO]检查是否增加/删除过账号[cat /root/.bash_history | grep -E '(useradd|groupadd|userdel|groupdel)']:${NC}"
-	addDelhistory=$(cat /root/.bash_history | grep -E "(useradd|groupadd|userdel|groupdel)" | grep -v grep)
-	if [ -n "$addDelhistory" ]; then
-		(echo -e "${RED}[WARN]发现增加/删除账号,请注意!${NC}" && echo "$addDelhistory") 
-	else
-		echo -e "${YELLOW}[INFO]未发现增加/删除账号${NC}" 
+	log_message "INFO" "检查历史命令中的用户账号操作"
+	
+	if [ -f /root/.bash_history ]; then
+		if addDelhistory=$(cat /root/.bash_history 2>/dev/null | grep -E "(useradd|groupadd|userdel|groupdel)" | grep -v grep 2>/dev/null); then
+			if [ -n "$addDelhistory" ]; then
+				(echo -e "${RED}[WARN]发现增加/删除账号,请注意!${NC}" && echo "$addDelhistory") 
+				local account_count=$(echo "$addDelhistory" | wc -l)
+				log_message "WARN" "发现${account_count}条账号操作记录"
+			else
+				echo -e "${YELLOW}[INFO]未发现增加/删除账号${NC}" 
+				log_message "INFO" "未发现账号操作行为"
+			fi
+		else
+			handle_error 1 "检查账号操作历史失败" "historyCheck"
+		fi
 	fi
 
 	## 检查是否存在黑客命令 
 	echo -e "${YELLOW}[KNOW]匹配规则可自行维护,列表如下:id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get${NC}"
-	hackCommand=$(cat /root/.bash_history | grep -E "id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get" | grep -v grep)
-	if [ -n "$hackCommand" ]; then
-		(echo -e "${RED}[WARN]发现黑客命令,请注意!${NC}" && echo "$hackCommand") 
-	else
-		echo -e "${YELLOW}[INFO]未发现黑客命令${NC}" 
+	log_message "INFO" "检查历史命令中的黑客工具使用"
+	
+	if [ -f /root/.bash_history ]; then
+		if hackCommand=$(cat /root/.bash_history 2>/dev/null | grep -E "id|whoami|ifconfig|whois|sqlmap|nmap|beef|nikto|john|ettercap|backdoor|*proxy|msfconsole|msf|frp*|xray|*scan|mv|wget|curl|python*|yum|apt-get" | grep -v grep 2>/dev/null); then
+			if [ -n "$hackCommand" ]; then
+				(echo -e "${RED}[WARN]发现黑客命令,请注意!${NC}" && echo "$hackCommand") 
+				local hack_count=$(echo "$hackCommand" | wc -l)
+				log_message "WARN" "发现${hack_count}条疑似黑客工具使用记录"
+			else
+				echo -e "${YELLOW}[INFO]未发现黑客命令${NC}" 
+				log_message "INFO" "未发现黑客工具使用"
+			fi
+		else
+			handle_error 1 "检查黑客命令历史失败" "historyCheck"
+		fi
 	fi
 
 	## 其他可疑命令[set +o history]等 例如 chattr 修改文件属性
 	echo -e "${YELLOW}[INFO]检查是否存在黑客命令[cat /root/.bash_history | grep -E '(chattr|chmod|rm|set +o history)'${NC}"
-	otherCommand=$(cat /root/.bash_history | grep -E "(chattr|chmod|rm|set +o history)" | grep -v grep)
-	if [ -n "$otherCommand" ]; then
-		(echo -e "${RED}[WARN]发现其他可疑命令,请注意!${NC}" && echo "$otherCommand") 
-	else
-		echo -e "${YELLOW}[INFO]未发现其他可疑命令${NC}" 
+	log_message "INFO" "检查历史命令中的其他可疑操作"
+	
+	if [ -f /root/.bash_history ]; then
+		if otherCommand=$(cat /root/.bash_history 2>/dev/null | grep -E "(chattr|chmod|rm|set +o history)" | grep -v grep 2>/dev/null); then
+			if [ -n "$otherCommand" ]; then
+				(echo -e "${RED}[WARN]发现其他可疑命令,请注意!${NC}" && echo "$otherCommand") 
+				local other_count=$(echo "$otherCommand" | wc -l)
+				log_message "WARN" "发现${other_count}条其他可疑操作记录"
+			else
+				echo -e "${YELLOW}[INFO]未发现其他可疑命令${NC}" 
+				log_message "INFO" "未发现其他可疑操作"
+			fi
+		else
+			handle_error 1 "检查其他可疑命令历史失败" "historyCheck"
+		fi
 	fi
 
 	# 检查历史记录目录,看是否被备份,注意：这里可以看开容器持久化的.bash_history
 	echo -e "${YELLOW}[INFO]输出系统中所有可能的.bash_history*文件路径:${NC}"
-	findOut=$(find / -name ".bash_history*" -type f -exec ls -l {} \;) # 输出所有.bash_history文件[包含容器]
-	if [ -n "$findOut" ]; then
-		echo -e "${YELLOW}以下历史命令文件如有未检查需要人工手动检查,有可能涵盖容器内 history 文件${NC}"
-		(echo -e "${YELLOW}[INFO]系统中所有可能的.bash_history*文件如下:${NC}" && echo "$findOut") 
+	log_message "INFO" "搜索系统中所有历史命令文件"
+	
+	if findOut=$(find / -name ".bash_history*" -type f -exec ls -l {} \; 2>/dev/null); then
+		if [ -n "$findOut" ]; then
+			echo -e "${YELLOW}以下历史命令文件如有未检查需要人工手动检查,有可能涵盖容器内 history 文件${NC}"
+			(echo -e "${YELLOW}[INFO]系统中所有可能的.bash_history*文件如下:${NC}" && echo "$findOut") 
+			local history_files_count=$(echo "$findOut" | wc -l)
+			log_message "INFO" "发现${history_files_count}个历史命令文件"
+		else
+			echo -e "${RED}[WARN]未发现系统中存在历史命令文件,请人工检查机器是否被清理攻击痕迹${NC}" 
+			log_message "WARN" "未发现任何历史命令文件，可能已被清理"
+		fi
 	else
-		echo -e "${RED}[WARN]未发现系统中存在历史命令文件,请人工检查机器是否被清理攻击痕迹${NC}" 
+		handle_error 1 "搜索历史命令文件失败" "historyCheck"
 	fi
 
 	# 输出其他用户的历史命令[cat /[user]/.bash_history]
 	# 使用awk处理/etc/passwd文件,提取用户名和主目录,并检查.bash_history文件
 	echo -e "${YELLOW}[INFO]遍历系统用户并输出其的历史命令[cat /[user]/.bash_history]${NC}"
-	awk -F: '{
-		user=$1
-		home=$6
-		if (-f home"/.bash_history") {
-			print "[----- History for User: "user" -----]"
-			system("cat " home "/.bash_history")
-			print ""
-		}
-	}' /etc/passwd
+	log_message "INFO" "检查所有用户的历史命令文件"
+	
+	if [ -f /etc/passwd ]; then
+		if awk -F: '{
+			user=$1
+			home=$6
+			if (-f home"/.bash_history") {
+				print "[----- History for User: "user" -----]"
+				system("cat " home "/.bash_history")
+				print ""
+			}
+		}' /etc/passwd 2>/dev/null; then
+			log_message "INFO" "成功检查所有用户历史命令"
+		else
+			handle_error 1 "检查用户历史命令失败" "historyCheck"
+		fi
+	else
+		handle_error 1 "/etc/passwd文件不存在" "historyCheck"
+	fi
 	printf "\n" 
 
 	# 输出数据库操作历史命令
 	echo -e "${YELLOW}正在检查数据库操作历史命令[/root/.mysql_history]:${NC}"  
-	mysql_history=$(more /root/.mysql_history)
-	if [ -n "$mysql_history" ];then
-		(echo -e "${YELLOW}[INFO]数据库操作历史命令如下:${NC}" && echo "$mysql_history")  
+	log_message "INFO" "检查数据库操作历史命令"
+	
+	if [ -f /root/.mysql_history ]; then
+		if mysql_history=$(more /root/.mysql_history 2>/dev/null); then
+			if [ -n "$mysql_history" ]; then
+				(echo -e "${YELLOW}[INFO]数据库操作历史命令如下:${NC}" && echo "$mysql_history")  
+				local mysql_history_count=$(echo "$mysql_history" | wc -l)
+				log_message "INFO" "发现${mysql_history_count}条数据库操作历史"
+			else
+				echo -e "${YELLOW}[INFO]未发现数据库历史命令${NC}"  
+				log_message "INFO" "数据库历史文件为空"
+			fi
+		else
+			handle_error 1 "读取数据库历史文件失败" "historyCheck"
+		fi
 	else
 		echo -e "${YELLOW}[INFO]未发现数据库历史命令${NC}"  
+		log_message "INFO" "数据库历史文件不存在"
 	fi
 	printf "\n"  
+	
+	# 记录函数执行完成和性能统计
+	local end_time=$(date +%s)
+	log_performance "historyCheck" "$start_time" "$end_time"
+	log_operation "MOUDLE:HISTORYCHECK" "历史命令分析和安全检测完成" "END"
 }
 
 # 用户信息排查【归档 -- systemCheck】
 userInfoCheck(){
-	echo -e "${YELLOW}[INFO]输出正在登录的用户:${NC}" && w  # 正在登录的用户 或者 who 都行
-	echo -e "${YELLOW}[INFO]输出系统最后登录用户:${NC}" && last  # 系统最后登录用户
+	local start_time=$(date +%s)
+	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "BEGIN"
+	
+	echo -e "${GREEN}==========${YELLOW}User Information Analysis${GREEN}==========${NC}"
+	
+	echo -e "${YELLOW}[INFO]输出正在登录的用户:${NC}"
+	log_message "INFO" "获取当前登录用户信息"
+	if w 2>/dev/null; then
+		log_message "INFO" "成功获取当前登录用户信息"
+	else
+		handle_error 1 "获取当前登录用户信息失败" "userInfoCheck"
+	fi
+	
+	echo -e "${YELLOW}[INFO]输出系统最后登录用户:${NC}"
+	log_message "INFO" "获取系统最后登录用户信息"
+	if last 2>/dev/null; then
+		log_message "INFO" "成功获取系统最后登录用户信息"
+	else
+		handle_error 1 "获取系统最后登录用户信息失败" "userInfoCheck"
+	fi
+	
 	# 检查用户信息/etc/passwd
 	echo -e "${YELLOW}[INFO]检查用户信息[/etc/passwd]${NC}"
 	echo -e "${YELLOW}[KNOW]用户名:口令:用户标识号:组标识号:注释性描述:主目录:登录Shell[共7个字段]${NC}"
-	echo -e "${YELLOW}[INFO]show /etc/passwd:${NC}" && cat /etc/passwd
+	log_message "INFO" "开始分析/etc/passwd文件"
+	
+	if [ -f /etc/passwd ]; then
+		echo -e "${YELLOW}[INFO]show /etc/passwd:${NC}"
+		if cat /etc/passwd 2>/dev/null; then
+			local passwd_users_count=$(cat /etc/passwd | wc -l)
+			log_message "INFO" "成功读取/etc/passwd文件，共${passwd_users_count}个用户记录"
+		else
+			handle_error 1 "读取/etc/passwd文件失败" "userInfoCheck"
+		fi
+	else
+		handle_error 1 "/etc/passwd文件不存在" "userInfoCheck"
+	fi
 	# 检查可登录用户
 	echo -e "${YELLOW}[INFO]检查可登录用户[cat /etc/passwd | grep -E '/bin/bash$' | awk -F: '{print \$1}']${NC}"
-	loginUser=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
-	if [ -n "$loginUser" ]; then
-		echo -e "${RED}[WARN]发现可登录用户,请注意!${NC}" && echo "$loginUser"
-	else
-		echo -e "${YELLOW}[INFO]未发现可登录用户${NC}" 
+	log_message "INFO" "检查系统中可登录的用户"
+	
+	if [ -f /etc/passwd ]; then
+		if loginUser=$(cat /etc/passwd 2>/dev/null | grep -E "/bin/bash$" | awk -F: '{print $1}' 2>/dev/null); then
+			if [ -n "$loginUser" ]; then
+				echo -e "${RED}[WARN]发现可登录用户,请注意!${NC}" && echo "$loginUser"
+				local login_user_count=$(echo "$loginUser" | wc -l)
+				log_message "WARN" "发现${login_user_count}个可登录用户"
+			else
+				echo -e "${YELLOW}[INFO]未发现可登录用户${NC}" 
+				log_message "INFO" "未发现可登录用户"
+			fi
+		else
+			handle_error 1 "检查可登录用户失败" "userInfoCheck"
+		fi
 	fi
+	
 	# 检查超级用户[除了 root 外的超级用户]
 	echo -e "${YELLOW}[INFO]检查除root外超级用户[cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if(\$3==0) print \$1}'] ${NC}"
 	echo -e "${YELLOW}[KNOW]UID=0的为超级用户,系统默认root的UID为0 ${NC}"
-	superUser=$(cat /etc/passwd | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}')
-	if [ -n "$superUser" ]; then
-		echo -e "${RED}[WARN]发现其他超级用户,请注意!${NC}" && echo "$superUser"
-	else
-		echo -e "${YELLOW}[INFO]未发现超其他级用户${NC}" 
+	log_message "INFO" "检查除root外的超级用户"
+	
+	if [ -f /etc/passwd ]; then
+		if superUser=$(cat /etc/passwd 2>/dev/null | grep -v -E '^root|^#|^(\+:\*)?:0:0:::' | awk -F: '{if($3==0) print $1}' 2>/dev/null); then
+			if [ -n "$superUser" ]; then
+				echo -e "${RED}[WARN]发现其他超级用户,请注意!${NC}" && echo "$superUser"
+				local super_user_count=$(echo "$superUser" | wc -l)
+				log_message "WARN" "发现${super_user_count}个非root超级用户"
+			else
+				echo -e "${YELLOW}[INFO]未发现超其他级用户${NC}" 
+				log_message "INFO" "未发现其他超级用户"
+			fi
+		else
+			handle_error 1 "检查超级用户失败" "userInfoCheck"
+		fi
 	fi
+	
 	# 检查克隆用户
 	echo -e "${YELLOW}[INFO]检查克隆用户[awk -F: '{a[\$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd] ${NC}"
 	echo -e "${YELLOW}[KNOW]UID相同为克隆用户${NC}"
-	cloneUserUid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd)
-	if [ -n "$cloneUserUid" ]; then
-		echo -e "${RED}[WARN]发现克隆用户,请注意!${NC}" && (cat /etc/passwd | grep $cloneUserUid | awk -F: '{print $1}') 
-	else
-		echo -e "${YELLOW}[INFO]未发现克隆用户${NC}" 
+	log_message "INFO" "检查UID相同的克隆用户"
+	
+	if [ -f /etc/passwd ]; then
+		if cloneUserUid=$(awk -F: '{a[$3]++}END{for(i in a)if(a[i]>1)print i}' /etc/passwd 2>/dev/null); then
+			if [ -n "$cloneUserUid" ]; then
+				echo -e "${RED}[WARN]发现克隆用户,请注意!${NC}"
+				if cat /etc/passwd | grep $cloneUserUid | awk -F: '{print $1}' 2>/dev/null; then
+					local clone_user_count=$(cat /etc/passwd | grep $cloneUserUid | wc -l)
+					log_message "WARN" "发现${clone_user_count}个克隆用户"
+				else
+					handle_error 1 "获取克隆用户详情失败" "userInfoCheck"
+				fi
+			else
+				echo -e "${YELLOW}[INFO]未发现克隆用户${NC}" 
+				log_message "INFO" "未发现克隆用户"
+			fi
+		else
+			handle_error 1 "检查克隆用户失败" "userInfoCheck"
+		fi
 	fi
 	# 检查非系统自带用户
 	## 原理：从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,找出非系统自带用户
 	echo -e "${YELLOW}[INFO]检查非系统自带用户[awk -F: '{if (\$3>='\$defaultUid' && \$3!=65534) {print }}' /etc/passwd] ${NC}"
 	echo -e "${YELLOW}[KNOW]从/etc/login.defs文件中读取系统用户UID的范围,然后从/etc/passwd文件中读取用户UID进行比对,UID在范围外的用户为非系统自带用户${NC}"
+	log_message "INFO" "检查非系统自带用户"
+	
 	if [ -f /etc/login.defs ]; then
-		defaultUid=$(grep -E "^UID_MIN" /etc/login.defs | awk '{print $2}')
-		noSystemUser=$(awk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd)
-		if [ -n "$noSystemUser" ]; then
-			echo -e "${RED}[WARN]发现非系统自带用户,请注意!${NC}" && echo "$noSystemUser"
+		if defaultUid=$(grep -E "^UID_MIN" /etc/login.defs 2>/dev/null | awk '{print $2}' 2>/dev/null); then
+			if [ -n "$defaultUid" ] && [ -f /etc/passwd ]; then
+				if noSystemUser=$(awk -F: '{if ($3>='$defaultUid' && $3!=65534) {print $1}}' /etc/passwd 2>/dev/null); then
+					if [ -n "$noSystemUser" ]; then
+						echo -e "${RED}[WARN]发现非系统自带用户,请注意!${NC}" && echo "$noSystemUser"
+						local nosys_user_count=$(echo "$noSystemUser" | wc -l)
+						log_message "WARN" "发现${nosys_user_count}个非系统自带用户"
+					else
+						echo -e "${YELLOW}[INFO]未发现非系统自带用户${NC}" 
+						log_message "INFO" "未发现非系统自带用户"
+					fi
+				else
+					handle_error 1 "检查非系统自带用户失败" "userInfoCheck"
+				fi
+			else
+				handle_error 1 "获取UID_MIN失败或/etc/passwd不存在" "userInfoCheck"
+			fi
 		else
-			echo -e "${YELLOW}[INFO]未发现非系统自带用户${NC}" 
+			handle_error 1 "读取/etc/login.defs失败" "userInfoCheck"
 		fi
+	else
+		log_message "WARN" "/etc/login.defs文件不存在，跳过非系统用户检查"
 	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
 	echo -e "${YELLOW}[INFO]检查空口令用户[awk -F: '(\$2=="") {print \$1}' /etc/shadow] ${NC}"
 	echo -e "${YELLOW}[KNOW]用户名:加密密码:最后一次修改时间:最小修改时间间隔:密码有效期:密码需要变更前的警告天数:密码过期后的宽限时间:账号失效时间:保留字段[共9个字段]${NC}"
-	echo -e "${YELLOW}[INFO]show /etc/shadow:${NC}" && cat /etc/shadow 
-	echo -e "${YELLOW}[原理]shadow文件中密码字段(第2个字段)为空的用户即为空口令用户 ${NC}"
-	emptyPasswdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
-	if [ -n "$emptyPasswdUser" ]; then
-		echo -e "${RED}[WARN]发现空口令用户,请注意!${NC}" && echo "$emptyPasswdUser"
+	echo -e "${YELLOW}[INFO]show /etc/shadow:${NC}"
+	log_message "INFO" "检查空口令用户"
+	
+	if [ -f /etc/shadow ]; then
+		if cat /etc/shadow 2>/dev/null; then
+			echo -e "${YELLOW}[原理]shadow文件中密码字段(第2个字段)为空的用户即为空口令用户 ${NC}"
+			if emptyPasswdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow 2>/dev/null); then
+				if [ -n "$emptyPasswdUser" ]; then
+					echo -e "${RED}[WARN]发现空口令用户,请注意!${NC}" && echo "$emptyPasswdUser"
+					local empty_passwd_count=$(echo "$emptyPasswdUser" | wc -l)
+					log_message "WARN" "发现${empty_passwd_count}个空口令用户"
+				else
+					echo -e "${YELLOW}[INFO]未发现空口令用户${NC}" 
+					log_message "INFO" "未发现空口令用户"
+				fi
+			else
+				handle_error 1 "检查空口令用户失败" "userInfoCheck"
+			fi
+		else
+			handle_error 1 "读取/etc/shadow失败" "userInfoCheck"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现空口令用户${NC}" 
+		log_message "WARN" "/etc/shadow文件不存在，跳过空口令用户检查"
 	fi
 	# - 检查空口令且可登录SSH的用户
 	# 原理:
@@ -1673,62 +1978,141 @@ userInfoCheck(){
 	##2.echo "PermitEmptyPasswords yes" >>/etc/ssh/sshd_config
 	##3.service sshd restart
 	echo -e "${YELLOW}[INFO]检查空口令且可登录SSH的用户[/etc/passwd|/etc/shadow|/etc/ssh/sshd_config] ${NC}"
-	userList=$(cat /etc/passwd  | grep -E "/bin/bash$" | awk -F: '{print $1}')
-	noSetPwdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow)
-	isSSHPermit=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-	flag=""
-	for userA in $userList; do
-		for userB in $noSetPwdUser; do
-			if [ "$userA" == "$userB" ]; then
-				if [ -n "$isSSHPermit" ]; then
-					echo -e "${RED}[WARN]发现空口令且可登录SSH的用户,请注意!${NC}" && echo "$userA"
-					flag="1"
+	log_message "INFO" "检查空口令且可登录SSH的用户"
+	
+	if [ -f /etc/passwd ] && [ -f /etc/shadow ]; then
+		if userList=$(cat /etc/passwd 2>/dev/null | grep -E "/bin/bash$" | awk -F: '{print $1}' 2>/dev/null); then
+			if noSetPwdUser=$(awk -F: '($2=="") {print $1}' /etc/shadow 2>/dev/null); then
+				if [ -f /etc/ssh/sshd_config ]; then
+					if isSSHPermit=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -w "^PermitEmptyPasswords yes" 2>/dev/null); then
+						log_message "INFO" "SSH配置允许空密码登录"
+					else
+						log_message "INFO" "SSH配置不允许空密码登录"
+					fi
+					flag=""
+					for userA in $userList; do
+						for userB in $noSetPwdUser; do
+							if [ "$userA" == "$userB" ]; then
+								if [ -n "$isSSHPermit" ]; then
+									echo -e "${RED}[WARN]发现空口令且可登录SSH的用户,请注意!${NC}" && echo "$userA"
+									log_message "WARN" "发现空口令且可SSH登录用户: $userA"
+									flag="1"
+								else
+									echo -e "${YELLOW}[INFO]发现空口令且不可登录SSH的用户,请注意!${NC}" && echo "$userA"
+									log_message "INFO" "发现空口令但不可SSH登录用户: $userA"
+								fi
+							fi
+						done
+					done
+					if [ -z "$flag" ]; then
+						echo -e "${YELLOW}[INFO]未发现空口令且可登录SSH的用户${NC}" 
+						log_message "INFO" "未发现空口令且可SSH登录的用户"
+					fi
 				else
-					echo -e "${YELLOW}[INFO]发现空口令且不可登录SSH的用户,请注意!${NC}" && echo "$userA"
+					handle_error 1 "读取SSH配置失败" "userInfoCheck"
 				fi
+			else
+				handle_error 1 "获取空密码用户失败" "userInfoCheck"
 			fi
-		done
-	done
-	if [ -n "$flag" ]; then
-		echo -e "${YELLOW}[INFO]未发现空口令且可登录SSH的用户${NC}" 
+		else
+			handle_error 1 "获取可登录用户失败" "userInfoCheck"
+		fi
+	else
+		log_message "WARN" "缺少必要文件，跳过空口令SSH登录检查"
 	fi
 	# - 检查口令未加密用户
 	echo -e "${YELLOW}[INFO]检查未加密口令用户[awk -F: '{if(\$2!="x") {print \$1}}' /etc/passwd] ${NC}"
-	noEncryptPasswdUser=$(awk -F: '{if($2!="x") {print $1}}' /etc/passwd)
-	if [ -n "$noEncryptPasswdUser" ]; then
-		echo -e "${RED}[WARN]发现未加密口令用户,请注意!${NC}" && echo "$noEncryptPasswdUser"
+	log_message "INFO" "检查未加密口令用户"
+	
+	if [ -f /etc/passwd ]; then
+		if noEncryptPasswdUser=$(awk -F: '{if($2!="x") {print $1}}' /etc/passwd 2>/dev/null); then
+			if [ -n "$noEncryptPasswdUser" ]; then
+				echo -e "${RED}[WARN]发现未加密口令用户,请注意!${NC}" && echo "$noEncryptPasswdUser"
+				local noencrypt_passwd_count=$(echo "$noEncryptPasswdUser" | wc -l)
+				log_message "WARN" "发现${noencrypt_passwd_count}个未加密口令用户"
+			else
+				echo -e "${YELLOW}[INFO]未发现未加密口令用户${NC}" 
+				log_message "INFO" "未发现未加密口令用户"
+			fi
+		else
+			handle_error 1 "检查未加密口令用户失败" "userInfoCheck"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现未加密口令用户${NC}" 
+		log_message "WARN" "/etc/passwd文件不存在，跳过未加密口令用户检查"
 	fi
 	# 检查用户组信息/etc/group
 	echo -e "${YELLOW}[INFO]检查用户组信息[/etc/group] ${NC}"
 	echo -e "${YELLOW}[KNOW]组名:组密码:GID:组成员列表[共4个字段] ${NC}"
-	echo -e "${YELLOW}[INFO]show /etc/group:${NC}" && cat /etc/group
+	echo -e "${YELLOW}[INFO]show /etc/group:${NC}"
+	log_message "INFO" "检查用户组信息"
+	
+	if [ -f /etc/group ]; then
+		if cat /etc/group 2>/dev/null; then
+			log_message "INFO" "成功读取/etc/group文件"
+		else
+			handle_error 1 "读取/etc/group失败" "userInfoCheck"
+		fi
+	else
+		log_message "WARN" "/etc/group文件不存在，跳过用户组检查"
+		return
+	fi
+	
 	# - 检查特权用户组[除root组之外]
 	echo -e "${YELLOW}[INFO]检查特权用户组[cat /etc/group | grep -v '^#' | awk -F: '{if (\$1!="root"&&\$3==0) print \$1}'] ${NC}"
 	echo -e "${YELLOW}[KNOW]GID=0的为超级用户组,系统默认root组的GID为0 ${NC}"
-	privGroupUsers=$(cat /etc/group | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}')
-	if [ -n "$privGroupUsers" ]; then
-		echo -e "${RED}[WARN]发现特权用户组,请注意!${NC}" && echo "$privGroupUsers"
+	log_message "INFO" "检查特权用户组"
+	
+	if privGroupUsers=$(cat /etc/group 2>/dev/null | grep -v '^#' | awk -F: '{if ($1!="root"&&$3==0) print $1}' 2>/dev/null); then
+		if [ -n "$privGroupUsers" ]; then
+			echo -e "${RED}[WARN]发现特权用户组,请注意!${NC}" && echo "$privGroupUsers"
+			local priv_group_count=$(echo "$privGroupUsers" | wc -l)
+			log_message "WARN" "发现${priv_group_count}个特权用户组"
+		else
+			echo -e "${YELLOW}[INFO]未发现特权用户组${NC}" 
+			log_message "INFO" "未发现特权用户组"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现特权用户组${NC}" 
+		handle_error 1 "检查特权用户组失败" "userInfoCheck"
 	fi
 	# - 检查相同GID的用户组
 	echo -e "${YELLOW}[INFO]检查相同GID的用户组[cat /etc/group | grep -v '^#' | awk -F: '{print \$3}' | uniq -d] ${NC}"
-	groupUid=$(cat /etc/group | grep -v "^$" | awk -F: '{print $3}' | uniq -d)
-	if [ -n "$groupUid" ];then
-		echo -e "${RED}[WARN]发现相同GID用户组:${NC}" && echo "$groupUid"
+	log_message "INFO" "检查相同GID的用户组"
+	
+	if groupUid=$(cat /etc/group 2>/dev/null | grep -v "^$" | awk -F: '{print $3}' 2>/dev/null | uniq -d 2>/dev/null); then
+		if [ -n "$groupUid" ];then
+			echo -e "${RED}[WARN]发现相同GID用户组:${NC}" && echo "$groupUid"
+			local dup_gid_count=$(echo "$groupUid" | wc -l)
+			log_message "WARN" "发现${dup_gid_count}个重复GID"
+		else
+			echo -e "${YELLOW}[INFO]未发现相同GID的用户组${NC}" 
+			log_message "INFO" "未发现相同GID的用户组"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现相同GID的用户组${NC}" 
+		handle_error 1 "检查相同GID用户组失败" "userInfoCheck"
 	fi
+	
 	# - 检查相同用户组名
 	echo -e "${YELLOW}[INFO]检查相同用户组名[cat /etc/group | grep -v '^$' | awk -F: '{print \$1}' | uniq -d] ${NC}"
-	groupName=$(cat /etc/group | grep -v "^$" | awk -F: '{print $1}' | uniq -d)
-	if [ -n "$groupName" ];then
-		echo -e "${RED}发现相同用户组名:${NC}" && echo "$groupName"
+	log_message "INFO" "检查相同用户组名"
+	
+	if groupName=$(cat /etc/group 2>/dev/null | grep -v "^$" | awk -F: '{print $1}' 2>/dev/null | uniq -d 2>/dev/null); then
+		if [ -n "$groupName" ];then
+			echo -e "${RED}发现相同用户组名:${NC}" && echo "$groupName"
+			local dup_group_count=$(echo "$groupName" | wc -l)
+			log_message "WARN" "发现${dup_group_count}个重复用户组名"
+		else
+			echo -e "${YELLOW}[INFO]未发现相同用户组名${NC}" 
+			log_message "INFO" "未发现相同用户组名"
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现相同用户组名${NC}" 
+		handle_error 1 "检查相同用户组名失败" "userInfoCheck"
 	fi
+	
+	# 记录性能统计
+	local end_time=$(date +%s)
+	log_performance "userInfoCheck" "$start_time" "$end_time"
+	log_operation "MOUDLE:USERINFOCHECK" "用户信息检查模块执行完成" "END"
+	
 	printf "\n" 
 }
 
@@ -1746,163 +2130,311 @@ systemCheck(){
 
 # 系统自启动服务分析【归档 -- systemServiceCheck】
 systemEnabledServiceCheck(){
+	local start_time=$(date +%s)
+	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "开始系统自启动服务安全检查和分析" "BEGIN"
+	
 	# 系统自启动项服务分析
 	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
 	## 有些用户自启动配置在用户的.bashrc/.bash_profile/.profile/.bash_logout等文件中
 	## 判断系统的初始化程序[sysvinit|systemd|upstart(弃用)]
 	echo -e "${YELLOW}[INFO]正在检查自启动服务信息:${NC}"
+	log_message "INFO" "开始检查系统自启动服务信息"
+	
 	echo -e "${YELLOW}[INFO]正在辨认系统使用的初始化程序${NC}"
-	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	log_message "INFO" "开始识别系统初始化程序类型"
+	
+	if systemInit=$((cat /proc/1/comm 2>/dev/null)|| (cat /proc/1/cgroup 2>/dev/null | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) 2>/dev/null; then
+		: # 命令执行成功，继续处理
+	else
+		handle_error 1 "获取系统初始化程序信息失败" "systemEnabledServiceCheck"
+		return 1
+	fi
 	if [ -n "$systemInit" ];then
 		echo -e "${YELLOW}[INFO]系统初始化程序为:$systemInit ${NC}"
+		log_message "INFO" "识别到系统初始化程序: $systemInit"
+		
 		if [ "$systemInit" == "systemd" ];then
 			echo -e "${YELLOW}[INFO]正在检查systemd自启动项[systemctl list-unit-files]:${NC}"
-			systemd=$(systemctl list-unit-files | grep -E "enabled" )   # 输出启动项
-			systemdList=$(systemctl list-unit-files | grep -E "enabled" | awk '{print $1}') # 输出启动项名称列表
+			log_message "INFO" "开始检查systemd自启动服务项"
+			
+			if systemd=$(systemctl list-unit-files 2>/dev/null | grep -E "enabled" 2>/dev/null); then
+				if systemdList=$(systemctl list-unit-files 2>/dev/null | grep -E "enabled" | awk '{print $1}' 2>/dev/null); then
+					: # 命令执行成功
+				else
+					handle_error 1 "获取systemd服务列表失败" "systemEnabledServiceCheck"
+					return 1
+				fi
+			else
+				handle_error 1 "执行systemctl list-unit-files命令失败" "systemEnabledServiceCheck"
+				return 1
+			fi
+			
 			if [ -n "$systemd" ];then
 				echo -e "${YELLOW}[INFO]systemd自启动项:${NC}" && echo "$systemd"
+				local systemd_count=$(echo "$systemd" | wc -l)
+				log_message "INFO" "发现${systemd_count}个systemd自启动服务"
 				# 分析系统启动项 【这里只是启动服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd启动项
 				echo -e "${YELLOW}[INFO]正在分析危险systemd启动项[systemctl list-unit-files]:${NC}"
+				log_message "INFO" "开始分析systemd启动项中的危险服务"
+				
 				echo -e "${YELLOW}[KNOW]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
 				echo -e "${YELLOW}[KNOW]根据服务文件位置找到服务文件并匹配敏感命令${NC}"
-				# 循环
+				
+				# 循环分析每个服务
+				local analyzed_services=0
+				local dangerous_services=0
+				
 				for service in $systemdList; do
 					echo -e "${YELLOW}[INFO]正在分析systemd启动项:$service${NC}"
+					log_message "DEBUG" "分析systemd服务: $service"
+					
 					# 根据服务名称找到服务文件位置
-					servicePath=$(systemctl show $service -p FragmentPath | awk -F "=" '{print $2}')  # 文件不存在的时候程序会中断 --- 20240808
-					if [ -n "$servicePath" ];then  # 判断文件是否存在
-						echo -e "${YELLOW}[INFO]找到service服务文件位置:$servicePath${NC}"
-						dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" $servicePath)
-						if [ -n "$dangerService" ];then
-							echo -e "${RED}[WARN]发现systemd启动项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
+					if servicePath=$(systemctl show $service -p FragmentPath 2>/dev/null | awk -F "=" '{print $2}' 2>/dev/null); then
+						if [ -n "$servicePath" ] && [ -f "$servicePath" ]; then
+							echo -e "${YELLOW}[INFO]找到service服务文件位置:$servicePath${NC}"
+							log_message "DEBUG" "找到服务文件: $servicePath"
+							
+							if dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null); then
+								if [ -n "$dangerService" ];then
+									echo -e "${RED}[WARN]发现systemd启动项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
+									log_message "WARN" "发现危险systemd服务: $service，包含敏感命令"
+									dangerous_services=$((dangerous_services + 1))
+								else
+									echo -e "${YELLOW}[INFO]未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
+									log_message "DEBUG" "systemd服务 $service 未发现敏感命令"
+								fi
+							else
+								handle_error 1 "分析服务文件${servicePath}失败" "systemEnabledServiceCheck"
+							fi
 						else
-							echo -e "${YELLOW}[INFO]未发现systemd启动项:${service}包含敏感命令或脚本${NC}" 
+							echo -e "${RED}[WARN]未找到service服务文件位置:$service${NC}"
+							log_message "WARN" "未找到systemd服务文件: $service"
 						fi
-					else
-						echo -e "${RED}[WARN]未找到service服务文件位置:$service${NC}"
-					fi
-				done			
+				else
+					handle_error 1 "获取服务${service}文件路径失败" "systemEnabledServiceCheck"
+				fi
+					analyzed_services=$((analyzed_services + 1))
+				done
+				
+				log_message "INFO" "systemd服务分析完成，共分析${analyzed_services}个服务，发现${dangerous_services}个危险服务"			
 
 			else
-				echo -e "${RED}[WARN]未发现systemd自启动项${NC}" 
+				echo -e "${RED}[WARN]未发现systemd自启动项${NC}"
+				log_message "WARN" "未发现systemd自启动项"
 			fi
 		elif [ "$systemInit" == "init" ];then
 			echo -e "${YELLOW}[INFO]正在检查init自启动项[chkconfig --list]:${NC}"  # [chkconfig --list实际查看的是/etc/init.d/下的服务]
-			init=$(chkconfig --list | grep -E ":on|启用" )
-			# initList=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}')
+			log_message "INFO" "开始检查init自启动服务项"
+			
+			if init=$(chkconfig --list 2>/dev/null | grep -E ":on|启用" 2>/dev/null); then
+				: # 命令执行成功
+			else
+				handle_error 1 "执行chkconfig --list命令失败" "systemEnabledServiceCheck"
+				return 1
+			fi
+			
 			if [ -n "$init" ];then
 				echo -e "${YELLOW}[INFO]init自启动项:${NC}" && echo "$init"
+				local init_count=$(echo "$init" | wc -l)
+				log_message "INFO" "发现${init_count}个init自启动服务"
+				
 				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
 				# 分析sysvinit启动项
 				echo -e "${YELLOW}[INFO]正在分析危险init自启动项[chkconfig --list| awk '{print \$1}' | grep -E '\.(sh|pl|py|exe)$']:${NC}"
+				log_message "INFO" "开始分析init启动项中的危险服务"
+				
 				echo -e "${YELLOW}[KNOW]只根据服务启动名后缀检查可疑服务,并未匹配服务文件内容${NC}"
-				dangerServiceInit=$(chkconfig --list| awk '{print $1}' | grep -E "\.(sh|pl|py|exe)$") 
-				if [ -n "$dangerServiceInit" ];then
-					echo -e "${RED}[WARN]发现敏感init自启动项:${NC}" && echo "$dangerServiceInit"
+				
+				if dangerServiceInit=$(chkconfig --list 2>/dev/null | awk '{print $1}' 2>/dev/null | grep -E "\.(sh|pl|py|exe)$" 2>/dev/null); then
+					if [ -n "$dangerServiceInit" ];then
+						echo -e "${RED}[WARN]发现敏感init自启动项:${NC}" && echo "$dangerServiceInit"
+						local danger_init_count=$(echo "$dangerServiceInit" | wc -l)
+						log_message "WARN" "发现${danger_init_count}个敏感init自启动项"
+					else
+						echo -e "${YELLOW}[INFO]未发现敏感init自启动项:${NC}"
+						log_message "INFO" "未发现敏感init自启动项"
+					fi
 				else
-					echo -e "${YELLOW}[INFO]未发现敏感init自启动项:${NC}" 
+					handle_error 1 "分析init自启动项失败" "systemEnabledServiceCheck"
 				fi
 
 			else
-				echo -e "${RED}[WARN]未发现init自启动项${NC}" 
+				echo -e "${RED}[WARN]未发现init自启动项${NC}"
+				log_message "WARN" "未发现init自启动项"
 			fi
 		else
 			echo -e "${RED}[WARN]系统使用初始化程序本程序不适配,请手动检查${NC}"
 			echo -e "${YELLOW}[KNOW]如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			log_message "WARN" "系统使用不支持的初始化程序: $systemInit，需要手动检查"
 		fi
 	else
 		echo -e "${RED}[WARN]未识别到系统初始化程序,请手动检查${NC}"
+		log_message "ERROR" "未能识别系统初始化程序，请手动检查"
 	fi
+	
+	# 记录性能统计和操作完成
+	local end_time=$(date +%s)
+	log_performance "systemEnabledServiceCheck" "$start_time" "$end_time"
+	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "系统自启动服务检查模块执行完成" "END"
+	printf "\n"
 }
 
 # 系统运行服务分析【归档 -- systemServiceCheck】
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
-	echo -e "${YELLOW}[INFO]正在检查正在运行中服务:${NC}"
+	start_time=$(date +%s)
+	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块开始执行" "START"
+	log_message "INFO" "正在检查正在运行中服务"
 	# systemRunningService=$(systemctl | grep -E "\.service.*running")
 
-	echo -e "${YELLOW}[INFO]正在辨认系统使用的初始化程序${NC}"
-	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	log_message "INFO" "正在辨认系统使用的初始化程序"
+	systemInit=$((cat /proc/1/comm 2>/dev/null)|| (cat /proc/1/cgroup 2>/dev/null | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取系统初始化程序失败" "systemRunningServiceCheck"
+	fi
 	if [ -n "$systemInit" ];then
 		echo -e "${YELLOW}[INFO]系统初始化程序为:$systemInit ${NC}"
+		log_message "INFO" "系统初始化程序为:$systemInit"
 		if [ "$systemInit" == "systemd" ];then
 			echo -e "${YELLOW}[INFO]正在检查systemd运行中服务项[systemctl | grep -E '\.service.*running']:${NC}"
+			log_message "INFO" "正在检查systemd运行中服务项[systemctl | grep -E '\.service.*running']"
 			# systemd=$(systemctl list-unit-files | grep -E "enabled" )   # 输出启动项
-			systemRunningService=$(systemctl | grep -E "\.service.*running")
+			systemRunningService=$(systemctl 2>/dev/null | grep -E "\.service.*running")
+			if [ $? -ne 0 ]; then
+				handle_error 1 "获取systemd运行中服务列表失败" "systemRunningServiceCheck"
+			fi
 			# systemdList=$(systemctl list-unit-files | grep -E "enabled" | awk '{print $1}') # 输出启动项名称列表
-			systemRunningServiceList=$(systemctl | grep -E "\.service.*running" | awk '{print $1}')  # 输出启动项名称列表
+			systemRunningServiceList=$(echo "$systemRunningService" | awk '{print $1}')  # 输出启动项名称列表
 			if [ -n "$systemRunningService" ];then
 				echo -e "${YELLOW}[INFO]systemd正在运行中服务项:${NC}" && echo "$systemRunningService"
+				running_service_count=$(echo "$systemRunningService" | wc -l)
+				log_message "INFO" "发现 $running_service_count 个systemd正在运行中服务项"
+				log_message "INFO" "systemd正在运行中服务项详情:\n$systemRunningService"
 				# 分析系统启动项 【这里只是运行中服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd运行中的服务
 				echo -e "${YELLOW}[INFO]正在分析危险systemd运行中服务项[systemctl list-unit-files]:${NC}"
 				echo -e "${YELLOW}[KNOW]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
 				echo -e "${YELLOW}[KNOW]根据服务文件位置找到服务文件并匹配敏感命令${NC}"
 				# 循环
+				analyzed_count=0
+				danger_running_count=0
 				for service in $systemRunningServiceList; do
 					echo -e "${YELLOW}[INFO]正在分析systemd运行中服务项:$service${NC}"
+					log_message "DEBUG" "正在分析systemd运行中服务项:$service"
 					# 根据服务名称找到服务文件位置
-					servicePath=$(systemctl show $service -p FragmentPath | awk -F "=" '{print $2}')  # 文件不存在的时候程序会中断 --- 20240808
-					if [ -n "$servicePath" ];then  # 判断文件是否存在
-						echo -e "${YELLOW}[INFO]找到service服务文件位置:$servicePath${NC}"
-						dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" $servicePath)
+					servicePath=$(systemctl show $service -p FragmentPath 2>/dev/null | awk -F "=" '{print $2}')  # 文件不存在的时候程序会中断 --- 20240808
+					if [ $? -ne 0 ]; then
+						handle_error 1 "获取服务文件路径失败: $service" "systemRunningServiceCheck"
+					fi
+					if [ -n "$servicePath" ] && [ -f "$servicePath" ];then  # 判断文件是否存在
+						log_message "INFO" "找到service服务文件位置:$servicePath"
+						dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null)
+						if [ $? -ne 0 ]; then
+							handle_error 1 "分析服务文件失败: $servicePath" "systemRunningServiceCheck"
+						fi
 						if [ -n "$dangerService" ];then
 							echo -e "${RED}[WARN]发现systemd运行中服务项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
+							log_message "WARN" "发现systemd运行中服务项:${service}包含敏感命令或脚本:\n$dangerService"
+							danger_running_count=$((danger_running_count + 1))
 						else
-							echo -e "${YELLOW}[INFO]未发现systemd运行中服务项:${service}包含敏感命令或脚本${NC}" 
+							echo -e "${YELLOW}[INFO]未发现systemd运行中服务项:${service}包含敏感命令或脚本${NC}"
+							log_message "INFO" "未发现systemd运行中服务项:${service}包含敏感命令或脚本" 
 						fi
 					else
 						echo -e "${RED}[WARN]未找到service服务文件位置:$service${NC}"
+						log_message "WARN" "未找到service服务文件位置:$service"
 					fi
-				done			
+					analyzed_count=$((analyzed_count + 1))
+				done
+				log_message "INFO" "systemd运行中服务分析完成，共分析 $analyzed_count 个服务，发现 $danger_running_count 个危险服务"			
 
 			else
 				echo -e "${RED}[WARN]未发现systemd运行中服务项${NC}" 
+				log_message "WARN" "未发现systemd运行中服务项" 
 			fi
 		else
-			echo -e "${RED}[WARN]系统使用初始化程序本程序不适配,请手动检查${NC}"
+			cho -e "${RED}[WARN]系统使用初始化程序本程序不适配,请手动检查${NC}"
 			echo -e "${YELLOW}[KNOW]如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			log_message "WARN" "系统使用初始化程序本程序不适配,请手动检查"
+			log_message "INFO" "如果系统使用初始化程序不是[sysvinit|systemd]"
 		fi
 	else
 		echo -e "${RED}[WARN]未识别到系统初始化程序,请手动检查${NC}"
+		log_message "INFO" "未识别到系统初始化程序,请手动检查"
 	fi
+	
+	end_time=$(date +%s)
+	log_performance "systemRunningServiceCheck" "$start_time" "$end_time"
+	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块执行完成" "END"
 }
 
 # 系统服务收集【归档 -- systemServiceCheck】
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
+	start_time=$(date +%s)
+	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块开始执行" "START"
 	echo -e "${YELLOW}[INFO]正在收集系统服务信息(不含威胁分析):${NC}"
+	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
 	echo -e "${YELLOW}[KNOW]根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+	log_message "DEBUG" "根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]"
 	echo -e "${YELLOW}[INFO]正在辨认系统使用的初始化程序${NC}"
-	systemInit=$((cat /proc/1/comm)|| (cat /proc/1/cgroup | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	log_message "INFO" "正在辨认系统使用的初始化程序"
+	systemInit=$((cat /proc/1/comm 2>/dev/null)|| (cat /proc/1/cgroup 2>/dev/null | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取系统初始化程序失败" "systemServiceCollect"
+	fi
 	if [ -n "$systemInit" ];then
 		echo -e "${YELLOW}[INFO]系统初始化程序为:$systemInit ${NC}"
+		log_message "INFO" "系统初始化程序为:$systemInit"
 		if [ "$systemInit" == "systemd" ];then
 			echo -e "${YELLOW}[INFO]正在收集systemd系统服务项[systemctl list-unit-files]:${NC}"
-			systemd=$(systemctl list-unit-files)   # 输出启动项
+			log_message "INFO" "正在收集systemd系统服务项[systemctl list-unit-files]"
+			systemd=$(systemctl list-unit-files 2>/dev/null)   # 输出启动项
+			if [ $? -ne 0 ]; then
+				handle_error 1 "获取systemd系统服务列表失败" "systemServiceCollect"
+			fi
 			if [ -n "$systemd" ];then
-				echo -e "${YELLOW}[INFO]systemd系统服务项如下:${NC}" && echo "$systemd"		
+				service_count=$(echo "$systemd" | wc -l)
+				echo -e "${YELLOW}[INFO]systemd系统服务项如下:${NC}" && echo "$systemd"
+				log_message "INFO" "发现 $service_count 个systemd系统服务项"
+				log_message "INFO" "systemd系统服务项详情:\n$systemd"		
 			else
-				echo -e "${RED}[WARN]未发现systemd系统服务项${NC}" 
+				echo -e "${RED}[WARN]未发现systemd系统服务项${NC}"
+				log_message "WARN" "未发现systemd系统服务项" 
 			fi
 		elif [ "$systemInit" == "init" ];then
 			echo -e "${YELLOW}[INFO]正在检查init系统服务项[chkconfig --list]:${NC}"  # [chkconfig --list实际查看的是/etc/init.d/下的服务]
-			init=$(chkconfig --list )
+			log_message "INFO" "正在检查init系统服务项[chkconfig --list]"
+			init=$(chkconfig --list 2>/dev/null)
+			if [ $? -ne 0 ]; then
+				handle_error 1 "获取init系统服务列表失败" "systemServiceCollect"
+			fi
 			# initList=$(chkconfig --list | grep -E ":on|启用" | awk '{print $1}')
 			if [ -n "$init" ];then
+				init_service_count=$(echo "$init" | wc -l)
 				echo -e "${YELLOW}[INFO]init系统服务项:${NC}" && echo "$init"
+				log_message "INFO" "发现 $init_service_count 个init系统服务项"
+				log_message "INFO" "init系统服务项详情:\n$init"
 				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
 			else
-				echo "[WARN]未发现init系统服务项" 
+				echo "[WARN]未发现init系统服务项"
+				log_message "WARN" "未发现init系统服务项" 
 			fi
 		else
 			echo -e "${RED}[WARN]系统使用初始化程序本程序不适配,请手动检查${NC}"
+			log_message "WARN" "系统使用初始化程序本程序不适配,请手动检查"
 			echo -e "${YELLOW}[KNOW]如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			log_message "INFO" "如果系统使用初始化程序不是[sysvinit|systemd]"
 		fi
 	else
 		echo -e "${RED}[WARN]未识别到系统初始化程序,请手动检查${NC}"
+		log_message "INFO" "未识别到系统初始化程序,请手动检查"
 	fi
+	
+	end_time=$(date +%s)
+	log_performance "systemServiceCollect" "$start_time" "$end_time"
+	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块执行完成" "END"
 }
 
 # 用户服务分析【归档 -- systemServiceCheck】
