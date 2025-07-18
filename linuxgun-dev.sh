@@ -4313,11 +4313,11 @@ main() {
 	log_message "INFO" "OPTIONS: $*"
 	log_message "INFO" "USER: $(whoami), UID: $(id -u)"
 
-    local run_all=false
-    local modules=()  # 模块列表,参数选定的模块会追加到这个列表中
-    local interactive_mode=false
+    local run_all=false		# 信号量: 是否运行所有模块
+    local modules=()  		# 模块列表,参数选定的模块会追加到这个列表中
+    local interactive_mode=false 	# 信号量: 是否启用交互模式
 
-    # 检查--send参数是否与其他参数组合使用（不允许）
+    # 检查--send参数是否与其他参数组合使用（不允许）【--send参数不能与其他检查参数组合使用】
     if [[ "$*" == *"--send"* ]] && [ $# -gt 1 ]; then
         # 检查是否有--send以外的其他参数
         local has_other_params=false 	# 标记变量
@@ -4357,7 +4357,7 @@ main() {
         exit $?		# $? 表示返回上一条命令的退出状态码 sendFileRemote 函数返回值 1 表示失败,0 表示成功
     fi
 
-    # 解析所有参数
+    # 解析所有参数【每多一个参数多追加一个模块】
     for arg in "$@"; do
         # 参数和模块绑定  --system[参数] modules+=("system") 模块名 $module 执行函数
         case "$arg" in
@@ -4466,7 +4466,7 @@ main() {
                 interactive_mode=true
                 ;;
             --all)
-                run_all=true
+                run_all=true		# 信号量: 是否运行所有模块	
                 ;;
             *)
                 echo -e "${RED}[WARN] 未知参数: $arg${NC}"
@@ -4476,7 +4476,7 @@ main() {
         esac
     done
 
-    # 定义所有一级模块
+    # 定义所有一级模块【用于交互执行询问用户是否运行】每一个一级模块默认包含二级模块
     local all_modules=(system network psinfo file backdoor tunnel webshell virus memInfo hackerTools kernel other k8s performance baseline)
 
     # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用,且不包括--send】
