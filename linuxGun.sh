@@ -1147,7 +1147,7 @@ historyCheck(){
 
 	## 其他可疑命令[set +o history]等 例如 chattr 修改文件属性
 	echo -e "${YELLOW}[INFO] 检查是否存在黑客命令[cat /root/.bash_history | grep -E '(chattr|chmod|rm|set +o history)'${NC}"
-	otherCommand=$(cat /root/.bash_history | grep -E "(chattr|chmod|rm|set +o history)" | grep -v grep)
+	otherCommand=$(cat /root/.bash_history | grep -E "(chattr|chmod|shred|rm|set +o history)" | grep -v grep)
 	if [ -n "$otherCommand" ]; then
 		(echo -e "${RED}[WARN] 发现其他可疑命令,请注意!${NC}" && echo "$otherCommand") 
 	else

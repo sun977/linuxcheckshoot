@@ -1722,7 +1722,7 @@ historyCheck(){
 	log_message "INFO" "检查历史命令中的其他可疑操作"
 	
 	if [ -f /root/.bash_history ]; then
-		if otherCommand=$(cat /root/.bash_history 2>/dev/null | grep -E "(chattr|chmod|rm|set +o history)" | grep -v grep 2>/dev/null); then
+		if otherCommand=$(cat /root/.bash_history 2>/dev/null | grep -E "(chattr|chmod|shred|rm|set +o history)" | grep -v grep 2>/dev/null); then
 			if [ -n "$otherCommand" ]; then
 				(echo -e "${RED}[WARN]发现其他可疑命令,请注意!${NC}" && echo "$otherCommand") 
 				local other_count=$(echo "$otherCommand" | wc -l)
@@ -2440,42 +2440,69 @@ systemServiceCollect(){
 # 用户服务分析【归档 -- systemServiceCheck】
 userServiceCheck(){
 	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
+	start_time=$(date +%s)
+	log_operation "MODULE:USERSERVICECHECK" "用户服务检查模块开始执行" "START"
 	## 输出 /etc/rc.d/rc.local
 	# 【判断是否存在】
 	echo -e "${YELLOW}[INFO]正在检查/etc/rc.d/rc.local是否存在:${NC}"
+	log_message "INFO" "正在检查/etc/rc.d/rc.local是否存在"
 	if [ -f "/etc/rc.d/rc.local" ];then
 		echo -e "${YELLOW}[INFO]/etc/rc.d/rc.local存在${NC}"
+		log_message "INFO" "/etc/rc.d/rc.local存在"
 		echo -e "${YELLOW}[INFO]正在检查/etc/rc.d/rc.local用户自启动服务:${NC}"
-		rcLocal=$(cat /etc/rc.d/rc.local)
+		log_message "INFO" "正在检查/etc/rc.d/rc.local用户自启动服务"
+		rcLocal=$(cat /etc/rc.d/rc.local 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			handle_error 1 "读取/etc/rc.d/rc.local文件失败" "userServiceCheck"
+		fi
 		if [ -n "$rcLocal" ];then
 			echo -e "${YELLOW}[INFO]/etc/rc.d/rc.local用户自启动项服务如下:${NC}" && echo "$rcLocal"
+			log_message "INFO" "/etc/rc.d/rc.local用户自启动项服务内容"
+			log_message "DEBUG" "/etc/rc.d/rc.local内容详情:\n$rcLocal"
 		else
 			echo -e "${RED}[WARN]未发现/etc/rc.d/rc.local用户自启动服务${NC}"
+			log_message "WARN" "未发现/etc/rc.d/rc.local用户自启动服务"
 		fi
 
 		## 分析 /etc/rc.d/rc.local
 		echo -e "${YELLOW}[INFO]正在分析/etc/rc.d/rc.local用户自启动服务:${NC}"
-		dangerRclocal=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" /etc/rc.d/rc.local)
+		log_message "INFO" "正在分析/etc/rc.d/rc.local用户自启动服务"
+		dangerRclocal=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" /etc/rc.d/rc.local 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			handle_error 1 "分析/etc/rc.d/rc.local文件失败" "userServiceCheck"
+		fi
 		if [ -n "$dangerRclocal" ];then
 			echo -e "${RED}[WARN]发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:${NC}" && echo "$dangerRclocal"
+			log_message "WARN" "发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:\n$dangerRclocal"
 		else
-			echo -e "${YELLOW}[INFO]未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}" 
+			echo -e "${YELLOW}[INFO]未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}"
+			log_message "INFO" "未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本" 
 		fi
 	else
 		echo -e "${RED}[WARN]/etc/rc.d/rc.local不存在${NC}"
+		log_message "WARN" "/etc/rc.d/rc.local不存在"
 	fi
 
 	## 分析 /etc/init.d/*
 	echo -e "${YELLOW}[INFO]正在检查/etc/init.d/*用户自启动服务:${NC}"
-	dangerinitd=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))"  /etc/init.d/*)
-	if [ -n "$dangerinitd" ];then
-		(echo -e "${RED}[WARN]发现/etc/init.d/用户危险自启动服务:${NC}" && echo "$dangerinitd") 
+	log_message "INFO" "正在检查/etc/init.d/*用户自启动服务"
+	if [ -d "/etc/init.d" ]; then
+		dangerinitd=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" /etc/init.d/* 2>/dev/null)
+		if [ -n "$dangerinitd" ];then
+			(echo -e "${RED}[WARN]发现/etc/init.d/用户危险自启动服务:${NC}" && echo "$dangerinitd")
+			log_message "WARN" "发现/etc/init.d/用户危险自启动服务:\n$dangerinitd" 
+		else
+			echo -e "${YELLOW}[INFO]未发现/etc/init.d/用户危险自启动服务${NC}"
+			log_message "INFO" "未发现/etc/init.d/用户危险自启动服务" 
+		fi
 	else
-		echo -e "${YELLOW}[INFO]未发现/etc/init.d/用户危险自启动服务${NC}" 
+		echo -e "${RED}[WARN]/etc/init.d目录不存在${NC}"
+		log_message "WARN" "/etc/init.d目录不存在"
 	fi
 
 	# 有些用户自启动配置在用户的.bashrc|.bash_profile|.profile|.bash_logout|.viminfo 等文件中
 	# 检查给定用户的配置文件中是否存在敏感命令或脚本
+	log_message "INFO" "开始检查用户配置文件中的自启动服务"
 	check_files() {
 		local user=$1
 		local home_dir="/home/$user"
@@ -2488,23 +2515,39 @@ userServiceCheck(){
 		for file in "${files[@]}"; do
 			if [ -f "$home_dir/$file" ]; then  # $home_dir/$file
 				echo -e "${YELLOW}[INFO]正在检查用户: $user 的 $file 文件: ${NC}"
-				local results=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$home_dir/$file")
+				log_message "INFO" "正在检查用户: $user 的 $file 文件"
+				local results=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$home_dir/$file" 2>/dev/null)
 				if [ -n "$results" ]; then
 					echo -e "${RED}[INFO]用户: $user 的 $file 文件存在敏感命令或脚本:${NC}" && echo "$results"
+					log_message "WARN" "用户: $user 的 $file 文件存在敏感命令或脚本:\n$results"
 				else
 					echo -e "${YELLOW}[INFO]用户: $user 的 $file 文件不存在敏感命令或脚本${NC}"
+					log_message "INFO" "用户: $user 的 $file 文件不存在敏感命令或脚本"
 				fi
 			else
 				echo -e "${YELLOW}[INFO]用户: $user 的 $file 文件不存在${NC}"
+				log_message "INFO" "用户: $user 的 $file 文件不存在"
 			fi
 		done
 	}
 
 	# 获取所有用户
-	for user in $(cut -d: -f1 /etc/passwd); do
+	echo -e "${YELLOW}[INFO]正在检查所有用户的配置文件:${NC}"
+	log_message "INFO" "正在检查所有用户的配置文件"
+	user_count=0
+	for user in $(cut -d: -f1 /etc/passwd 2>/dev/null); do
 		echo -e "${YELLOW}[INFO]正在检查用户: $user 的自启动服务(.bashrc|.bash_profile|.profile):${NC}"
+		log_message "INFO" "正在检查用户: $user 的自启动服务"
 		check_files "$user"
+		((user_count++))
 	done
+	
+	log_message "INFO" "已检查 $user_count 个用户的配置文件"
+	
+	# 记录性能统计和操作完成
+	end_time=$(date +%s)
+	log_performance "userServiceCheck" "$start_time" "$end_time"
+	log_operation "MODULE:USERSERVICECHECK" "用户自启动服务检查模块执行完成" "END"
 }
 
 # 系统服务排查 【归档 -- fileCheck】
@@ -2523,143 +2566,222 @@ systemServiceCheck(){
 
 # 敏感目录排查(包含隐藏文件)【归档 -- fileCheck】
 dirFileCheck(){
+	# 敏感目录排查(包含隐藏文件)
+	start_time=$(date +%s)
+	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块开始执行" "BEGIN"
+	
 	# /tmp/下
 	echo -e "${YELLOW}[INFO]正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
+	log_message "INFO" "正在检查/tmp/下文件"
 	echo -e "${YELLOW}[[KNOW]tmp目录是用于存放临时文件的目录,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"
-	tmp_tmp=$(ls -alt /tmp)
+	log_message "INFO" "tmp目录是用于存放临时文件的目录,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"
+	tmp_tmp=$(ls -alt /tmp 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "检查/tmp目录失败" "dirFileCheck"
+	fi
 	if [ -n "$tmp_tmp" ];then
-		echo -e "${YELLOW}[INFO]/tmp/下文件如下:${NC}" && echo "$tmp"
+		echo -e "${YELLOW}[INFO]/tmp/下文件如下:${NC}" && echo "$tmp_tmp"
+		log_message "INFO" "/tmp/下文件列表:\n$tmp_tmp"
 	else
 		echo -e "${RED}[WARN]未发现/tmp/下文件${NC}"
+		log_message "WARN" "未发现/tmp/下文件"
 	fi
 
 	# /root下隐藏文件分析
 	echo -e "${YELLOW}[INFO]正在检查/root/下隐藏文件[ls -alt /root]:${NC}"
+	log_message "INFO" "正在检查/root/下隐藏文件"
 	echo -e "${YELLOW}[KNOW]隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
-	root_tmp=$(ls -alt /root)
+	log_message "INFO" "隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"
+	root_tmp=$(ls -alt /root 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "检查/root目录失败" "dirFileCheck"
+	fi
 	if [ -n "$root_tmp" ];then
 		echo -e "${YELLOW}[INFO]/root下隐藏文件如下:${NC}" && echo "$root_tmp"
+		log_message "INFO" "/root下隐藏文件列表:\n$root_tmp"
 	else
 		echo -e "${RED}[WARN]未发现/root下隐藏文件${NC}"
+		log_message "WARN" "未发现/root下隐藏文件"
 	fi
 
+	# 记录性能统计和操作完成
+	end_time=$(date +%s)
+	log_performance "dirFileCheck" "$start_time" "$end_time"
+	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块执行完成" "END"
+	
 	# 其他
 	
 }
 
 # SSH登录配置排查 【归档 -- specialFileCheck】
 sshFileCheck(){
+	# SSH登录配置排查
+	start_time=$(date +%s)
+	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块开始执行" "START"
+	
 	# 输出/root/.ssh/下文件
 	echo -e "${YELLOW}[INFO]正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
-	ls_ssh=$(ls -alt /root/.ssh)
+	log_message "INFO" "正在检查/root/.ssh/下文件"
+	ls_ssh=$(ls -alt /root/.ssh 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "检查/root/.ssh目录失败" "sshFileCheck"
+	fi
 	if [ -n "$ls_ssh" ];then
 		echo -e "${YELLOW}[INFO]/root/.ssh/下文件如下:${NC}" && echo "$ls_ssh"
+		log_message "INFO" "/root/.ssh/下文件列表:\n$ls_ssh"
 	else
 		echo -e "${RED}[WARN]未发现/root/.ssh/存在文件${NC}"
+		log_message "WARN" "未发现/root/.ssh/存在文件"
 	fi
 	printf "\n"
 
 	# 公钥文件分析
 	echo -e "${YELLOW}正在检查公钥文件[/root/.ssh/*.pub]:${NC}"
-	pubkey=$(cat /root/.ssh/*.pub)
+	log_message "INFO" "正在检查公钥文件"
+	pubkey=$(cat /root/.ssh/*.pub 2>/dev/null)
 	if [ -n "$pubkey" ];then
 		echo -e "${RED}[WARN]发现公钥文件如下,请注意!${NC}" && echo "$pubkey"
+		log_message "WARN" "发现公钥文件:\n$pubkey"
 	else
 		echo -e "${YELLOW}[INFO]未发现公钥文件${NC}"
+		log_message "INFO" "未发现公钥文件"
 	fi
 	printf "\n"
 
 	# 私钥文件分析
 	echo -e "${YELLOW}正在检查私钥文件[/root/.ssh/id_rsa]:${NC}" 
+	log_message "INFO" "正在检查私钥文件"
 	echo -e "${YELLOW}[KNOW]私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]${NC}"
-	privatekey=$(cat /root/.ssh/id_rsa)
+	log_message "DEBUG" "私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]"
+	privatekey=$(cat /root/.ssh/id_rsa 2>/dev/null)
 	if [ -n "$privatekey" ];then
 		echo -e "${RED}[WARN]发现私钥文件,请注意!${NC}" && echo "$privatekey"
+		log_message "WARN" "发现私钥文件:\n$privatekey"
 	else
 		echo -e "${YELLOW}[INFO]未发现私钥文件${NC}"
+		log_message "INFO" "未发现私钥文件"
 	fi
 	printf "\n" 
 
 	# authorized_keys文件分析
 	echo -e "${YELLOW}正在检查被授权登录公钥信息[/root/.ssh/authorized_keys]:${NC}" 
+	log_message "INFO" "正在检查被授权登录公钥信息"
 	echo -e "${YELLOW}[KNOW]authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机" 
 	echo -e "${YELLOW}[KNOW]免密登录配置中需要将用户公钥内容追加到authorized_keys文件中[cat id_rsa.pub >> authorized_keys]"
-	authkey=$(cat /root/.ssh/authorized_keys)
+	log_message "DEBUG" "authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机"
+	authkey=$(cat /root/.ssh/authorized_keys 2>/dev/null)
 	if [ -n "$authkey" ];then
 		echo -e "${RED}[WARN]发现被授权登录的用户公钥信息如下${NC}" && echo "$authkey"
+		log_message "WARN" "发现被授权登录的用户公钥信息:\n$authkey"
 	else
 		echo -e "${YELLOW}[INFO]未发现被授权登录的用户公钥信息${NC}" 
+		log_message "INFO" "未发现被授权登录的用户公钥信息"
 	fi
 	printf "\n" 
 
 	# known_hosts文件分析
 	echo -e "${YELLOW}正在检查当前设备可登录主机信息[/root/.ssh/known_hosts]:${NC}" 
+	log_message "INFO" "正在检查当前设备可登录主机信息"
 	echo -e "${YELLOW}[KNOW]known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机${NC}" 
-	knownhosts=$(cat /root/.ssh/known_hosts | awk '{print $1}')
+	log_message "DEBUG" "known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机"
+	knownhosts=$(cat /root/.ssh/known_hosts 2>/dev/null | awk '{print $1}')
 	if [ -n "$knownhosts" ];then
 		echo -e "${RED}[WARN]发现可横向远程主机信息如下:${NC}" && echo "$knownhosts"
+		log_message "WARN" "发现可横向远程主机信息:\n$knownhosts"
 	else
 		echo -e "${YELLOW}[INFO]未发现可横向远程主机信息${NC}" 
+		log_message "INFO" "未发现可横向远程主机信息"
 	fi
 	printf "\n" 
 
 
 	# sshd_config 配置文件分析
 	echo -e "${YELLOW}正在检查SSHD配置文件[/etc/ssh/sshd_config]:${NC}" 
+	log_message "INFO" "正在检查SSHD配置文件"
 	echo -e "${YELLOW}正在输出SSHD文件所有开启配置(不带#号的配置)[/etc/ssh/sshd_config]:"
-	sshdconfig=$(cat /etc/ssh/sshd_config | egrep -v "#|^$")
+	log_message "DEBUG" "正在输出SSHD文件所有开启配置(不带#号的配置)"
+	sshdconfig=$(cat /etc/ssh/sshd_config 2>/dev/null | egrep -v "#|^$")
+	if [ $? -ne 0 ]; then
+		handle_error 1 "读取/etc/ssh/sshd_config文件失败" "sshFileCheck"
+	fi
 	if [ -n "$sshdconfig" ];then
 		echo -e "${YELLOW}[INFO]sshd_config所有开启的配置如下:${NC}" && echo "$sshdconfig" 
+		log_message "INFO" "sshd_config所有开启的配置:\n$sshdconfig"
 	else
 		echo -e "${YELLOW}[WARN]未发现sshd_config开启任何配置!请留意这是异常现象!${NC}" 
+		log_message "WARN" "未发现sshd_config开启任何配置!请留意这是异常现象!"
 	fi
 	printf "\n" 
 
 	## sshd_config 配置文件分析 -- 允许空口令登录分析
 	echo -e "${YELLOW}正在检查sshd_config配置--允许SSH空口令登录[/etc/ssh/sshd_config]:${NC}" 
-	emptypasswd=$(cat /etc/ssh/sshd_config | grep -w "^PermitEmptyPasswords yes")
-	nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow)
+	log_message "INFO" "正在检查sshd_config配置--允许SSH空口令登录"
+	emptypasswd=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -w "^PermitEmptyPasswords yes")
+	nopasswd=$(awk -F: '($2=="") {print $1}' /etc/shadow 2>/dev/null)
 	if [ -n "$emptypasswd" ];then
 		echo -e "${RED}[WARN]发现允许空口令登录,请注意!${NC}"
+		log_message "WARN" "发现允许空口令登录,请注意!"
 		if [ -n "$nopasswd" ];then
 			echo -e "${RED}[WARN]以下用户空口令:${NC}" && echo "$nopasswd"
+			log_message "WARN" "以下用户空口令:\n$nopasswd"
 		else
 			echo -e "${RED}[INFO]但未发现空口令用户${NC}" 
+			log_message "INFO" "但未发现空口令用户"
 		fi
 	else
 		echo -e "${YELLOW}[INFO]不允许空口令用户登录${NC}" 
+		log_message "INFO" "不允许空口令用户登录"
 	fi
 	printf "\n" 
 
 	## sshd_config 配置文件分析 -- root远程登录分析
 	echo -e "${YELLOW}正在检查sshd_config配置--允许SSH远程root登录[/etc/ssh/sshd_config]:${NC}" 
-	rootRemote=$(cat /etc/ssh/sshd_config | grep -v ^# | grep "PermitRootLogin yes")
+	log_message "INFO" "正在检查sshd_config配置--允许SSH远程root登录"
+	rootRemote=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -v ^# | grep "PermitRootLogin yes")
 	if [ -n "$rootRemote" ];then
 		echo -e "${RED}[WARN]发现允许root远程登录,请注意!${NC}"
+		log_message "WARN" "发现允许root远程登录,请注意!"
 		echo -e "${RED}[WARN]请修改/etc/ssh/sshd_config配置文件,添加PermitRootLogin no${NC}"
+		log_message "WARN" "请修改/etc/ssh/sshd_config配置文件,添加PermitRootLogin no"
 	else
 		echo -e "${YELLOW}[INFO]不允许root远程登录${NC}" 
+		log_message "INFO" "不允许root远程登录"
 	fi
 	printf "\n" 
 
 	## sshd_config 配置文件分析 -- ssh协议版本分析
 	echo -e "${YELLOW}正在检查sshd_config配置--检查SSH协议版本[/etc/ssh/sshd_config]:${NC}" 
+	log_message "INFO" "正在检查sshd_config配置--检查SSH协议版本"
 	echo -e "${YELLOW}[KNOW]需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
 	echo -e "${YELLOW}[KNOW]从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
-	protocolver=$(cat /etc/ssh/sshd_config | grep -v ^$ | grep Protocol | awk '{print $2}')
+	log_message "DEBUG" "需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
+	protocolver=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -v ^$ | grep Protocol | awk '{print $2}')
 	if [ -n "$protocolver" ];then
 		echo -e "${YELLOW}[INFO]openssh协议版本如下:${NC}" && echo "$protocolver"
+		log_message "INFO" "openssh协议版本:$protocolver"
 		if [ "$protocolver" -eq "2" ];then
 			echo -e "${RED}[INFO]openssh使用ssh2协议,版本过低!${NC}" 
+			log_message "WARN" "openssh使用ssh2协议,版本过低!"
 		fi
 	else
 		echo -e "${YELLOW}[WARN]未发现openssh协议版本(未发现并非代表异常)${NC}"
+		log_message "WARN" "未发现openssh协议版本(未发现并非代表异常)"
 	fi
 
 	# ssh版本分析 -- 罗列几个有漏洞的ssh版本
 	echo -e "${YELLOW}正在检查SSH版本[ssh -V]:${NC}"
-	sshver=$(ssh -V)
+	log_message "INFO" "正在检查SSH版本"
+	sshver=$(ssh -V 2>&1)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取SSH版本信息失败" "sshFileCheck"
+	fi
 	echo -e "${YELLOW}[INFO]ssh版本信息如下:${NC}" && echo "$sshver"
+	log_message "INFO" "ssh版本信息:$sshver"
+
+	# 记录性能统计和操作完成
+	end_time=$(date +%s)
+	log_performance "sshFileCheck" "$start_time" "$end_time"
+	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块执行完成" "END"
 
 	# 上述光检测了root账户下的相关文件的信息,需要增加机器上其他账号的相关文件检测,比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
 	# 其他
