@@ -4589,7 +4589,8 @@ usage() {
 
 	echo -e "${GREEN}  全量检查:${NC}"
     echo -e "${YELLOW}    --all                   ${GREEN}执行所有检查项并打包检查结果(推荐首次运行)${NC}"
-    echo -e "${YELLOW}    --inter                 ${GREEN}启用交互模式，在执行每个模块前询问用户${NC}"
+    echo -e "${YELLOW}    --inter                 ${GREEN}启用交互模式,在执行每个模块前询问用户,该参数需要和一级模块参数联用${NC}"
+	echo -e "${YELLOW}                            ${GREEN}示例: --all --inter ${NC}"
 
     echo -e "${GREEN}  系统相关检查:${NC}"
     echo -e "${YELLOW}    --system                ${GREEN}执行所有系统相关检查(baseinfo/user/crontab/history)${NC}"
