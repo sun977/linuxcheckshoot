@@ -53,6 +53,7 @@ print_summary() {
 		- 系统基础信息
 		    - 系统版本信息
 		    - 系统发行版本
+		    - 虚拟化环境检测
 		- 用户信息分析
 		    - 正在登录用户
 		    - 系统最后登录用户
@@ -73,7 +74,7 @@ print_summary() {
 			- 用户计划任务
 		- 历史命令分析
 		    - 输出当前shell系统历史命令[history]
-		    - 输出用系历史命令[.bash_history]
+		    - 输出用户历史命令[.bash_history]
 			- 是否下载过脚本文件
 			- 是否通过主机下载,传输过文件
 			- 是否增加,删除过账号
@@ -82,13 +83,13 @@ print_summary() {
 			- 检查系统中所有可能的历史文件路径[补充]
 			- 输出系统中所有用户的历史文件[补充]
 			- 输出数据库操作历史命令
-	二.网络链接排查
+	二.网络连接排查
 		- ARP 攻击分析
 		- 网络连接分析
 		- 端口信息排查
 		    - TCP 端口检测
 			- TCP 高危端口(自定义高危端口组)
-			- UDP 端口检测
+		    - UDP 端口检测
 			- UDP 高危端口(自定义高危端口组)
 		- DNS 信息排查
 		- 网卡工作模式
@@ -100,13 +101,14 @@ print_summary() {
 		- top进程分析
 		- 规则匹配敏感进程(自定义进程组)
 		- 异常进程检测
-		- 孤儿进程检测
-		- 网络连接和进程映射
-		- 进程可疑内存映射
-		- 文件描述符异常进程
-		- 系统调用表完整性检测
-		- 进程启动时间异常检测
-		- 进程环境变量异常检测
+		- 高级进程隐藏检测
+		    - 孤儿进程检测
+		    - 网络连接和进程映射
+		    - 进程可疑内存映射
+		    - 文件描述符异常进程
+		    - 系统调用表完整性检测
+		    - 进程启动时间异常检测
+		    - 进程环境变量异常检测
 	四.文件排查
 		- 系统服务排查
 			- 系统服务收集
@@ -121,7 +123,7 @@ print_summary() {
 			- ssh相关文件排查
 				- .ssh目录排查
 				- 公钥私钥排查
-				- authrized_keys文件排查
+				- authorized_keys文件排查
 				- known_hosts文件排查
 				- sshd_config文件分析
 					- 所有开启的配置(不带#号)
@@ -139,7 +141,7 @@ print_summary() {
 				- gshadow文件权限
 				- gshadow文件属性
 			- 24小时变动文件排查
-			— SUID/SGID文件排查	
+			- SUID/SGID文件排查
 		- 日志文件分析
 			- message日志分析
 				- ZMODEM传输文件
@@ -166,31 +168,49 @@ print_summary() {
 			- auditd 服务状态
 			- rsyslog 配置文件
 	五.后门排查
-	六.webshell排查
-	七.病毒排查
-	八.内存排查
-	九.黑客工具排查
+		- 后门特征检测(SUID/SGID/启动项/异常进程)[待完成]
+	六.隧道检测
+		- SSH隧道检测
+		    - 同一PID的多个sshd连接
+		    - SSH本地转发特征
+		    - SSH远程转发特征
+		    - SSH动态转发(SOCKS代理)特征
+		    - SSH多级跳板特征
+		    - SSH隧道网络流量特征
+		    - SSH隧道持久化特征
+		- HTTP隧道检测[待完成]
+		- DNS隧道检测[待完成]
+		- ICMP隧道检测[待完成]
+		- 其他隧道工具检测[待完成]
+	七.webshell排查
+		- WebShell 排查(关键词匹配/文件特征)[待完成]
+	八.病毒排查
+		- 病毒信息排查(已安装可疑软件/RPM检测)[待完成]
+	九.内存排查
+		- 内存信息排查(内存占用/异常内容)[待完成]
+	十.黑客工具排查
 		- 黑客工具匹配(规则自定义)
 		- 常见黑客痕迹排查(待完成)
-	十.内核排查
+	十一.内核排查
 		- 内核驱动排查
-	    - 可疑驱动排查(自定义可疑驱动列表)
-	十一.其他排查
+		- 可疑驱动排查(自定义可疑驱动列表)
+		- 内核模块检测
+	十二.其他排查
 		- 可疑脚本文件排查
 		- 系统文件完整性校验(MD5)
 		- 安装软件排查
-	十二.k8s排查
+	十三.Kubernetes排查
 		- 集群信息排查
 		- 集群凭据排查
 		- 集群敏感文件扫描
 		- 集群基线检查
-	十三.系统性能分析
+	十四.系统性能分析
 		- 磁盘使用情况
 		- CPU使用情况
 		- 内存使用情况
 		- 系统负载情况
 		- 网络流量情况
-	十四.基线检查
+	十五.基线检查
 		- 1.账户管理
 		    - 1.1 账户审查(用户和组策略) 
 		    	- 系统最后登录用户
@@ -2656,7 +2676,7 @@ sshFileCheck(){
 	privatekey=$(cat /root/.ssh/id_rsa 2>/dev/null)
 	if [ -n "$privatekey" ];then
 		echo -e "${RED}[WARN]发现私钥文件,请注意!${NC}" && echo "$privatekey"
-		log_message "WARN" "发现私钥文件:\n$privatekey"
+		log_message "INFO" "发现私钥文件:\n$privatekey"
 	else
 		echo -e "${YELLOW}[INFO]未发现私钥文件${NC}"
 		log_message "INFO" "未发现私钥文件"
@@ -2683,11 +2703,11 @@ sshFileCheck(){
 	echo -e "${YELLOW}正在检查当前设备可登录主机信息[/root/.ssh/known_hosts]:${NC}" 
 	log_message "INFO" "正在检查当前设备可登录主机信息"
 	echo -e "${YELLOW}[KNOW]known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机${NC}" 
-	log_message "DEBUG" "known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机"
+	log_message "INFO" "known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机"
 	knownhosts=$(cat /root/.ssh/known_hosts 2>/dev/null | awk '{print $1}')
 	if [ -n "$knownhosts" ];then
 		echo -e "${RED}[WARN]发现可横向远程主机信息如下:${NC}" && echo "$knownhosts"
-		log_message "WARN" "发现可横向远程主机信息:\n$knownhosts"
+		log_message "INFO" "发现可横向远程主机信息:\n$knownhosts"
 	else
 		echo -e "${YELLOW}[INFO]未发现可横向远程主机信息${NC}" 
 		log_message "INFO" "未发现可横向远程主机信息"
@@ -2900,8 +2920,13 @@ checkRecentModifiedFiles() {
 
 # 特殊文件排查【归档 -- fileCheck】
 specialFileCheck(){
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:SPECIALFILECHECK" "特殊文件检查模块开始执行" "START"
+	
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
 	echo -e "${YELLOW}[INFO]正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
+	log_message "INFO" "正在检查SSH相关文件"
 	sshFileCheck
 	
 	# 环境变量分析
@@ -2911,10 +2936,15 @@ specialFileCheck(){
 	for file in $env_file;do
 		if [ -e $file ];then
 			echo -e "${YELLOW}[INFO]环境变量文件:$file${NC}"
-			more $file
+			log_message "INFO" "检查环境变量文件:$file"
+			more $file 2>/dev/null
+			if [ $? -ne 0 ]; then
+				handle_error 1 "读取环境变量文件失败:$file" "specialFileCheck"
+			fi
 			printf "\n"
 			# 文件内容中是否包含关键字 curl http https wget 等关键字
-			if [ -n "$(more $file | grep -E "curl|wget|http|https|python")" ];then
+			suspicious_content=$(more $file 2>/dev/null | grep -E "curl|wget|http|https|python")
+			if [ -n "$suspicious_content" ];then
 				echo -e "${RED}[WARN]发现环境变量文件[$file]中包含curl|wget|http|https|python等关键字!${NC}" 
 			fi 
 		else
@@ -3317,7 +3347,12 @@ webshellCheck(){
 
 # SSH隧道检测 【完成 -- 归档 tunnelCheck】
 tunnelSSH(){ 
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块开始执行" "START"
+	
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
+	log_message "INFO" "正在检查SSH隧道"
 	
 	# SSH隧道检测
 	# 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道
@@ -3325,14 +3360,21 @@ tunnelSSH(){
 	## 1. 检测同一PID的多个sshd连接（主要检测方法）
 	### [检测的时候发现 unix 连接会干扰判断,所以 netstat 增加-t 参数只显示 tcp 协议的连接(ssh基于tcp)]
 	echo -e "${YELLOW}[INFO]检查同一PID的多个sshd连接:${NC}"
+	log_message "INFO" "检查同一PID的多个sshd连接"
 	echo -e "${YELLOW}[KNOW]检测方法: 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道${NC}"
 	echo -e "${YELLOW}[KNOW]检查结果需要排除父进程 1 的SSHD系统服务进程,例如: PSINFO:  xxx     1 root     /usr/sbin/sshd -D ${NC}"
+	log_message "INFO" "检测方法: 检查网络连接的时候发现2个以上的连接是同一个进程PID,且服务是SSHD的大概率是SSH隧道"
 	ssh_connections=$(netstat -anpot 2>/dev/null | grep sshd | awk '{print $7}' | cut -d'/' -f1 | sort | uniq -c | awk '$1 > 1 {print $2, $1}')
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行netstat命令检查SSH连接失败" "tunnelSSH"
+	fi
 	if [ -n "$ssh_connections" ]; then
 		echo -e "${RED}[WARN]发现可疑SSH隧道 - 同一PID存在多个SSHD连接:${NC}"
+		log_message "INFO" "发现可疑SSH隧道 - 同一PID存在多个SSHD连接"
 		echo "$ssh_connections" | while read pid count; do
 			if [ -n "$pid" ] && [ "$pid" != "-" ]; then
 				echo -e "${RED}  PID: $pid, 连接数: $count${NC}"
+				log_message "INFO" "PID: $pid, 连接数: $count"
 				# 显示详细连接信息
 				netstat -anpot 2>/dev/null | grep "$pid/sshd" | while read line; do
 					echo -e "${YELLOW}    $line${NC}"
@@ -3342,22 +3384,29 @@ tunnelSSH(){
 				if [ -n "$ps_info" ]; then
 					echo -e "${YELLOW}    COLUMN: pid - ppid - user - cmd ${NC}"
 					echo -e "${YELLOW}    PSINFO: $ps_info${NC}"
+					log_message "INFO" "进程详细信息: $ps_info"
 				fi
 				echo ""
 			fi
 		done
 	else
 		echo -e "${GREEN}[INFO]未发现同一PID的多个sshd连接${NC}"
+		log_message "INFO" "未发现同一PID的多个sshd连接"
 	fi
 	printf "\n"
 	
 	## 2. 检测SSH本地转发（Local Port Forwarding）
 	echo -e "${YELLOW}[INFO]检查SSH本地转发特征:${NC}"
+	log_message "INFO" "检查SSH本地转发特征"
 	# 本地转发命令：ssh -L local_port:target_host:target_port user@ssh_server
 	# 特征：SSH进程监听本地端口,将流量转发到远程
 	local_forward_ports=$(netstat -tlnp 2>/dev/null | grep sshd | awk '{print $4, $7}' | grep -v ':22')
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行netstat命令检查SSH本地转发失败" "tunnelSSH"
+	fi
 	if [ -n "$local_forward_ports" ]; then
 		echo -e "${YELLOW}[WARN]发现SSH进程监听非22端口(可能的本地转发):${NC}"
+		log_message "INFO" "发现SSH进程监听非22端口(可能的本地转发)"
 		echo "$local_forward_ports"
 		# 检查对应的SSH进程命令行参数
 		echo "$local_forward_ports" | while read port_info; do
@@ -3366,65 +3415,87 @@ tunnelSSH(){
 				cmd_line=$(ps -p $pid -o cmd --no-headers 2>/dev/null)
 				if echo "$cmd_line" | grep -q '\-L'; then
 					echo -e "${RED}    [WARN]确认本地转发: $cmd_line${NC}"
+					log_message "INFO" "确认本地转发: $cmd_line"
 				fi
 			fi
 		done
 	else
 		echo -e "${GREEN}[INFO]未发现SSH本地转发特征${NC}"
+		log_message "INFO" "未发现SSH本地转发特征"
 	fi
 	printf "\n"
 	
 	## 3. 检测SSH远程转发（Remote Port Forwarding）
 	echo -e "${YELLOW}[INFO]检查SSH远程转发特征:${NC}"
+	log_message "INFO" "检查SSH远程转发特征"
 	# 远程转发命令：ssh -R remote_port:local_host:local_port user@ssh_server
 	# 特征：SSH客户端连接到远程服务器,远程服务器监听端口
 	
 	### 3.1 检查SSH进程的命令行参数中是否包含-R选项
-	remote_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-R')
+	remote_forward_processes=$(ps aux 2>/dev/null | grep ssh | grep -v grep | grep '\-R')
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行ps命令检查SSH远程转发进程失败" "tunnelSSH"
+	fi
 	if [ -n "$remote_forward_processes" ]; then
 		echo -e "${RED}[WARN]发现SSH远程转发进程:${NC}"
+		log_message "INFO" "发现SSH远程转发进程"
 		echo "$remote_forward_processes"
 	else
 		echo -e "${GREEN}[INFO]未发现SSH远程转发特征${NC}"
+		log_message "INFO" "未发现SSH远程转发特征"
 	fi
 	
 	### 3.2 检查SSH配置文件中的远程转发设置
 	remote_forward_config=$(grep -E '^(AllowTcpForwarding|GatewayPorts)' /etc/ssh/sshd_config 2>/dev/null | grep -v 'no')
 	if [ -n "$remote_forward_config" ]; then
 		echo -e "${YELLOW}[WARN]SSH配置允许远程转发:${NC}"
+		log_message "INFO" "SSH配置允许远程转发"
 		echo "$remote_forward_config"
 	fi
 	printf "\n"
 	
 	## 4. 检测SSH动态转发（SOCKS代理）
 	echo -e "${YELLOW}[INFO]检查SSH动态转发(SOCKS代理)特征:${NC}"
+	log_message "INFO" "检查SSH动态转发(SOCKS代理)特征"
 	# 动态转发命令：ssh -D local_port user@ssh_server
 	# - 排除 sshd -D （SSH守护进程的调试模式）
 	# - 排除 /usr/sbin/sshd （系统SSH服务）
 	# - 只检测真正的SSH客户端动态转发
 	# 特征：SSH进程创建SOCKS代理,监听本地端口
 	echo -e "${YELLOW}[KNOW]:检查结果需要排除SSHD系统服务进程${NC}"
+	log_message "INFO" "检查结果需要排除SSHD系统服务进程"
 	# dynamic_forward_processes=$(ps aux | grep ssh | grep -v grep | grep '\-D')
-	dynamic_forward_processes=$(ps aux | grep -E 'ssh.*-D' | grep -v grep | grep -v 'sshd.*-D' | grep -v '/usr/sbin/sshd')
+	dynamic_forward_processes=$(ps aux 2>/dev/null | grep -E 'ssh.*-D' | grep -v grep | grep -v 'sshd.*-D' | grep -v '/usr/sbin/sshd')
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行ps命令检查SSH动态转发进程失败" "tunnelSSH"
+	fi
 	if [ -n "$dynamic_forward_processes" ]; then
 		echo -e "${RED}[WARN]发现SSH动态转发(SOCKS代理)进程:${NC}"
+		log_message "INFO" "发现SSH动态转发(SOCKS代理)进程"
 		echo "$dynamic_forward_processes"
 	else
 		echo -e "${GREEN}[INFO]未发现SSH动态转发特征${NC}"
+		log_message "INFO" "未发现SSH动态转发特征"
 	fi
 	printf "\n"
 	
 	## 5. 检测SSH多级跳板（ProxyJump/ProxyCommand）
 	echo -e "${YELLOW}[INFO]检查SSH多级跳板特征:${NC}"
+	log_message "INFO" "检查SSH多级跳板特征"
 	# 多级跳板命令：ssh -J jump_host1,jump_host2 target_host
 	# 或使用ProxyCommand: ssh -o ProxyCommand="ssh jump_host nc target_host 22" target_host
 	### 5.1 检查SSH进程的命令行参数
-	jump_processes=$(ps aux | grep ssh | grep -v grep | grep -E '(\-J|ProxyCommand|ProxyJump)')
+	jump_processes=$(ps aux 2>/dev/null | grep ssh | grep -v grep | grep -E '(\-J|ProxyCommand|ProxyJump)')
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行ps命令检查SSH多级跳板进程失败" "tunnelSSH"
+	fi
 	if [ -n "$jump_processes" ]; then
 		echo -e "${RED}[WARN]发现SSH多级跳板进程:${NC}"
+		log_message "INFO" "发现SSH多级跳板进程"
 		echo "$jump_processes"
 	else
 		echo -e "${GREEN}[INFO]未发现SSH多级跳板进程${NC}"
+		log_message "INFO" "未发现SSH多级跳板进程"
 	fi
 	
 	### 5.2 检查SSH配置文件中的跳板设置
@@ -3432,6 +3503,7 @@ tunnelSSH(){
 		jump_config=$(grep -E '(ProxyJump|ProxyCommand)' ~/.ssh/config 2>/dev/null)
 		if [ -n "$jump_config" ]; then
 			echo -e "${YELLOW}[WARN]SSH配置文件中发现跳板设置:${NC}"
+			log_message "INFO" "SSH配置文件中发现跳板设置"
 			echo "$jump_config"
 		fi
 	fi
@@ -3439,6 +3511,7 @@ tunnelSSH(){
 	
 	## 6. 检测SSH隧道的网络流量特征
 	echo -e "${YELLOW}[INFO]检查SSH隧道网络流量特征:${NC}"
+	log_message "INFO" "检查SSH隧道网络流量特征"
 	
 	# 6.1 检查总体网络流量（分级阈值检测）
 	ssh_traffic=$(cat /proc/net/dev 2>/dev/null | awk '
@@ -3504,11 +3577,13 @@ tunnelSSH(){
 	
 	## 7. 检测SSH隧道持久化特征
 	echo -e "${YELLOW}[INFO]检查SSH隧道持久化特征:${NC}"
+	log_message "INFO" "检查SSH隧道持久化特征"
 	
 	### 7.1 检查SSH相关的定时任务
 	ssh_cron=$(crontab -l 2>/dev/null | grep ssh)
 	if [ -n "$ssh_cron" ]; then
 		echo -e "${YELLOW}[WARN]发现SSH相关的定时任务:${NC}"
+		log_message "INFO" "发现SSH相关的定时任务"
 		echo "$ssh_cron"
 	fi
 	
@@ -3516,6 +3591,7 @@ tunnelSSH(){
 	ssh_services=$(systemctl list-units --type=service 2>/dev/null | grep ssh | grep -v sshd)
 	if [ -n "$ssh_services" ]; then
 		echo -e "${YELLOW}[WARN]发现SSH相关的自定义服务:${NC}"
+		log_message "INFO" "发现SSH相关的自定义服务"
 		echo "$ssh_services"
 	fi
 	
@@ -3523,6 +3599,7 @@ tunnelSSH(){
 	ssh_startup=$(find /etc/init.d /etc/systemd/system /etc/rc.local 2>/dev/null -exec grep -l "ssh.*-[LRD]" {} \; 2>/dev/null)
 	if [ -n "$ssh_startup" ]; then
 		echo -e "${RED}[WARN]发现SSH隧道相关的启动脚本:${NC}"
+		log_message "INFO" "发现SSH隧道相关的启动脚本"
 		echo "$ssh_startup"
 	fi
 	printf "\n"
@@ -3548,6 +3625,11 @@ tunnelSSH(){
 	printf "\n"
 	
 	echo -e "${GREEN}SSH隧道检测完成${NC}"
+	
+	# 记录结束时间和性能统计
+	end_time=$(date +%s)
+	log_performance "tunnelSSH" "$start_time" "$end_time"
+	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块执行完成" "END"
 
 }
 
@@ -3602,48 +3684,88 @@ memInfoCheck(){
 
 # 黑客工具排查 【完成】
 hackerToolsCheck(){
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块开始执行" "START"
+	
 	# 黑客工具排查
 	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
+	log_message "INFO" "正在检查全盘是否存在黑客工具"
 	# hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
 	# 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
 	# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
 	echo -e "${YELLOW}[KNOW]定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"
-	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt)
+	log_message "INFO" "定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警"
+	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "读取黑客工具列表文件失败" "hackerToolsCheck"
+	fi
 	for hacker_tool in $hacker_tools_list
 	do
 		findhackertool=$(find / -name $hacker_tool 2>/dev/null)
+		if [ $? -ne 0 ]; then
+			handle_error 1 "执行find命令搜索黑客工具失败: $hacker_tool" "hackerToolsCheck"
+		fi
 		if [ -n "$findhackertool" ];then
 			(echo -e "${RED}[WARN]发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
+			log_message "INFO" "发现全盘存在可疑黑客工具:$hacker_tool"
 		else
 			echo -e "${YELLOW}[INFO]未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
+			log_message "INFO" "未发现全盘存在可疑黑客工具:$hacker_tool"
 		fi
 		printf "\n"  
 	done
 	
 	# 常见黑客痕迹排查
+	
+	# 记录结束时间和性能统计
+	end_time=$(date +%s)
+	log_performance "hackerToolsCheck" "$start_time" "$end_time"
+	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块执行完成" "END"
 
 }
 
 # 内核排查 【完成】
 kernelCheck(){
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:KERNELCHECK" "内核检查模块开始执行" "START"
+	
 	# 内核信息排查
 	echo -e "${YELLOW}正在检查内核信息[lsmod]:${NC}"  
-	lsmod=$(lsmod)
+	log_message "INFO" "正在检查内核信息"
+	lsmod=$(lsmod 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行lsmod命令失败" "kernelCheck"
+	fi
 	if [ -n "$lsmod" ];then
 		(echo "${YELLOW}[INFO]内核信息如下:${NC}" && echo "$lsmod")  
+		log_message "INFO" "内核信息获取成功"
 	else
 		echo "${YELLOW}[INFO]未发现内核信息${NC}"  
+		log_message "INFO" "未发现内核信息"
 	fi
 	printf "\n"  
 
 	echo -e "${YELLOW}正在检查异常内核[lsmod|grep -Ev mod_list]:${NC}"  
-	danger_lsmod=$(lsmod | grep -Ev "ablk_helper|ac97_bus|acpi_power_meter|aesni_intel|ahci|ata_generic|ata_piix|auth_rpcgss|binfmt_misc|bluetooth|bnep|bnx2|bridge|cdrom|cirrus|coretemp|crc_t10dif|crc32_pclmul|crc32c_intel|crct10dif_common|crct10dif_generic|crct10dif_pclmul|cryptd|dca|dcdbas|dm_log|dm_mirror|dm_mod|dm_region_hash|drm|drm_kms_helper|drm_panel_orientation_quirks|e1000|ebtable_broute|ebtable_filter|ebtable_nat|ebtables|edac_core|ext4|fb_sys_fops|floppy|fuse|gf128mul|ghash_clmulni_intel|glue_helper|grace|i2c_algo_bit|i2c_core|i2c_piix4|i7core_edac|intel_powerclamp|ioatdma|ip_set|ip_tables|ip6_tables|ip6t_REJECT|ip6t_rpfilter|ip6table_filter|ip6table_mangle|ip6table_nat|ip6table_raw|ip6table_security|ipmi_devintf|ipmi_msghandler|ipmi_si|ipmi_ssif|ipt_MASQUERADE|ipt_REJECT|iptable_filter|iptable_mangle|iptable_nat|iptable_raw|iptable_security|iTCO_vendor_support|iTCO_wdt|jbd2|joydev|kvm|kvm_intel|libahci|libata|libcrc32c|llc|lockd|lpc_ich|lrw|mbcache|megaraid_sas|mfd_core|mgag200|Module|mptbase|mptscsih|mptspi|nf_conntrack|nf_conntrack_ipv4|nf_conntrack_ipv6|nf_defrag_ipv4|nf_defrag_ipv6|nf_nat|nf_nat_ipv4|nf_nat_ipv6|nf_nat_masquerade_ipv4|nfnetlink|nfnetlink_log|nfnetlink_queue|nfs_acl|nfsd|parport|parport_pc|pata_acpi|pcspkr|ppdev|rfkill|sch_fq_codel|scsi_transport_spi|sd_mod|serio_raw|sg|shpchp|snd|snd_ac97_codec|snd_ens1371|snd_page_alloc|snd_pcm|snd_rawmidi|snd_seq|snd_seq_device|snd_seq_midi|snd_seq_midi_event|snd_timer|soundcore|sr_mod|stp|sunrpc|syscopyarea|sysfillrect|sysimgblt|tcp_lp|ttm|tun|uvcvideo|videobuf2_core|videobuf2_memops|videobuf2_vmalloc|videodev|virtio|virtio_balloon|virtio_console|virtio_net|virtio_pci|virtio_ring|virtio_scsi|vmhgfs|vmw_balloon|vmw_vmci|vmw_vsock_vmci_transport|vmware_balloon|vmwgfx|vsock|xfs|xt_CHECKSUM|xt_conntrack|xt_state")
+	log_message "INFO" "正在检查异常内核模块"
+	danger_lsmod=$(lsmod 2>/dev/null | grep -Ev "ablk_helper|ac97_bus|acpi_power_meter|aesni_intel|ahci|ata_generic|ata_piix|auth_rpcgss|binfmt_misc|bluetooth|bnep|bnx2|bridge|cdrom|cirrus|coretemp|crc_t10dif|crc32_pclmul|crc32c_intel|crct10dif_common|crct10dif_generic|crct10dif_pclmul|cryptd|dca|dcdbas|dm_log|dm_mirror|dm_mod|dm_region_hash|drm|drm_kms_helper|drm_panel_orientation_quirks|e1000|ebtable_broute|ebtable_filter|ebtable_nat|ebtables|edac_core|ext4|fb_sys_fops|floppy|fuse|gf128mul|ghash_clmulni_intel|glue_helper|grace|i2c_algo_bit|i2c_core|i2c_piix4|i7core_edac|intel_powerclamp|ioatdma|ip_set|ip_tables|ip6_tables|ip6t_REJECT|ip6t_rpfilter|ip6table_filter|ip6table_mangle|ip6table_nat|ip6table_raw|ip6table_security|ipmi_devintf|ipmi_msghandler|ipmi_si|ipmi_ssif|ipt_MASQUERADE|ipt_REJECT|iptable_filter|iptable_mangle|iptable_nat|iptable_raw|iptable_security|iTCO_vendor_support|iTCO_wdt|jbd2|joydev|kvm|kvm_intel|libahci|libata|libcrc32c|llc|lockd|lpc_ich|lrw|mbcache|megaraid_sas|mfd_core|mgag200|Module|mptbase|mptscsih|mptspi|nf_conntrack|nf_conntrack_ipv4|nf_conntrack_ipv6|nf_defrag_ipv4|nf_defrag_ipv6|nf_nat|nf_nat_ipv4|nf_nat_ipv6|nf_nat_masquerade_ipv4|nfnetlink|nfnetlink_log|nfnetlink_queue|nfs_acl|nfsd|parport|parport_pc|pata_acpi|pcspkr|ppdev|rfkill|sch_fq_codel|scsi_transport_spi|sd_mod|serio_raw|sg|shpchp|snd|snd_ac97_codec|snd_ens1371|snd_page_alloc|snd_pcm|snd_rawmidi|snd_seq|snd_seq_device|snd_seq_midi|snd_seq_midi_event|snd_timer|soundcore|sr_mod|stp|sunrpc|syscopyarea|sysfillrect|sysimgblt|tcp_lp|ttm|tun|uvcvideo|videobuf2_core|videobuf2_memops|videobuf2_vmalloc|videodev|virtio|virtio_balloon|virtio_console|virtio_net|virtio_pci|virtio_ring|virtio_scsi|vmhgfs|vmw_balloon|vmw_vmci|vmw_vsock_vmci_transport|vmware_balloon|vmwgfx|vsock|xfs|xt_CHECKSUM|xt_conntrack|xt_state")
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行lsmod命令检查异常内核模块失败" "kernelCheck"
+	fi
 	if [ -n "$danger_lsmod" ];then
 		(echo -e "${RED}!]发现可疑内核模块:${NC}" && echo "$danger_lsmod")  
+		log_message "INFO" "发现可疑内核模块"
 	else
 		echo -e "${YELLOW}[INFO]未发现可疑内核模块${NC}"  
+		log_message "INFO" "未发现可疑内核模块"
 	fi
 	printf "\n"  
+	
+	# 记录结束时间和性能统计
+	end_time=$(date +%s)
+	log_performance "kernelCheck" "$start_time" "$end_time"
+	log_operation "MODULE:KERNELCHECK" "内核检查模块执行完成" "END"
 
 }
 
