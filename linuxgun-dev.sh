@@ -5019,46 +5019,80 @@ k8sCheck() {
 
 # 系统性能评估 【完成】
 performanceCheck(){
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块开始执行" "START"
+	
 	# 系统性能评估
 	## 磁盘使用情况
 	echo -e "${YELLOW}正在检查磁盘使用情况:${NC}"  
-	echo -e "${YELLOW}[INFO]磁盘使用情况如下:${NC}" && df -h   
+	log_message "INFO" "正在检查磁盘使用情况"
+	echo -e "${YELLOW}[INFO]磁盘使用情况如下:${NC}" && df -h 2>/dev/null
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取磁盘使用情况失败" "performanceCheck"
+	fi
 	printf "\n"  
 
 	echo -e "${YELLOW}正在检查磁盘使用是否过大[df -h]:${NC}"  
+	log_message "INFO" "检查磁盘使用率是否超过70%"
 	echo -e "${YELLOW}[KNOW]使用超过70%告警${NC}"  
-	df=$(df -h | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
+	df=$(df -h 2>/dev/null | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
+	if [ ${PIPESTATUS[0]} -ne 0 ]; then
+		handle_error 1 "分析磁盘使用率失败" "performanceCheck"
+	fi
 	if [ -n "$df" ];then
 		(echo -e "${RED}[WARN]硬盘空间使用过高,请注意!${NC}" && echo "$df" )  
+		log_message "INFO" "硬盘空间使用过高: $df"
 	else
 		echo -e "${YELLOW}[INFO]硬盘空间足够${NC}" 
+		log_message "INFO" "硬盘空间足够"
 	fi
 	printf "\n"  
 
 	## CPU使用情况
 	echo -e "${YELLOW}正在检查CPU用情况[cat /proc/cpuinfo]:${NC}" 
-	(echo -e "${YELLOW}CPU硬件信息如下:${NC}" && cat /proc/cpuinfo )  
+	log_message "INFO" "正在检查CPU硬件信息"
+	(echo -e "${YELLOW}CPU硬件信息如下:${NC}" && cat /proc/cpuinfo 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取CPU硬件信息失败" "performanceCheck"
+	fi
 
 	## 内存使用情况
 	echo -e "${YELLOW}正在分析内存情况:${NC}"  
-	(echo -e "${YELLOW}[INFO]内存信息如下[cat /proc/meminfo]:${NC}" && cat /proc/meminfo)  
-	(echo -e "${YELLOW}[INFO]内存使用情况如下[free -m]:${NC}" && free -m)  
+	log_message "INFO" "正在分析内存使用情况"
+	(echo -e "${YELLOW}[INFO]内存信息如下[cat /proc/meminfo]:${NC}" && cat /proc/meminfo 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取内存详细信息失败" "performanceCheck"
+	fi
+	(echo -e "${YELLOW}[INFO]内存使用情况如下[free -m]:${NC}" && free -m 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取内存使用情况失败" "performanceCheck"
+	fi
 	printf "\n"  
 
 	## 系统运行及负载情况
 	echo -e "${YELLOW}系统运行及负载情况:${NC}"  
+	log_message "INFO" "正在检查系统运行时间及负载情况"
 	echo -e "${YELLOW}正在检查系统运行时间及负载情况:${NC}"  
-	(echo -e "${YELLOW}[INFO]系统运行时间如下[uptime]:${NC}" && uptime)  
+	(echo -e "${YELLOW}[INFO]系统运行时间如下[uptime]:${NC}" && uptime 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取系统运行时间及负载情况失败" "performanceCheck"
+	fi
 	printf "\n"  
 	
 	# 网络流量情况【没有第三方工具无法检测】
 	# yum install nload -y
 	# nload ens192 
 	echo -e "${YELLOW}网络流量情况:${NC}"
+	log_message "INFO" "网络流量监控需要第三方工具nload"
 	echo -e "${YELLOW}需要借助第三放工具nload进行流量监控,请自行安装并运行${NC}"
 	echo -e "${GREEN}安装命令: yum install nload -y${NC}"
 	echo -e "${GREEN}检查命令: nload ens192${NC}"
 	
+	# 记录结束时间和性能统计
+	end_time=$(date +%s)
+	log_performance "performanceCheck" $start_time $end_time
+	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块执行完成" "END"
 }
 
 
