@@ -365,8 +365,8 @@ log_message() {
         local color
         case "$level" in
             "DEBUG") color="$GREEN" ;;   # 绿色
-            "INFO")  color="$YELLOW" ;;  # 黄色
-            "WARN")  color="$RED" ;;     # 红色
+            "INFO")  color="$BLUE" ;;    # 蓝色
+            "WARN")  color="$YELLOW" ;;  # 黄色
             "ERROR") color="$RED" ;;     # 红色
         esac
         
@@ -416,7 +416,8 @@ log_performance() {
     
     if [ -n "$start_time" ] && [ -n "$end_time" ]; then
         local duration=$((end_time - start_time))
-        log_message "INFO" "[$timestamp] [PERF] $function_name 执行时间: ${duration}秒"
+        log_message "DEBUG" "[$timestamp] [PERF] $function_name 执行时间: ${duration}秒"
+		# DEBUG 自带 绿色输出
         
         # 写入性能日志文件
         if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
@@ -440,10 +441,10 @@ init_env(){
 	# 优先使用ip命令,如果不存在则使用ifconfig作为备用
 	if command -v ip >/dev/null 2>&1; then
 		ipadd=$(ip addr | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#') # 192.168.1.1_24
-		log_message "INFO" "使用ip命令获取IP地址: $ipadd"
+		log_message "DEBUG" "使用ip命令获取IP地址: $ipadd"
 	elif command -v ifconfig >/dev/null 2>&1; then
 		ipadd=$(ifconfig | grep -w inet | grep -v 127.0.0.1 | awk 'NR==1{print $2}' | sed 's#/\([0-9]\+\)#_\1#')
-		log_message "INFO" "使用ifconfig命令获取IP地址: $ipadd"
+		log_message "DEBUG" "使用ifconfig命令获取IP地址: $ipadd"
 	else
 		# 如果都没有,使用主机名作为标识
 		ipadd=$(hostname | tr '.' '_')
@@ -579,7 +580,7 @@ baseInfo(){
         if [ -n "$distro" ]; then
             echo -e "${YELLOW}[INFO] 系统发行版本: $distro${NC}"
         else
-            echo -e "${RED}[WARN] 未找到有效的系统发行版本信息${NC}"
+            echo -e "${YELLOW}[WARN] 未找到有效的系统发行版本信息${NC}"
         fi
     elif [ -f "/etc/redhat-release" ]; then
         distro=$(cat /etc/redhat-release)
@@ -600,7 +601,7 @@ baseInfo(){
         distro=$(lsb_release -d | cut -f2)
         echo -e "${YELLOW}[INFO] 系统发行版本: $distro${NC}"
     else
-        echo -e "${RED}[WARN] 系统发行版本信息未找到,请手动检查${NC}"
+        echo -e "${YELLOW}[WARN] 系统发行版本信息未找到,请手动检查${NC}"
     fi
     printf "\n"
 
@@ -2206,13 +2207,13 @@ systemEnabledServiceCheck(){
 				
 				for service in $systemdList; do
 					echo -e "${YELLOW}[INFO] 正在分析systemd启动项:$service${NC}"
-					log_message "INFO" "分析systemd服务: $service"
+					log_message "DEBUG" "分析systemd服务: $service"
 					
 					# 根据服务名称找到服务文件位置
 					if servicePath=$(systemctl show $service -p FragmentPath 2>/dev/null | awk -F "=" '{print $2}' 2>/dev/null); then
 						if [ -n "$servicePath" ] && [ -f "$servicePath" ]; then
 							echo -e "${YELLOW}[INFO] 找到service服务文件位置:$servicePath${NC}"
-							log_message "INFO" "找到服务文件: $servicePath"
+							log_message "DEBUG" "找到服务文件: $servicePath"
 							
 							if dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null); then
 								if [ -n "$dangerService" ];then
@@ -2221,7 +2222,7 @@ systemEnabledServiceCheck(){
 									dangerous_services=$((dangerous_services + 1))
 								else
 									echo -e "${YELLOW}[INFO] 未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
-									log_message "INFO" "systemd服务 $service 未发现敏感命令"
+									log_message "DEBUG" "systemd服务 $service 未发现敏感命令"
 								fi
 							else
 								handle_error 1 "分析服务文件${servicePath}失败" "systemEnabledServiceCheck"
@@ -2340,7 +2341,7 @@ systemRunningServiceCheck(){
 				danger_running_count=0
 				for service in $systemRunningServiceList; do
 					echo -e "${YELLOW}[INFO] 正在分析systemd运行中服务项:$service${NC}"
-					log_message "INFO" "正在分析systemd运行中服务项:$service"
+					log_message "DEBUG" "正在分析systemd运行中服务项:$service"
 					# 根据服务名称找到服务文件位置
 					servicePath=$(systemctl show $service -p FragmentPath 2>/dev/null | awk -F "=" '{print $2}')  # 文件不存在的时候程序会中断 --- 20240808
 					if [ $? -ne 0 ]; then
@@ -2396,7 +2397,7 @@ systemServiceCollect(){
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
 	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
 	echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
-	log_message "INFO" "根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]"
+	log_message "DEBUG" "根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]"
 	echo -e "${YELLOW}[INFO] 正在辨认系统使用的初始化程序${NC}"
 	log_message "INFO" "正在辨认系统使用的初始化程序"
 	systemInit=$((cat /proc/1/comm 2>/dev/null)|| (cat /proc/1/cgroup 2>/dev/null | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) # 多文件判断
@@ -2477,7 +2478,7 @@ userServiceCheck(){
 		if [ -n "$rcLocal" ];then
 			echo -e "${YELLOW}[INFO] /etc/rc.d/rc.local用户自启动项服务如下:${NC}" && echo "$rcLocal"
 			log_message "INFO" "/etc/rc.d/rc.local用户自启动项服务内容"
-			log_message "INFO" "/etc/rc.d/rc.local内容详情:\n$rcLocal"
+			log_message "DEBUG" "/etc/rc.d/rc.local内容详情:\n$rcLocal"
 		else
 			echo -e "${RED}[WARN] 未发现/etc/rc.d/rc.local用户自启动服务${NC}"
 			log_message "WARN" "未发现/etc/rc.d/rc.local用户自启动服务"
@@ -2537,7 +2538,7 @@ userServiceCheck(){
 				log_message "INFO" "正在检查用户: $user 的 $file 文件"
 				local results=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$home_dir/$file" 2>/dev/null)
 				if [ -n "$results" ]; then
-					echo -e "${YELLOW}[INFO] 用户: $user 的 $file 文件存在敏感命令或脚本:${NC}" && echo "$results"
+					echo -e "${RED}[INFO] 用户: $user 的 $file 文件存在敏感命令或脚本:${NC}" && echo "$results"
 					log_message "WARN" "用户: $user 的 $file 文件存在敏感命令或脚本:\n$results"
 				else
 					echo -e "${YELLOW}[INFO] 用户: $user 的 $file 文件不存在敏感命令或脚本${NC}"
@@ -2671,7 +2672,7 @@ sshFileCheck(){
 	echo -e "${YELLOW}正在检查私钥文件[/root/.ssh/id_rsa]:${NC}" 
 	log_message "INFO" "正在检查私钥文件"
 	echo -e "${YELLOW}[KNOW] 私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]${NC}"
-	log_message "INFO" "私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]"
+	log_message "DEBUG" "私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]"
 	privatekey=$(cat /root/.ssh/id_rsa 2>/dev/null)
 	if [ -n "$privatekey" ];then
 		echo -e "${RED}[WARN] 发现私钥文件,请注意!${NC}" && echo "$privatekey"
@@ -2687,7 +2688,7 @@ sshFileCheck(){
 	log_message "INFO" "正在检查被授权登录公钥信息"
 	echo -e "${YELLOW}[KNOW] authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机" 
 	echo -e "${YELLOW}[KNOW] 免密登录配置中需要将用户公钥内容追加到authorized_keys文件中[cat id_rsa.pub >> authorized_keys]"
-	log_message "INFO" "authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机"
+	log_message "DEBUG" "authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机"
 	authkey=$(cat /root/.ssh/authorized_keys 2>/dev/null)
 	if [ -n "$authkey" ];then
 		echo -e "${RED}[WARN] 发现被授权登录的用户公钥信息如下${NC}" && echo "$authkey"
@@ -2718,7 +2719,7 @@ sshFileCheck(){
 	echo -e "${YELLOW}正在检查SSHD配置文件[/etc/ssh/sshd_config]:${NC}" 
 	log_message "INFO" "正在检查SSHD配置文件"
 	echo -e "${YELLOW}正在输出SSHD文件所有开启配置(不带#号的配置)[/etc/ssh/sshd_config]:"
-	log_message "INFO" "正在输出SSHD文件所有开启配置(不带#号的配置)"
+	log_message "DEBUG" "正在输出SSHD文件所有开启配置(不带#号的配置)"
 	sshdconfig=$(cat /etc/ssh/sshd_config 2>/dev/null | egrep -v "#|^$")
 	if [ $? -ne 0 ]; then
 		handle_error 1 "读取/etc/ssh/sshd_config文件失败" "sshFileCheck"
@@ -2727,7 +2728,7 @@ sshFileCheck(){
 		echo -e "${YELLOW}[INFO] sshd_config所有开启的配置如下:${NC}" && echo "$sshdconfig" 
 		log_message "INFO" "sshd_config所有开启的配置:\n$sshdconfig"
 	else
-		echo -e "${RED}[WARN] 未发现sshd_config开启任何配置!请留意这是异常现象!${NC}" 
+		echo -e "${YELLOW}[WARN] 未发现sshd_config开启任何配置!请留意这是异常现象!${NC}" 
 		log_message "WARN" "未发现sshd_config开启任何配置!请留意这是异常现象!"
 	fi
 	printf "\n" 
@@ -2744,7 +2745,7 @@ sshFileCheck(){
 			echo -e "${RED}[WARN] 以下用户空口令:${NC}" && echo "$nopasswd"
 			log_message "WARN" "以下用户空口令:\n$nopasswd"
 		else
-			echo -e "${YELLOW}[INFO] 但未发现空口令用户${NC}" 
+			echo -e "${RED}[INFO] 但未发现空口令用户${NC}" 
 			log_message "INFO" "但未发现空口令用户"
 		fi
 	else
@@ -2773,17 +2774,17 @@ sshFileCheck(){
 	log_message "INFO" "正在检查sshd_config配置--检查SSH协议版本"
 	echo -e "${YELLOW}[KNOW] 需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
 	echo -e "${YELLOW}[KNOW] 从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
-	log_message "INFO" "需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
+	log_message "DEBUG" "需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
 	protocolver=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -v ^$ | grep Protocol | awk '{print $2}')
 	if [ -n "$protocolver" ];then
 		echo -e "${YELLOW}[INFO] openssh协议版本如下:${NC}" && echo "$protocolver"
 		log_message "INFO" "openssh协议版本:$protocolver"
 		if [ "$protocolver" -eq "2" ];then
-			echo -e "${YELLOW}[INFO] openssh使用ssh2协议,版本过低!${NC}" 
+			echo -e "${RED}[INFO] openssh使用ssh2协议,版本过低!${NC}" 
 			log_message "WARN" "openssh使用ssh2协议,版本过低!"
 		fi
 	else
-		echo -e "${RED}[WARN] 未发现openssh协议版本(未发现并非代表异常)${NC}"
+		echo -e "${YELLOW}[WARN] 未发现openssh协议版本(未发现并非代表异常)${NC}"
 		log_message "WARN" "未发现openssh协议版本(未发现并非代表异常)"
 	fi
 
@@ -3111,16 +3112,16 @@ systemLogCheck(){
 	loginfailed=$(more /var/log/secure* | grep "Failed")  # 获取日志中登录失败的记录
 	if [ -n "$loginfailed" ];then
 		(echo -e "${RED}[WARN] 日志中发现以下登录失败记录:${NC}" && echo "$loginfailed") 
-		# (echo -e "${RED}[WARN] 登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $11}' | sort | uniq -c | sort -nr)  # 问题: $11 会出现 ip 和 username
+		# (echo -e "${YELLOW}[WARN] 登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $11}' | sort | uniq -c | sort -nr)  # 问题: $11 会出现 ip 和 username
 		(echo -e "${RED}[WARN] 登录失败的IP及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk 'match($0, /[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/) {print substr($0, RSTART, RLENGTH)}' | sort | uniq -c | sort -nr)  # 优化:只匹配ip	
-		# (echo -e "${RED}[WARN] 登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
+		# (echo -e "${YELLOW}[WARN] 登录失败的用户及次数如下(疑似SSH爆破):${NC}" && grep "Failed" /var/log/secure* | awk '{print $9}' | sort | uniq -c | sort -nr) 
 		# 根据 from 截取  用户名
 		(echo -e "${RED}[WARN] 登录失败的用户及次数如下(疑似SSH爆破):${NC}" && 
 		{
 			grep "Failed" /var/log/secure* | grep -v "invalid user" | awk '/Failed/ {for_index = index($0, "for ") + 4; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "valid: " user}';
 			grep "Failed" /var/log/secure* | grep "invalid user" | awk '/Failed/ {for_index = index($0, "invalid user ") + 13; from_index = index($0, " from "); user = substr($0, for_index, from_index - for_index); print "invalid: " user}';
 		} | sort | uniq -c | sort -nr)
-		# (echo -e "${RED}[WARN] SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
+		# (echo -e "${YELLOW}[WARN] SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
 	else
 		echo -e "${YELLOW}[INFO] 日志中未发现登录失败的情况${NC}" 
 	fi
@@ -3205,7 +3206,7 @@ systemLogCheck(){
 	for hacker_tools in $hacker_tools_list;do
 		hacker_tools=$(more /var/log/yum* | awk -F: '{print $NF}' | awk -F '[-]' '{print }' | sort | uniq | grep -E "$hacker_tools")
 		if [ -n "$hacker_tools" ];then
-			(echo -e "${RED}[WARN] 发现使用yum下载过以下可疑软件:${NC}"&& echo "$hacker_tools")  
+			(echo -e "${YELLOW}[WARN] 发现使用yum下载过以下可疑软件:${NC}"&& echo "$hacker_tools")  
 		else
 			echo -e "${YELLOW}[INFO] 未发现使用yum下载过可疑软件${NC}"  
 		fi
@@ -3273,7 +3274,7 @@ systemLogCheck(){
 		echo -e "${YELLOW}[INFO] journalctl最近24小时内的日志输出到[$log_file/journalctl_24h.txt]:${NC}"  
 		echo "$journalctl" >> $log_file/journalctl_24H.txt
 	else
-		echo -e "${RED}[WARN] journalctl未发现最近24小时内的日志${NC}"  
+		echo -e "${YELLOW}[WARN] journalctl未发现最近24小时内的日志${NC}"  
 	fi
 	printf "\n"
 	echo -e "${YELLOW}journalctl 其他使用参数:${NC}"
@@ -3304,7 +3305,7 @@ systemLogCheck(){
 	if [ -n "$logconf" ];then
 		(echo -e "${YELLOW}[INFO] 日志配置如下:${NC}" && echo "$logconf")  
 	else
-		echo -e "${RED}[WARN] 未发现日志配置文件${NC}"  
+		echo -e "${YELLOW}[WARN] 未发现日志配置文件${NC}"  
 	fi
 	printf "\n"  
 
@@ -3389,7 +3390,7 @@ tunnelSSH(){
 			fi
 		done
 	else
-		echo -e "${YELLOW}[INFO] 未发现同一PID的多个sshd连接${NC}"
+		echo -e "${GREEN}[INFO] 未发现同一PID的多个sshd连接${NC}"
 		log_message "INFO" "未发现同一PID的多个sshd连接"
 	fi
 	printf "\n"
@@ -3404,7 +3405,7 @@ tunnelSSH(){
 		handle_error 1 "执行netstat命令检查SSH本地转发失败" "tunnelSSH"
 	fi
 	if [ -n "$local_forward_ports" ]; then
-		echo -e "${RED}[WARN] 发现SSH进程监听非22端口(可能的本地转发):${NC}"
+		echo -e "${YELLOW}[WARN] 发现SSH进程监听非22端口(可能的本地转发):${NC}"
 		log_message "INFO" "发现SSH进程监听非22端口(可能的本地转发)"
 		echo "$local_forward_ports"
 		# 检查对应的SSH进程命令行参数
@@ -3419,7 +3420,7 @@ tunnelSSH(){
 			fi
 		done
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH本地转发特征${NC}"
+		echo -e "${GREEN}[INFO] 未发现SSH本地转发特征${NC}"
 		log_message "INFO" "未发现SSH本地转发特征"
 	fi
 	printf "\n"
@@ -3440,14 +3441,14 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH远程转发进程"
 		echo "$remote_forward_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH远程转发特征${NC}"
+		echo -e "${GREEN}[INFO] 未发现SSH远程转发特征${NC}"
 		log_message "INFO" "未发现SSH远程转发特征"
 	fi
 	
 	### 3.2 检查SSH配置文件中的远程转发设置
 	remote_forward_config=$(grep -E '^(AllowTcpForwarding|GatewayPorts)' /etc/ssh/sshd_config 2>/dev/null | grep -v 'no')
 	if [ -n "$remote_forward_config" ]; then
-		echo -e "${RED}[WARN] SSH配置允许远程转发:${NC}"
+		echo -e "${YELLOW}[WARN] SSH配置允许远程转发:${NC}"
 		log_message "INFO" "SSH配置允许远程转发"
 		echo "$remote_forward_config"
 	fi
@@ -3473,7 +3474,7 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH动态转发(SOCKS代理)进程"
 		echo "$dynamic_forward_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH动态转发特征${NC}"
+		echo -e "${GREEN}[INFO] 未发现SSH动态转发特征${NC}"
 		log_message "INFO" "未发现SSH动态转发特征"
 	fi
 	printf "\n"
@@ -3493,7 +3494,7 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH多级跳板进程"
 		echo "$jump_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH多级跳板进程${NC}"
+		echo -e "${GREEN}[INFO] 未发现SSH多级跳板进程${NC}"
 		log_message "INFO" "未发现SSH多级跳板进程"
 	fi
 	
@@ -3501,7 +3502,7 @@ tunnelSSH(){
 	if [ -f ~/.ssh/config ]; then
 		jump_config=$(grep -E '(ProxyJump|ProxyCommand)' ~/.ssh/config 2>/dev/null)
 		if [ -n "$jump_config" ]; then
-			echo -e "${RED}[WARN] SSH配置文件中发现跳板设置:${NC}"
+			echo -e "${YELLOW}[WARN] SSH配置文件中发现跳板设置:${NC}"
 			log_message "INFO" "SSH配置文件中发现跳板设置"
 			echo "$jump_config"
 		fi
@@ -3556,7 +3557,7 @@ tunnelSSH(){
 				echo -e "${YELLOW}[建议]检查SSH隧道进程和大文件传输活动${NC}"
 				;;
 			"MEDIUM")
-				echo -e "${RED}[WARN] 检测到中等网络流量(1-5GB) - 建议关注:${NC}"
+				echo -e "${YELLOW}[WARN] 检测到中等网络流量(1-5GB) - 建议关注:${NC}"
 				echo -e "${YELLOW}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
 				echo -e "${YELLOW}[建议]确认是否为正常业务操作${NC}"
 				;;
@@ -3565,12 +3566,12 @@ tunnelSSH(){
 				echo -e "${GREEN}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
 				;;
 			"NORMAL")
-				echo -e "${YELLOW}[INFO] 网络流量正常(<200MB):${NC}"
+				echo -e "${GREEN}[INFO] 网络流量正常(<200MB):${NC}"
 				echo -e "${GREEN}    接收: ${rx_mb}MB | 发送: ${tx_mb}MB | 总计: ${total_mb}MB${NC}"
 				;;
 		esac
 	else
-		echo -e "${YELLOW}[INFO] 无法获取网络流量信息${NC}"
+		echo -e "${GREEN}[INFO] 无法获取网络流量信息${NC}"
 	fi
 	printf "\n"
 	
@@ -3581,7 +3582,7 @@ tunnelSSH(){
 	### 7.1 检查SSH相关的定时任务
 	ssh_cron=$(crontab -l 2>/dev/null | grep ssh)
 	if [ -n "$ssh_cron" ]; then
-		echo -e "${RED}[WARN] 发现SSH相关的定时任务:${NC}"
+		echo -e "${YELLOW}[WARN] 发现SSH相关的定时任务:${NC}"
 		log_message "INFO" "发现SSH相关的定时任务"
 		echo "$ssh_cron"
 	fi
@@ -3589,7 +3590,7 @@ tunnelSSH(){
 	### 7.2 检查SSH相关的systemd服务
 	ssh_services=$(systemctl list-units --type=service 2>/dev/null | grep ssh | grep -v sshd)
 	if [ -n "$ssh_services" ]; then
-		echo -e "${RED}[WARN] 发现SSH相关的自定义服务:${NC}"
+		echo -e "${YELLOW}[WARN] 发现SSH相关的自定义服务:${NC}"
 		log_message "INFO" "发现SSH相关的自定义服务"
 		echo "$ssh_services"
 	fi
@@ -3618,7 +3619,7 @@ tunnelSSH(){
 		# 检查工具是否存在于系统中
 		tool_path=$(which "$tool" 2>/dev/null)
 		if [ -n "$tool_path" ]; then
-			echo -e "${RED}[WARN] 系统中存在隧道工具: $tool ($tool_path)${NC}"
+			echo -e "${YELLOW}[WARN] 系统中存在隧道工具: $tool ($tool_path)${NC}"
 		fi
 	done
 	printf "\n"
@@ -3844,7 +3845,7 @@ otherCheck(){
 					handle_error 1 "查找目录 $dir 中的可执行文件失败" "otherCheck"
 				fi
 			else
-				echo -e "${RED}[WARN] 目录不存在${NC}: $dir"  
+				echo -e "${YELLOW}[WARN] 目录不存在${NC}: $dir"  
 				log_message "INFO" "目录不存在: $dir"
 			fi
 		done
@@ -4108,7 +4109,7 @@ baselineCheck(){
 	else
 		# 检查是否配置了加密密码（推荐使用 password_pbkdf2）
 		if grep -qE '^\s*password_pbkdf2' "$GRUB_CFG"; then
-			echo -e "${YELLOW}[INFO] 已设置安全的grub2密码(PBKDF2加密),符合要求${NC}"
+			echo -e "${GREEN}[INFO] 已设置安全的grub2密码(PBKDF2加密),符合要求${NC}"
 		else
 			echo -e "${RED}[WARN] 未设置grub2密码,不符合安全要求!建议立即配置grub2密码保护${NC}"
 		fi
@@ -4428,7 +4429,7 @@ k8sClusterInfo() {
     echo -e "\n${YELLOW}[INFO] 正在检查 Kubernetes 版本信息:${NC}"
     log_message "INFO" "正在检查 Kubernetes 版本信息"
 	# kubectl 命令行工具,通过其向 API server 发送指令
-    echo -e "${YELLOW}[INFO] kubectl 版本信息 (客户端/服务端):${NC}"
+    echo -e "${GREEN}[INFO] kubectl 版本信息 (客户端/服务端):${NC}"
     if command -v kubectl &>/dev/null; then
         kubectl version 2>&1
         if [ $? -ne 0 ]; then
@@ -4441,7 +4442,7 @@ k8sClusterInfo() {
     fi
 
 	# kubelet 运行在每个node上运行,用于管理容器的生命周期,检查kubelet服务状态
-    echo -e "${YELLOW}[INFO] kubelet 版本信息:${NC}"
+    echo -e "${GREEN}[INFO] kubelet 版本信息:${NC}"
     if command -v kubelet &>/dev/null; then
         kubelet --version 2>&1
         if [ $? -ne 0 ]; then
@@ -4552,14 +4553,14 @@ k8sClusterInfo() {
             log_message "INFO" "检查配置文件: $config_file"
 
             # 检查文件权限
-            echo -e "${YELLOW}[INFO] 文件权限:${NC}"
+            echo -e "${GREEN}[INFO] 文件权限:${NC}"
             ls -l "$config_file" 2>/dev/null
             if [ $? -ne 0 ]; then
                 handle_error 1 "获取配置文件权限失败: $config_file" "k8sClusterInfo"
             fi
 
             # 检查常见安全配置项（示例：查看是否设置了认证和授权相关参数）
-            echo -e "${YELLOW}[INFO] 关键配置项检查:${NC}"
+            echo -e "${GREEN}[INFO] 关键配置项检查:${NC}"
             grep -E 'client-ca-file|token-auth-file|authorization-mode|secure-port' "$config_file" 2>&1
             if [ $? -ne 0 ]; then
                 log_message "INFO" "配置文件 $config_file 中未发现关键配置项"
@@ -4567,7 +4568,7 @@ k8sClusterInfo() {
 
             # 如果是 kubelet.conf,额外检查是否有 insecure-port 设置为 0
             if [[ "$config_file" == "/etc/kubernetes/kubelet.conf" ]]; then
-                echo -e "${YELLOW}[INFO] 检查 kubelet 是否禁用不安全端口:${NC}"
+                echo -e "${GREEN}[INFO] 检查 kubelet 是否禁用不安全端口:${NC}"
                 if grep -q 'insecure-port=0' "$config_file"; then
                     echo -e "${GREEN}✓ 不安全端口已禁用${NC}"
                     log_message "INFO" "kubelet 不安全端口已禁用"
@@ -4613,7 +4614,7 @@ k8sSecretCheck() {
         if [ $? -ne 0 ]; then
             handle_error 1 "创建K8S Secret目录失败" "k8sSecretCheck"
         fi
-        echo -e "${YELLOW}[INFO] 重新创建目录: $K8S_SECRET_DIR${NC}"
+        echo -e "${GREEN}[INFO] 重新创建目录: $K8S_SECRET_DIR${NC}"
         log_message "INFO" "重新创建目录: $K8S_SECRET_DIR"
     fi
 
@@ -4629,7 +4630,7 @@ k8sSecretCheck() {
         echo -e "${RED}[WARN] 未发现任何 Secret${NC}"
         log_message "INFO" "未发现任何 Secret"
     else
-        echo -e "${YELLOW}[INFO] 发现以下 Secret:${NC}"
+        echo -e "${GREEN}[INFO] 发现以下 Secret:${NC}"
         log_message "INFO" "发现Kubernetes Secrets"
         echo "$SECRETS"
 
@@ -4648,7 +4649,7 @@ k8sSecretCheck() {
             SECRET_YAML_FILE="${K8S_SECRET_DIR}/${namespace}_${secret_name}.yaml"
             kubectl get secret "$secret_name" -n "$namespace" -o yaml > "$SECRET_YAML_FILE" 2>/dev/null
             if [ $? -eq 0 ]; then
-                echo -e "${YELLOW}[INFO] 已保存 Secret 到文件: $SECRET_YAML_FILE${NC}"
+                echo -e "${GREEN}[INFO] 已保存 Secret 到文件: $SECRET_YAML_FILE${NC}"
                 log_message "INFO" "已保存 Secret 到文件: $SECRET_YAML_FILE"
             else
                 handle_error 1 "保存Secret到文件失败: $SECRET_YAML_FILE" "k8sSecretCheck"
@@ -4660,7 +4661,7 @@ k8sSecretCheck() {
                 handle_error 1 "检查使用Secret的Pod失败: $namespace/$secret_name" "k8sSecretCheck"
             fi
             if [ -n "$PODS_USING_SECRET" ]; then
-                echo -e "${YELLOW}[INFO] 使用此 Secret 的 Pod:${NC}"
+                echo -e "${GREEN}[INFO] 使用此 Secret 的 Pod:${NC}"
                 log_message "INFO" "发现使用Secret的Pod: $namespace/$secret_name"
                 echo "$PODS_USING_SECRET" | grep -v '^$'
             else
@@ -4669,7 +4670,7 @@ k8sSecretCheck() {
             fi
 
             # 检查 Secret 数据内容（以 base64 解码为例）
-            echo -e "${YELLOW}[INFO] Secret 数据内容 (Base64 解码):${NC}"
+            echo -e "${GREEN}[INFO] Secret 数据内容 (Base64 解码):${NC}"
             SECRET_DATA=$(kubectl get secret "$secret_name" -n "$namespace" -o jsonpath='{.data}' 2>&1)
             if [ $? -ne 0 ]; then
                 handle_error 1 "获取Secret数据内容失败: $namespace/$secret_name" "k8sSecretCheck"
@@ -4678,7 +4679,7 @@ k8sSecretCheck() {
                 echo "$SECRET_DATA" | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"' 2>/dev/null
                 log_message "INFO" "成功解码Secret数据内容: $namespace/$secret_name"
             else
-                echo -e "${YELLOW}[INFO] 无数据或无法获取 Secret 内容${NC}"
+                echo -e "${RED}[INFO] 无数据或无法获取 Secret 内容${NC}"
                 log_message "INFO" "无数据或无法获取Secret内容: $namespace/$secret_name"
             fi
         done
@@ -4747,14 +4748,14 @@ k8sSensitiveInfo() {
         if [ $? -ne 0 ]; then
             handle_error 1 "创建K8S敏感信息目录失败" "k8sSensitiveInfo"
         fi
-        echo -e "${YELLOW}[INFO] 创建目录: $K8S_SENSITIVE_DIR${NC}"
+        echo -e "${GREEN}[INFO] 创建目录: $K8S_SENSITIVE_DIR${NC}"
         log_message "INFO" "创建目录: $K8S_SENSITIVE_DIR"
     fi
 
     # 遍历每个路径
     for path in "${SCAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
-            echo -e "${YELLOW}[INFO] 正在扫描路径: $path${NC}"
+            echo -e "${BLUE}[INFO] 正在扫描路径: $path${NC}"
             log_message "INFO" "正在扫描路径: $path"
 
             # 遍历每个文件模式
@@ -4766,14 +4767,14 @@ k8sSensitiveInfo() {
                         log_message "INFO" "发现敏感文件: $file"
 
 						# 输出文件内容到终端
-						# echo -e "${YELLOW}[INFO] 文件内容如下:${NC}"
+						# echo -e "${GREEN}[INFO] 文件内容如下:${NC}"
 						# cat "$file"
 
                         # 复制文件到输出目录
                         filename=$(basename "$file")
                         cp "$file" "$K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)" 2>/dev/null
                         if [ $? -eq 0 ]; then
-                            echo -e "${YELLOW}[INFO] 已保存敏感文件副本至: $K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)${NC}"
+                            echo -e "${GREEN}[INFO] 已保存敏感文件副本至: $K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)${NC}"
                             log_message "INFO" "已保存敏感文件副本: ${filename}_$(date +%Y%m%d)"
                         else
                             handle_error 1 "保存敏感文件副本失败: $file" "k8sSensitiveInfo"
@@ -4817,10 +4818,10 @@ k8sBaselineCheck() {
     log_message "INFO" "开始控制平面配置检查"
     # 检查 kubelet 配置是否存在 insecure-port=0
     if [ -f /etc/kubernetes/kubelet.conf ]; then
-        echo -e "${YELLOW}[INFO] kubelet 是否禁用不安全端口:${NC}"
+        echo -e "${GREEN}[INFO] kubelet 是否禁用不安全端口:${NC}"
         log_message "INFO" "检查kubelet不安全端口配置"
         if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf 2>/dev/null; then
-            echo -e "${YELLOW}[INFO] 不安全端口已禁用${NC}"
+            echo -e "${GREEN}[INFO] 不安全端口已禁用${NC}"
             log_message "INFO" "kubelet不安全端口已禁用"
         else
             echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
@@ -4837,7 +4838,7 @@ k8sBaselineCheck() {
     echo -e "\n${BLUE}2. RBAC 授权模式检查:${NC}"
     log_message "INFO" "开始RBAC授权模式检查"
     if [ -f /etc/kubernetes/apiserver ]; then
-        echo -e "${YELLOW}[INFO] API Server 是否启用 RBAC:${NC}"
+        echo -e "${GREEN}[INFO] API Server 是否启用 RBAC:${NC}"
         log_message "INFO" "检查API Server RBAC配置"
         if grep -q 'authorization-mode=.*RBAC' /etc/kubernetes/apiserver 2>/dev/null; then
             echo -e "${GREEN}✓ 已启用 RBAC 授权模式${NC}"
@@ -4856,7 +4857,7 @@ k8sBaselineCheck() {
 
     echo -e "\n${BLUE}3. Pod 安全策略检查:${NC}"
     log_message "INFO" "开始Pod安全策略检查"
-    echo -e "${YELLOW}[INFO] 是否启用 PodSecurityPolicy 或 Pod Security Admission:${NC}"
+    echo -e "${GREEN}[INFO] 是否启用 PodSecurityPolicy 或 Pod Security Admission:${NC}"
     log_message "INFO" "检查PodSecurityPolicy或Pod Security Admission"
     psp_enabled=$(kubectl api-resources 2>/dev/null | grep -E 'podsecuritypolicies|podsecurityadmission')
     if [ $? -ne 0 ]; then
@@ -4886,7 +4887,7 @@ k8sBaselineCheck() {
 
     echo -e "\n${BLUE}5. Secret 加密存储检查:${NC}"
     log_message "INFO" "开始Secret加密存储检查"
-    echo -e "${YELLOW}[INFO] 是否启用 Secret 加密存储:${NC}"
+    echo -e "${GREEN}[INFO] 是否启用 Secret 加密存储:${NC}"
     log_message "INFO" "检查Secret加密存储配置"
     encryption_config="/etc/kubernetes/encryption-config.yaml"
     if [ -f "$encryption_config" ]; then
@@ -4926,7 +4927,7 @@ k8sBaselineCheck() {
     log_message "INFO" "开始Etcd安全配置检查"
     etcd_config="/etc/kubernetes/manifests/etcd.yaml"
     if [ -f "$etcd_config" ]; then
-        echo -e "${YELLOW}[INFO] Etcd 是否启用 TLS 加密:${NC}"
+        echo -e "${GREEN}[INFO] Etcd 是否启用 TLS 加密:${NC}"
         log_message "INFO" "检查Etcd TLS加密配置"
         if grep -q '--cert-file' "$etcd_config" 2>/dev/null && grep -q '--key-file' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了 TLS 加密通信${NC}"
@@ -4939,7 +4940,7 @@ k8sBaselineCheck() {
             log_message "INFO" "检查Etcd TLS配置时出现错误"
         fi
 
-        echo -e "${YELLOW}[INFO] Etcd 是否限制客户端访问:${NC}"
+        echo -e "${GREEN}[INFO] Etcd 是否限制客户端访问:${NC}"
         log_message "INFO" "检查Etcd客户端证书认证配置"
         if grep -q '--client-cert-auth' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了客户端证书认证${NC}"
@@ -4958,7 +4959,7 @@ k8sBaselineCheck() {
 
     echo -e "\n${BLUE}9. 容器运行时安全配置:${NC}"
     log_message "INFO" "开始容器运行时安全配置检查"
-    echo -e "${YELLOW}[INFO] 是否禁止以 root 用户运行容器:${NC}"
+    echo -e "${GREEN}[INFO] 是否禁止以 root 用户运行容器:${NC}"
     log_message "INFO" "检查容器是否以root用户运行"
     pod_runasuser=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.securityContext.runAsUser}{"\n"}{end}' 2>/dev/null | sort -u)
     if [ $? -ne 0 ]; then
@@ -5147,12 +5148,12 @@ findSensitiveFiles() {
     SENSITIVE_DIR="${check_file}/sensitive_files"
     if [ ! -d "$SENSITIVE_DIR" ]; then
         mkdir -p "$SENSITIVE_DIR"
-        echo -e "${YELLOW}[INFO] 创建敏感文件输出目录: $SENSITIVE_DIR${NC}"
+        echo -e "${GREEN}[INFO] 创建敏感文件输出目录: $SENSITIVE_DIR${NC}"
     fi
 
     for path in "${SCAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
-            echo -e "${YELLOW}[INFO] 正在扫描路径: $path${NC}"
+            echo -e "${BLUE}[INFO] 正在扫描路径: $path${NC}"
             find_cmd=(find "$path" -type f)
             for exdir in "${EXCLUDE_DIRS[@]}"; do
                 find_cmd+=( ! -path "$exdir*" )
@@ -5169,12 +5170,12 @@ findSensitiveFiles() {
             while IFS= read -r file; do
                 [ -z "$file" ] && continue
                 echo -e "${RED}[WARN] 发现敏感文件: $file${NC}"
-                # echo -e "${YELLOW}[INFO] 文件内容如下:${NC}"
+                # echo -e "${GREEN}[INFO] 文件内容如下:${NC}"
                 # cat "$file"
                 filename=$(basename "$file")
                 ts=$(date +%Y%m%d%H%M%S)
                 cp "$file" "$SENSITIVE_DIR/${ts}_${filename}"
-                echo -e "${YELLOW}[INFO] 已保存副本至: $SENSITIVE_DIR/${ts}_${filename}${NC}\n"
+                echo -e "${GREEN}[INFO] 已保存副本至: $SENSITIVE_DIR/${ts}_${filename}${NC}\n"
             done <<< "$files"
         else
             echo -e "${YELLOW}[INFO] 路径不存在或无权限访问: $path${NC}"
@@ -5253,7 +5254,7 @@ sendFileRemote() {
 		return 1
 	fi
 	
-	log_message "INFO" "token验证通过: 长度=${#token}位"
+	log_message "DEBUG" "token验证通过: 长度=${#token}位"
 	
 	# 如果没有指定文件路径,自动查找生成的tar.gz文件
 	if [ -z "$file_path" ]; then
@@ -5264,7 +5265,7 @@ sendFileRemote() {
 		
 		if [ -f "$expected_file" ]; then
 			file_path="$expected_file"
-			echo -e "${YELLOW}[INFO] 找到检查文件: $file_path${NC}"
+			echo -e "${GREEN}[INFO] 找到检查文件: $file_path${NC}"
 		else
 			echo -e "${RED}[WARN] 错误: 未找到自动生成的检查文件 $expected_file${NC}"
 			echo -e "${YELLOW}[INFO] 请先运行 --all 完整检查或手动指定文件路径${NC}"
@@ -5329,8 +5330,8 @@ sendFileRemote() {
 	curl_exit_code=$?
 	
 	if [ $curl_exit_code -eq 0 ]; then
-		echo -e "${YELLOW}[INFO] 文件上传成功!${NC}"
-		echo -e "${YELLOW}[INFO] 服务器响应: $curl_result${NC}"
+		echo -e "${GREEN}[INFO] 文件上传成功!${NC}"
+		echo -e "${GREEN}[INFO] 服务器响应: $curl_result${NC}"
 		# 记录上传日志
 		echo "$(date '+%Y-%m-%d %H:%M:%S') - 文件上传成功: $file_path -> $server_ip:$server_port" >> "${check_file}/upload.log" 2>/dev/null
 		log_message "INFO" "文件上传成功: $file_path -> $server_ip:$server_port"
