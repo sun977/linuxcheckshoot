@@ -3771,14 +3771,25 @@ kernelCheck(){
 
 # 其他排查 【完成】
 otherCheck(){
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:OTHERCHECK" "其他检查模块开始执行" "START"
+	
 	# 可疑脚本文件排查
 	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
+	log_message "INFO" "正在检查可疑脚本文件"
 	echo -e "${YELLOW}[NOTE]不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害${NC}"  
-	scripts=$(find / *.* | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
-	if [ -n "scripts" ];then
+	log_message "INFO" "不检查/usr,/etc,/var目录,需要检查请自行修改脚本,脚本需要人工判定是否有害"
+	scripts=$(find / *.* 2>/dev/null | egrep "\.(py|sh|per|pl|exe)$" | egrep -v "/usr|/etc|/var")
+	if [ $? -ne 0 ]; then
+		handle_error 1 "执行find命令搜索可疑脚本文件失败" "otherCheck"
+	fi
+	if [ -n "$scripts" ];then
 		(echo -e "${RED}[WARN]发现以下脚本文件,请注意!${NC}" && echo "$scripts")  
+		log_message "INFO" "发现可疑脚本文件"
 	else
 		echo -e "${YELLOW}[INFO]未发现脚本文件${NC}"  
+		log_message "INFO" "未发现可疑脚本文件"
 	fi
 	printf "\n"  
 
@@ -3788,7 +3799,9 @@ otherCheck(){
 	# 另一方面,使用该软件进行多次检查时会将相应的MD5值进行对比,若和上次不一样,则会进行提示
 	# 用来验证文件是否被篡改
 	echo -e "${YELLOW}[INFO] md5查询威胁情报或者用来防止二进制文件篡改(需要人工比对md5值)${NC}"  
+	log_message "INFO" "开始系统文件完整性校验"
 	echo -e "${YELLOW}[INFO] MD5值文件导出位置: ${check_file}/sysfile_md5.txt${NC}"  
+	log_message "INFO" "MD5值文件导出位置: ${check_file}/sysfile_md5.txt"
 
 	file="${check_file}/sysfile_md5.txt"
 
@@ -3803,50 +3816,83 @@ otherCheck(){
 	)
 
 	if [ -e "$file" ]; then 
+		log_message "INFO" "发现已存在的MD5文件，进行校验对比"
 		md5sum -c "$file" 2>&1  
+		if [ $? -ne 0 ]; then
+			handle_error 1 "MD5校验对比失败" "otherCheck"
+		fi
 	else
+		log_message "INFO" "未发现MD5文件，开始生成新的MD5文件"
 		# 清空或创建文件
 		> "$file"
+		if [ $? -ne 0 ]; then
+			handle_error 1 "创建MD5文件失败" "otherCheck"
+		fi
 
 		# 遍历每个目录,查找可执行文件
 		for dir in "${dirs_to_check[@]}"; do
 			if [ -d "$dir" ]; then
 				echo -e "${YELLOW}[INFO] 正在扫描目录${NC}: $dir"  
+				log_message "INFO" "正在扫描目录: $dir"
 
 				# 查找当前目录下所有具有可执行权限的普通文件
-				find "$dir" -maxdepth 1 -type f -executable | while read -r f; do
+				find "$dir" -maxdepth 1 -type f -executable 2>/dev/null | while read -r f; do
 					# 输出文件名和MD5值(输出屏幕同时保存到文件中)
-					md5sum "$f" | tee -a "$file"  
+					md5sum "$f" 2>/dev/null | tee -a "$file"  
 					# md5sum "$f" >> "$file"
 				done
+				if [ ${PIPESTATUS[0]} -ne 0 ]; then
+					handle_error 1 "查找目录 $dir 中的可执行文件失败" "otherCheck"
+				fi
 			else
 				echo -e "${YELLOW}[WARN] 目录不存在${NC}: $dir"  
+				log_message "INFO" "目录不存在: $dir"
 			fi
 		done
 	fi
 
 	# 安装软件排查(rpm)
 	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
-	software=$(rpm -qa | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
+	log_message "INFO" "正在检查rpm安装软件及版本情况"
+	software=$(rpm -qa 2>/dev/null | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
+	if [ ${PIPESTATUS[0]} -ne 0 ]; then
+		handle_error 1 "执行rpm -qa命令失败" "otherCheck"
+	fi
 	if [ -n "$software" ];then
 		(echo -e "${YELLOW}[INFO]系统安装与版本如下:${NC}" && echo "$software")  
+		log_message "INFO" "发现系统安装软件"
 	else
 		echo -e "${YELLOW}[INFO]系统未安装软件${NC}" 
+		log_message "INFO" "系统未安装软件"
 	fi
 	printf "\n"  
 
 	echo -e "${YELLOW}正在检查rpm安装的可疑软件:${NC}" 
+	log_message "INFO" "正在检查rpm安装的可疑软件"
 	# 从文件中取出一个工具名然后匹配
-	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt)
+	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "读取黑客工具列表文件失败" "otherCheck"
+	fi
 	for hacker_tools in $hacker_tools_list;do
-		danger_soft=$(rpm -qa | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
+		danger_soft=$(rpm -qa 2>/dev/null | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
+		if [ ${PIPESTATUS[0]} -ne 0 ]; then
+			handle_error 1 "检查可疑软件时rpm命令失败" "otherCheck"
+		fi
 		if [ -n "$danger_soft" ];then
 			(echo -e "${RED}[WARN]发现安装以下可疑软件:$hacker_tools${NC}" && echo "$danger_soft") 
+			log_message "INFO" "发现安装可疑软件: $hacker_tools"
 		else
 			echo -e "${YELLOW}[INFO]未发现安装可疑软件:$hacker_tools${NC}" 
+			log_message "INFO" "未发现安装可疑软件: $hacker_tools"
 		fi
 	done
 	printf "\n" 
+	
+	# 记录结束时间和性能统计
+	end_time=$(date +%s)
+	log_performance "otherCheck" $start_time $end_time
+	log_operation "MODULE:OTHERCHECK" "其他检查模块执行完成" "END"
 
 }
 
@@ -4365,70 +4411,132 @@ baselineCheck(){
 
 # 检查 Kubernetes 集群基础信息
 k8sClusterInfo() {
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块开始执行" "START"
+	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
         echo -e "${RED}[WARN] 未检测到 Kubernetes 环境,退出脚本${NC}"
+        log_message "INFO" "未检测到 Kubernetes 环境,退出脚本"
         exit 0
     fi
 
     echo -e "${YELLOW}正在检查K8s集群基础信息:${NC}"
+    log_message "INFO" "正在检查K8s集群基础信息"
 
 	# 检查 Kubernetes 版本信息
     echo -e "\n${YELLOW}[INFO]正在检查 Kubernetes 版本信息:${NC}"
+    log_message "INFO" "正在检查 Kubernetes 版本信息"
 	# kubectl 命令行工具,通过其向 API server 发送指令
     echo -e "${GREEN}[INFO] kubectl 版本信息 (客户端/服务端):${NC}"
     if command -v kubectl &>/dev/null; then
         kubectl version 2>&1
+        if [ $? -ne 0 ]; then
+            handle_error 1 "获取kubectl版本信息失败" "k8sClusterInfo"
+        fi
+        log_message "INFO" "成功获取kubectl版本信息"
     else
         echo -e "${RED}[WARN] 警告: kubectl 命令未安装,无法获取版本信息${NC}"
+        log_message "INFO" "kubectl 命令未安装,无法获取版本信息"
     fi
 
 	# kubelet 运行在每个node上运行,用于管理容器的生命周期,检查kubelet服务状态
     echo -e "${GREEN}[INFO] kubelet 版本信息:${NC}"
     if command -v kubelet &>/dev/null; then
         kubelet --version 2>&1
+        if [ $? -ne 0 ]; then
+            handle_error 1 "获取kubelet版本信息失败" "k8sClusterInfo"
+        fi
+        log_message "INFO" "成功获取kubelet版本信息"
     else
         echo -e "${RED}[WARN] 警告: kubelet 命令未安装,无法获取版本信息${NC}"
+        log_message "INFO" "kubelet 命令未安装,无法获取版本信息"
     fi
 
     # 检查 Kubernetes 服务状态
     echo -e "${BLUE}1. 检查 Kubernetes 服务状态:${NC}"
+    log_message "INFO" "检查 Kubernetes 服务状态"
     systemctl status kubelet 2>&1 | grep -v "No such process"
     if [ $? -ne 0 ]; then
         echo -e "${RED}kubelet 服务未运行${NC}"
+        log_message "INFO" "kubelet 服务未运行"
+    else
+        log_message "INFO" "kubelet 服务状态检查完成"
     fi
 
     echo -e "\n${BLUE}2. 检查集群信息:${NC}"
+    log_message "INFO" "检查集群信息"
     kubectl cluster-info 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取集群信息失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}3. 检查节点状态:${NC}"
+    log_message "INFO" "检查节点状态"
     kubectl get nodes 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取节点状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}4. 检查所有命名空间中的 Pod 状态:${NC}"
+    log_message "INFO" "检查所有命名空间中的 Pod 状态"
     kubectl get pods --all-namespaces 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取所有命名空间Pod状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}5. 检查系统 Pod 状态:${NC}"
+    log_message "INFO" "检查系统 Pod 状态"
     kubectl get pods -n kube-system 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取系统Pod状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}6. 检查持久卷(PV)状态:${NC}"
+    log_message "INFO" "检查持久卷(PV)状态"
     kubectl get pv 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取持久卷状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}7. 检查持久卷声明(PVC)状态:${NC}"
+    log_message "INFO" "检查持久卷声明(PVC)状态"
     kubectl get pvc 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取持久卷声明状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}8. 检查服务状态:${NC}"
+    log_message "INFO" "检查服务状态"
     kubectl get svc --all-namespaces 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取服务状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}9. 检查部署状态:${NC}"
+    log_message "INFO" "检查部署状态"
     kubectl get deployments --all-namespaces 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取部署状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}10. 检查守护进程集状态:${NC}"
+    log_message "INFO" "检查守护进程集状态"
     kubectl get daemonsets --all-namespaces 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取守护进程集状态失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}11. 检查事件信息:${NC}"
+    log_message "INFO" "检查事件信息"
     kubectl get events --sort-by=.metadata.creationTimestamp 2>&1
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取事件信息失败" "k8sClusterInfo"
+    fi
 
     echo -e "\n${BLUE}12. 检查 Kubernetes 配置文件:${NC}"
+    log_message "INFO" "检查 Kubernetes 配置文件"
 
     # 定义要检查的 Kubernetes 配置文件路径
     K8S_CONFIG_FILES=(
@@ -4442,101 +4550,162 @@ k8sClusterInfo() {
     for config_file in "${K8S_CONFIG_FILES[@]}"; do
         if [ -f "$config_file" ]; then
             echo -e "${BLUE}检查配置文件: $config_file${NC}"
+            log_message "INFO" "检查配置文件: $config_file"
 
             # 检查文件权限
             echo -e "${GREEN}[INFO] 文件权限:${NC}"
-            ls -l "$config_file"
+            ls -l "$config_file" 2>/dev/null
+            if [ $? -ne 0 ]; then
+                handle_error 1 "获取配置文件权限失败: $config_file" "k8sClusterInfo"
+            fi
 
             # 检查常见安全配置项（示例：查看是否设置了认证和授权相关参数）
             echo -e "${GREEN}[INFO] 关键配置项检查:${NC}"
             grep -E 'client-ca-file|token-auth-file|authorization-mode|secure-port' "$config_file" 2>&1
+            if [ $? -ne 0 ]; then
+                log_message "INFO" "配置文件 $config_file 中未发现关键配置项"
+            fi
 
             # 如果是 kubelet.conf,额外检查是否有 insecure-port 设置为 0
             if [[ "$config_file" == "/etc/kubernetes/kubelet.conf" ]]; then
                 echo -e "${GREEN}[INFO] 检查 kubelet 是否禁用不安全端口:${NC}"
                 if grep -q 'insecure-port=0' "$config_file"; then
                     echo -e "${GREEN}✓ 不安全端口已禁用${NC}"
+                    log_message "INFO" "kubelet 不安全端口已禁用"
                 else
                     echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
+                    log_message "INFO" "kubelet 的不安全端口未禁用"
                 fi
             fi
 
             echo -e ""
         else
             echo -e "${RED}[WARN] 配置文件 $config_file 不存在${NC}"
+            log_message "INFO" "配置文件不存在: $config_file"
         fi
     done
+    
+    # 记录结束时间和性能统计
+    end_time=$(date +%s)
+    log_performance "k8sClusterInfo" $start_time $end_time
+    log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块执行完成" "END"
 }
 
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块开始执行" "START"
+	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
         echo -e "${RED}[WARN] 未检测到 Kubernetes 环境,退出脚本${NC}"
+        log_message "INFO" "未检测到 Kubernetes 环境,退出脚本"
         exit 0
     fi
 
     echo -e "${YELLOW}正在检查K8s集群凭据(Secret)信息:${NC}"
+    log_message "INFO" "正在检查K8s集群凭据(Secret)信息"
 
     # 创建 k8s 子目录用于存储 Secret 文件
     K8S_SECRET_DIR="${k8s_file}"  # 文件在 init_env 函数已经创建 k8s_file="${check_file}/k8s"
     if [ ! -d "$K8S_SECRET_DIR" ]; then
         mkdir -p "$K8S_SECRET_DIR"
+        if [ $? -ne 0 ]; then
+            handle_error 1 "创建K8S Secret目录失败" "k8sSecretCheck"
+        fi
         echo -e "${GREEN}[INFO] 重新创建目录: $K8S_SECRET_DIR${NC}"
+        log_message "INFO" "重新创建目录: $K8S_SECRET_DIR"
     fi
 
     echo -e "\n${BLUE}1. 检查 Kubernetes Secrets:${NC}"
+    log_message "INFO" "检查 Kubernetes Secrets"
 
     # 获取所有命名空间下的 Secret
     SECRETS=$(kubectl get secrets --all-namespaces 2>&1)
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取Kubernetes Secrets失败" "k8sSecretCheck"
+    fi
     if echo "$SECRETS" | grep -q "No resources found"; then
         echo -e "${RED}[WARN] 未发现任何 Secret${NC}"
+        log_message "INFO" "未发现任何 Secret"
     else
         echo -e "${GREEN}[INFO] 发现以下 Secret:${NC}"
+        log_message "INFO" "发现Kubernetes Secrets"
         echo "$SECRETS"
 
         # 列出每个 Secret 的详细信息及其关联的 Pod
         echo "$SECRETS" | awk 'NR>1 {print $1, $2}' | while read -r namespace secret_name; do
             echo -e "\n${BLUE}检查 Secret: $namespace/$secret_name${NC}"
+            log_message "INFO" "检查 Secret: $namespace/$secret_name"
 
             # 显示 Secret 的详细信息
             kubectl describe secret "$secret_name" -n "$namespace" 2>&1
+            if [ $? -ne 0 ]; then
+                handle_error 1 "获取Secret详细信息失败: $namespace/$secret_name" "k8sSecretCheck"
+            fi
 
             # 保存 Secret 原始数据到文件
             SECRET_YAML_FILE="${K8S_SECRET_DIR}/${namespace}_${secret_name}.yaml"
-            kubectl get secret "$secret_name" -n "$namespace" -o yaml > "$SECRET_YAML_FILE"
-            echo -e "${GREEN}[INFO] 已保存 Secret 到文件: $SECRET_YAML_FILE${NC}"
+            kubectl get secret "$secret_name" -n "$namespace" -o yaml > "$SECRET_YAML_FILE" 2>/dev/null
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}[INFO] 已保存 Secret 到文件: $SECRET_YAML_FILE${NC}"
+                log_message "INFO" "已保存 Secret 到文件: $SECRET_YAML_FILE"
+            else
+                handle_error 1 "保存Secret到文件失败: $SECRET_YAML_FILE" "k8sSecretCheck"
+            fi
 
             # 检查哪些 Pod 使用了该 Secret
             PODS_USING_SECRET=$(kubectl get pods -n "$namespace" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.volumes[?(@.secret.secretName=="'$secret_name'")].secret.secretName}{"\n"}{end}' 2>&1)
+            if [ $? -ne 0 ]; then
+                handle_error 1 "检查使用Secret的Pod失败: $namespace/$secret_name" "k8sSecretCheck"
+            fi
             if [ -n "$PODS_USING_SECRET" ]; then
                 echo -e "${GREEN}[INFO] 使用此 Secret 的 Pod:${NC}"
+                log_message "INFO" "发现使用Secret的Pod: $namespace/$secret_name"
                 echo "$PODS_USING_SECRET" | grep -v '^$'
             else
                 echo -e "${YELLOW}[INFO] 此 Secret 当前没有被任何 Pod 使用${NC}"
+                log_message "INFO" "Secret未被任何Pod使用: $namespace/$secret_name"
             fi
 
             # 检查 Secret 数据内容（以 base64 解码为例）
             echo -e "${GREEN}[INFO] Secret 数据内容 (Base64 解码):${NC}"
             SECRET_DATA=$(kubectl get secret "$secret_name" -n "$namespace" -o jsonpath='{.data}' 2>&1)
+            if [ $? -ne 0 ]; then
+                handle_error 1 "获取Secret数据内容失败: $namespace/$secret_name" "k8sSecretCheck"
+            fi
             if [ -n "$SECRET_DATA" ]; then
-                echo "$SECRET_DATA" | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"'
+                echo "$SECRET_DATA" | jq -r 'to_entries[] | "\(.key): \(.value | @base64d)"' 2>/dev/null
+                log_message "INFO" "成功解码Secret数据内容: $namespace/$secret_name"
             else
                 echo -e "${RED}[INFO] 无数据或无法获取 Secret 内容${NC}"
+                log_message "INFO" "无数据或无法获取Secret内容: $namespace/$secret_name"
             fi
         done
     fi
+    
+    # 记录结束时间和性能统计
+    end_time=$(date +%s)
+    log_performance "k8sSecretCheck" $start_time $end_time
+    log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块执行完成" "END"
 }
 
 # 收集 Kubernetes 敏感信息（仅查找指定目录下规定后缀的文件）
 k8sSensitiveInfo() { 
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块开始执行" "START"
+	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
         echo -e "${RED}[WARN] 未检测到 Kubernetes 环境,退出脚本${NC}"
+        log_message "INFO" "未检测到 Kubernetes 环境,退出脚本"
         exit 0
     fi
 
     echo -e "${YELLOW}正在收集K8s集群敏感信息(仅查找文件):${NC}"
+    log_message "INFO" "正在收集K8s集群敏感信息"
 
     # 定义需要扫描的路径列表
     SCAN_PATHS=(
@@ -4576,13 +4745,18 @@ k8sSensitiveInfo() {
     K8S_SENSITIVE_DIR="${k8s_file}/k8s_sensitive"   # ${check_file}/k8s/k8s_sensitive
     if [ ! -d "$K8S_SENSITIVE_DIR" ]; then
         mkdir -p "$K8S_SENSITIVE_DIR"
+        if [ $? -ne 0 ]; then
+            handle_error 1 "创建K8S敏感信息目录失败" "k8sSensitiveInfo"
+        fi
         echo -e "${GREEN}[INFO] 创建目录: $K8S_SENSITIVE_DIR${NC}"
+        log_message "INFO" "创建目录: $K8S_SENSITIVE_DIR"
     fi
 
     # 遍历每个路径
     for path in "${SCAN_PATHS[@]}"; do
         if [ -d "$path" ]; then
             echo -e "${BLUE}[INFO] 正在扫描路径: $path${NC}"
+            log_message "INFO" "正在扫描路径: $path"
 
             # 遍历每个文件模式
             for pattern in "${search_patterns[@]}"; do
@@ -4590,6 +4764,7 @@ k8sSensitiveInfo() {
                 find "$path" -type f -name "$pattern" -print0 2>/dev/null | while IFS= read -r -d '' file; do
                     if [ -f "$file" ]; then
                         echo -e "${RED}[WARN] 发现敏感文件: $file${NC}"
+                        log_message "INFO" "发现敏感文件: $file"
 
 						# 输出文件内容到终端
 						# echo -e "${GREEN}[INFO] 文件内容如下:${NC}"
@@ -4597,132 +4772,226 @@ k8sSensitiveInfo() {
 
                         # 复制文件到输出目录
                         filename=$(basename "$file")
-                        cp "$file" "$K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)"
-                        echo -e "${GREEN}[INFO] 已保存敏感文件副本至: $K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)${NC}"
+                        cp "$file" "$K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)" 2>/dev/null
+                        if [ $? -eq 0 ]; then
+                            echo -e "${GREEN}[INFO] 已保存敏感文件副本至: $K8S_SENSITIVE_DIR/${filename}_$(date +%Y%m%d)${NC}"
+                            log_message "INFO" "已保存敏感文件副本: ${filename}_$(date +%Y%m%d)"
+                        else
+                            handle_error 1 "保存敏感文件副本失败: $file" "k8sSensitiveInfo"
+                        fi
                         echo -e ""
                     fi
                 done
+                if [ ${PIPESTATUS[0]} -ne 0 ]; then
+                    log_message "INFO" "扫描路径 $path 中的模式 $pattern 时出现错误"
+                fi
             done
         else
             echo -e "${YELLOW}[INFO] 路径不存在或无权限访问: $path${NC}"
+            log_message "INFO" "路径不存在或无权限访问: $path"
         fi
     done
+    
+    # 记录结束时间和性能统计
+    end_time=$(date +%s)
+    log_performance "k8sSensitiveInfo" $start_time $end_time
+    log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块执行完成" "END"
 }
 
 # Kubernetes 基线检查函数
 k8sBaselineCheck() {
+	# 记录开始时间和模块开始日志
+	start_time=$(date +%s)
+	log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块开始执行" "START"
+	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
         echo -e "${RED}[WARN] 未检测到 Kubernetes 环境,退出脚本${NC}"
+        log_message "INFO" "未检测到 Kubernetes 环境,退出脚本"
         exit 0
     fi
 
     echo -e "${YELLOW}正在执行 Kubernetes 基线安全检查:${NC}"
+    log_message "INFO" "正在执行 Kubernetes 基线安全检查"
 
     echo -e "\n${BLUE}1. 控制平面配置检查:${NC}"
+    log_message "INFO" "开始控制平面配置检查"
     # 检查 kubelet 配置是否存在 insecure-port=0
     if [ -f /etc/kubernetes/kubelet.conf ]; then
         echo -e "${GREEN}[INFO] kubelet 是否禁用不安全端口:${NC}"
-        if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf; then
+        log_message "INFO" "检查kubelet不安全端口配置"
+        if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf 2>/dev/null; then
             echo -e "${GREEN}[INFO] 不安全端口已禁用${NC}"
+            log_message "INFO" "kubelet不安全端口已禁用"
         else
             echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
+            log_message "INFO" "警告: kubelet的不安全端口未禁用"
+        fi
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            log_message "INFO" "检查kubelet配置文件时出现错误"
         fi
     else
         echo -e "${YELLOW}[INFO] kubelet.conf 文件不存在,跳过检查${NC}"
+        log_message "INFO" "kubelet.conf文件不存在,跳过检查"
     fi
 
     echo -e "\n${BLUE}2. RBAC 授权模式检查:${NC}"
+    log_message "INFO" "开始RBAC授权模式检查"
     if [ -f /etc/kubernetes/apiserver ]; then
         echo -e "${GREEN}[INFO] API Server 是否启用 RBAC:${NC}"
-        if grep -q 'authorization-mode=.*RBAC' /etc/kubernetes/apiserver; then
+        log_message "INFO" "检查API Server RBAC配置"
+        if grep -q 'authorization-mode=.*RBAC' /etc/kubernetes/apiserver 2>/dev/null; then
             echo -e "${GREEN}✓ 已启用 RBAC 授权模式${NC}"
+            log_message "INFO" "已启用RBAC授权模式"
         else
             echo -e "${RED}[WARN] 警告: API Server 未启用 RBAC 授权模式${NC}"
+            log_message "INFO" "警告: API Server未启用RBAC授权模式"
+        fi
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            log_message "INFO" "检查API Server配置文件时出现错误"
         fi
     else
         echo -e "${YELLOW}[INFO] apiserver 配置文件不存在,跳过检查${NC}"
+        log_message "INFO" "apiserver配置文件不存在,跳过检查"
     fi
 
     echo -e "\n${BLUE}3. Pod 安全策略检查:${NC}"
+    log_message "INFO" "开始Pod安全策略检查"
     echo -e "${GREEN}[INFO] 是否启用 PodSecurityPolicy 或 Pod Security Admission:${NC}"
-    psp_enabled=$(kubectl api-resources | grep -E 'podsecuritypolicies|podsecurityadmission')
+    log_message "INFO" "检查PodSecurityPolicy或Pod Security Admission"
+    psp_enabled=$(kubectl api-resources 2>/dev/null | grep -E 'podsecuritypolicies|podsecurityadmission')
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取API资源信息失败" "k8sBaselineCheck"
+    fi
     if [ -n "$psp_enabled" ]; then
         echo -e "${GREEN}✓ 已启用 Pod 安全策略${NC}"
+        log_message "INFO" "已启用Pod安全策略"
     else
         echo -e "${RED}[WARN] 警告: 未检测到任何 Pod 安全策略机制${NC}"
+        log_message "INFO" "警告: 未检测到任何Pod安全策略机制"
     fi
 
     echo -e "\n${BLUE}4. 网络策略(NetworkPolicy)检查:${NC}"
-    netpolicy_enabled=$(kubectl api-resources | grep networkpolicies)
+    log_message "INFO" "开始网络策略检查"
+    netpolicy_enabled=$(kubectl api-resources 2>/dev/null | grep networkpolicies)
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取网络策略API资源信息失败" "k8sBaselineCheck"
+    fi
     if [ -n "$netpolicy_enabled" ]; then
         echo -e "${GREEN}✓ 网络策略功能已启用${NC}"
+        log_message "INFO" "网络策略功能已启用"
     else
         echo -e "${RED}[WARN] 警告: 未启用网络策略(NetworkPolicy),可能导致跨命名空间通信风险${NC}"
+        log_message "INFO" "警告: 未启用网络策略,可能导致跨命名空间通信风险"
     fi
 
     echo -e "\n${BLUE}5. Secret 加密存储检查:${NC}"
+    log_message "INFO" "开始Secret加密存储检查"
     echo -e "${GREEN}[INFO] 是否启用 Secret 加密存储:${NC}"
+    log_message "INFO" "检查Secret加密存储配置"
     encryption_config="/etc/kubernetes/encryption-config.yaml"
     if [ -f "$encryption_config" ]; then
         echo -e "${GREEN}✓ 已配置加密存储：$encryption_config${NC}"
+        log_message "INFO" "已配置Secret加密存储: $encryption_config"
     else
         echo -e "${RED}[WARN] 警告: 未发现 Secret 加密配置文件${NC}"
+        log_message "INFO" "警告: 未发现Secret加密配置文件"
     fi
 
     echo -e "\n${BLUE}6. 审计日志检查:${NC}"
+    log_message "INFO" "开始审计日志检查"
     audit_log_path="/var/log/kube-audit/audit.log"
     if [ -f "$audit_log_path" ]; then
         echo -e "${GREEN}✓ 审计日志已启用,路径为: $audit_log_path${NC}"
+        log_message "INFO" "审计日志已启用,路径: $audit_log_path"
     else
         echo -e "${RED}[WARN] 警告: 未发现审计日志文件${NC}"
+        log_message "INFO" "警告: 未发现审计日志文件"
     fi
 
     echo -e "\n${BLUE}7. ServiceAccount 自动挂载 Token 检查:${NC}"
-    default_sa=$(kubectl get serviceaccount default -o jsonpath='{.automountServiceAccountToken}')
+    log_message "INFO" "开始ServiceAccount自动挂载Token检查"
+    default_sa=$(kubectl get serviceaccount default -o jsonpath='{.automountServiceAccountToken}' 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取默认ServiceAccount信息失败" "k8sBaselineCheck"
+    fi
     if [ "$default_sa" = "false" ]; then
         echo -e "${GREEN}✓ 默认 ServiceAccount 未自动挂载 Token${NC}"
+        log_message "INFO" "默认ServiceAccount未自动挂载Token"
     else
         echo -e "${RED}[WARN] 警告: 默认 ServiceAccount 启用了自动挂载 Token,存在提权风险${NC}"
+        log_message "INFO" "警告: 默认ServiceAccount启用了自动挂载Token,存在提权风险"
     fi
 
     echo -e "\n${BLUE}8. Etcd 安全配置检查:${NC}"
+    log_message "INFO" "开始Etcd安全配置检查"
     etcd_config="/etc/kubernetes/manifests/etcd.yaml"
     if [ -f "$etcd_config" ]; then
         echo -e "${GREEN}[INFO] Etcd 是否启用 TLS 加密:${NC}"
-        if grep -q '--cert-file' "$etcd_config" && grep -q '--key-file' "$etcd_config"; then
+        log_message "INFO" "检查Etcd TLS加密配置"
+        if grep -q '--cert-file' "$etcd_config" 2>/dev/null && grep -q '--key-file' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了 TLS 加密通信${NC}"
+            log_message "INFO" "Etcd启用了TLS加密通信"
         else
             echo -e "${RED}[WARN] 警告: Etcd 未启用 TLS 加密通信${NC}"
+            log_message "INFO" "警告: Etcd未启用TLS加密通信"
+        fi
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            log_message "INFO" "检查Etcd TLS配置时出现错误"
         fi
 
         echo -e "${GREEN}[INFO] Etcd 是否限制客户端访问:${NC}"
-        if grep -q '--client-cert-auth' "$etcd_config"; then
+        log_message "INFO" "检查Etcd客户端证书认证配置"
+        if grep -q '--client-cert-auth' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了客户端证书认证${NC}"
+            log_message "INFO" "Etcd启用了客户端证书认证"
         else
             echo -e "${RED}[WARN] 警告: Etcd 未启用客户端证书认证,可能存在未授权访问风险${NC}"
+            log_message "INFO" "警告: Etcd未启用客户端证书认证,可能存在未授权访问风险"
+        fi
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            log_message "INFO" "检查Etcd客户端认证配置时出现错误"
         fi
     else
         echo -e "${YELLOW}[INFO] etcd.yaml 配置文件不存在,跳过检查${NC}"
+        log_message "INFO" "etcd.yaml配置文件不存在,跳过检查"
     fi
 
     echo -e "\n${BLUE}9. 容器运行时安全配置:${NC}"
+    log_message "INFO" "开始容器运行时安全配置检查"
     echo -e "${GREEN}[INFO] 是否禁止以 root 用户运行容器:${NC}"
-    pod_runasuser=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.securityContext.runAsUser}{"\n"}{end}' | sort -u)
+    log_message "INFO" "检查容器是否以root用户运行"
+    pod_runasuser=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.securityContext.runAsUser}{"\n"}{end}' 2>/dev/null | sort -u)
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取Pod运行用户信息失败" "k8sBaselineCheck"
+    fi
     if echo "$pod_runasuser" | grep -v '^$' | grep -q -v '0'; then
         echo -e "${GREEN}✓ 大多数 Pod 未以 root 用户运行${NC}"
+        log_message "INFO" "大多数Pod未以root用户运行"
     else
         echo -e "${RED}[WARN] 警告: 存在以 root 用户运行的容器,请检查 Pod 安全上下文配置${NC}"
+        log_message "INFO" "警告: 存在以root用户运行的容器,请检查Pod安全上下文配置"
     fi
 
     echo -e "\n${BLUE}10. 特权容器检查:${NC}"
+    log_message "INFO" "开始特权容器检查"
 	# 使用检查配置文件件中是否存在 privileged==true 的方式判断是否是特权容器
-    privileged_pods=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.containers[?(@.securityContext.privileged==true)]}{"\n"}{end}')
+    privileged_pods=$(kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.containers[?(@.securityContext.privileged==true)]}{"\n"}{end}' 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        handle_error 1 "获取特权容器信息失败" "k8sBaselineCheck"
+    fi
     if [ -z "$privileged_pods" ]; then
         echo -e "${GREEN}✓ 未发现特权容器(privileged)${NC}"
+        log_message "INFO" "未发现特权容器"
     else
         echo -e "${RED}[WARN] 警告: 检测到特权容器,建议禁用或限制特权容器运行${NC}"
+        log_message "INFO" "警告: 检测到特权容器,建议禁用或限制特权容器运行"
     fi
+    
+    # 记录结束时间和性能统计
+    end_time=$(date +%s)
+    log_performance "k8sBaselineCheck" $start_time $end_time
+    log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块执行完成" "END"
 }
 
 # k8s排查
