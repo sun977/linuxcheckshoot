@@ -355,7 +355,7 @@ echo "192.168.1.200\n192.168.1.201" > malicious_ips.txt
 
 - **作者**: Sun977
 - **邮箱**: jiuwei977@foxmail.com
-- **项目**: LinuxCheckShoot - Linux安全检测工具集
+- **项目**: Linuxgun - Linux安全检测工具集
 - **版本**: v6.0.5 (2025-07-15)
 - **维护**: 持续更新和功能增强
 

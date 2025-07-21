@@ -7,11 +7,11 @@
 # 安装指南 Installation
 1、可以到需要应急的主机上 git 安装
 ```SHELL
-git clone https://github.com/sun977/linuxcheckshoot.git
+git clone https://github.com/sun977/Linuxgun.git
 ```
 2、或者下载 zip 包解压到应急主机上使用
 ```SHELL
-unzip linuxcheckshoot.zip
+unzip Linuxgun.zip
 ```
 
 # 使用方法 Usage
@@ -36,7 +36,7 @@ unzip linuxcheckshoot.zip
 - dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
 - 其他文件若干。
 
-7、**tools** 目录存放了一些实用的小脚本工具，包含以下工具：[工具集详情请参考:https://github.com/sun977/linuxcheckshoot/blob/main/tools/README.md]
+7、**tools** 目录存放了一些实用的小脚本工具，包含以下工具：[工具集详情请参考:https://github.com/sun977/Linuxgun/tree/main/tools/README.md]
 - **monitorInter.sh** - 网络接口流量监控工具，可以实时显示指定网络接口的入流量和出流量信息。
 - **monitorPs2Ip.sh** - 网络连接检查工具，可以实时检查与指定 IP 地址通信的进程信息(支持TCP/UDP)。
 - **blockIP/** - IP封禁管理工具目录
