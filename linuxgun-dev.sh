@@ -4,7 +4,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # Version: 6.0.5
 # Author: Sun977
-# Update: 2025-07-15
+# Update: 2025-07-21
 
 # ========== Bash 版本支持说明 ==========
 # 本脚本支持的 Bash 版本要求:
