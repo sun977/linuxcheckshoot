@@ -6,6 +6,27 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # Author: Sun977
 # Update: 2025-07-15
 
+# ========== Bash 版本支持说明 ==========
+# 本脚本支持的 Bash 版本要求:
+#
+# macOS 系统:
+#   - 默认 Bash 版本: 3.2.57 (系统自带)
+#   - 推荐版本: Bash 4.0+ (通过 Homebrew 安装)
+#   - 安装命令: brew install bash
+#   - 注意: macOS 默认 Bash 3.2 不支持关联数组，本脚本已做兼容处理
+#
+# Linux 系统:
+#   - 最低要求: Bash 3.2+
+#   - 推荐版本: Bash 4.0+
+#   - 大多数现代 Linux 发行版默认支持 Bash 4.0+
+#   - 检查版本: bash --version
+#
+# 兼容性说明:
+#   - 本脚本已针对 Bash 3.2 进行兼容性优化
+#   - 使用函数式映射替代关联数组以确保兼容性
+#   - 如遇到版本相关问题，请参考 buglist.md 文件
+# ======================================
+
 # ========== 新增功能说明 ==========
 # 1. 统一错误处理系统:
 #    - handle_error() 函数提供统一的错误处理和日志记录
@@ -308,6 +329,11 @@ typeset LOG_ERROR=3
 
 # 当前日志级别（默认为INFO）
 LOG_LEVEL=${LOG_LEVEL:-$LOG_INFO}
+
+# 执行状态跟踪数组（防止重复执行）
+# 使用普通变量模拟关联数组，兼容更多shell版本
+executed_functions_userInfoCheck=0
+executed_functions_sshFileCheck=0
 
 # 统一错误处理函数
 # 使用方式: handle_error 1 "清理旧k8s目录失败" "init_env"
@@ -1828,6 +1854,21 @@ historyCheck(){
 
 # 用户信息排查【归档 -- systemCheck】
 userInfoCheck(){
+	# 调试信息：显示当前变量值
+	echo -e "${BLUE}[DEBUG] userInfoCheck函数开始执行，当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck${NC}"
+	log_message "DEBUG" "userInfoCheck函数开始执行，当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck"
+	
+	# 检查函数是否已执行
+	if [ "$executed_functions_userInfoCheck" = "1" ]; then
+		echo -e "${YELLOW}[INFO] userInfoCheck函数已执行，跳过重复执行${NC}"
+		log_message "INFO" "userInfoCheck函数已执行，跳过重复执行"
+		return 0
+	fi
+	# 标记函数为已执行
+	executed_functions_userInfoCheck=1
+	echo -e "${BLUE}[DEBUG] userInfoCheck函数标记为已执行，executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck${NC}"
+	log_message "DEBUG" "userInfoCheck函数标记为已执行，executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck"
+	
 	local start_time=$(date +%s)
 	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "BEGIN"
 	
@@ -2634,6 +2675,21 @@ dirFileCheck(){
 
 # SSH登录配置排查 【归档 -- specialFileCheck】
 sshFileCheck(){
+	# 调试信息：显示当前变量值
+	echo -e "${BLUE}[DEBUG] sshFileCheck函数开始执行，当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck${NC}"
+	log_message "DEBUG" "sshFileCheck函数开始执行，当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck"
+	
+	# 检查函数是否已执行
+	if [ "$executed_functions_sshFileCheck" = "1" ]; then
+		echo -e "${YELLOW}[INFO] sshFileCheck函数已执行，跳过重复执行${NC}"
+		log_message "INFO" "sshFileCheck函数已执行，跳过重复执行"
+		return 0
+	fi
+	# 标记函数为已执行
+	executed_functions_sshFileCheck=1
+	echo -e "${BLUE}[DEBUG] sshFileCheck函数标记为已执行，executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck${NC}"
+	log_message "DEBUG" "sshFileCheck函数标记为已执行，executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck"
+	
 	# SSH登录配置排查
 	start_time=$(date +%s)
 	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块开始执行" "START"
@@ -5563,27 +5619,59 @@ main() {
     fi
 
     if [ ${#modules[@]} -gt 0 ]; then
-        # 创建一个关联数组，用于存储模块对应的函数名（在交互和非交互模式中都需要使用）
-        declare -A module_functions
-        module_functions=( [system]="systemCheck" [network]="networkInfo" [psinfo]="processInfo" [file]="fileCheck" [backdoor]="backdoorCheck" [tunnel]="tunnelCheck" [webshell]="webshellCheck" [virus]="virusCheck" [memInfo]="memInfoCheck" [hackerTools]="hackerToolsCheck" [kernel]="kernelCheck" [other]="otherCheck" [k8s]="k8sCheck" [performance]="performanceCheck" [baseline]="baselineCheck" )
+        # 定义一个函数来获取模块对应的函数名（兼容Bash 3.2版本）
+        get_module_function() {
+            local module="$1"
+            case "$module" in
+                "system") echo "systemCheck" ;;
+                "network") echo "networkInfo" ;;
+                "psinfo") echo "processInfo" ;;
+                "file") echo "fileCheck" ;;
+                # "file-keyfiles") echo "specialFileCheck" ;;
+                "backdoor") echo "backdoorCheck" ;;
+                "tunnel") echo "tunnelCheck" ;;
+                "webshell") echo "webshellCheck" ;;
+                "virus") echo "virusCheck" ;;
+                "memInfo") echo "memInfoCheck" ;;
+                "hackerTools") echo "hackerToolsCheck" ;;
+                "kernel") echo "kernelCheck" ;;
+                "other") echo "otherCheck" ;;
+                "k8s") echo "k8sCheck" ;;
+                "performance") echo "performanceCheck" ;;
+                "baseline") echo "baselineCheck" ;;
+                *) echo "" ;;  # 未知模块返回空字符串
+            esac
+        }
+        
+        # 验证模块映射关系
+        for module in "${modules[@]}"; do
+            func_name=$(get_module_function "$module")
+            if [[ -z "$func_name" ]]; then
+                echo "错误: 未知模块 $module"
+                log_message "ERROR" "未知模块: $module"
+                exit 1
+            fi
+        done
         
         if [ "$interactive_mode" = true ]; then  # 判断信号量是否进入交互模式【--inter 交互模式】
             log_message "INFO" "进入交互模式"
             for module in "${modules[@]}"; do
                 read -p "是否执行模块 $module? (y/n): " choice
-                choice=${choice,,}
-                if [[ ! "$choice" =~ ^(y|n)$ ]]; then
+                # 转换为小写并去除空格
+                choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+                if [[ ! "$choice" =~ ^(y|yes|n|no)$ ]]; then
                     echo "无效输入，跳过模块 $module"
                     log_message "WARN" "Invalid input for $module, skipping."
                     continue
                 fi
-                if [[ "$choice" == "y" ]]; then
+                if [[ "$choice" == "y" || "$choice" == "yes" ]]; then
                     log_message "INFO" "用户选择执行模块: $module"
                     # 检查模块函数是否存在
-                    if [[ -n "${module_functions[$module]}" ]]; then
-                        log_message "INFO" "正在执行模块: $module (函数: ${module_functions[$module]})"
+                    func_name=$(get_module_function "$module")
+                    if [[ -n "$func_name" ]]; then
+                        log_message "INFO" "正在执行模块: $module (函数: $func_name)"
                         # 执行对应的模块函数并将输出重定向到结果文件
-                        ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                        $func_name | log2file "${check_file}/checkresult.txt"
                         log_message "INFO" "模块 $module 执行完成"
                     else
                         echo "错误: 模块 $module 对应的函数未找到"
@@ -5601,10 +5689,11 @@ main() {
             log_message "INFO" "进入非交互模式，自动执行所有模块"
             for module in "${modules[@]}"; do
                 # 检查模块函数是否存在
-                if [[ -n "${module_functions[$module]}" ]]; then
-                    log_message "INFO" "正在执行模块: $module (函数: ${module_functions[$module]})"
+                func_name=$(get_module_function "$module")
+                 if [[ -n "$func_name" ]]; then
+                     log_message "INFO" "正在执行模块: $module (函数: $func_name)"
                     # 执行对应的模块函数并将输出重定向到结果文件
-                    ${module_functions[$module]} | log2file "${check_file}/checkresult.txt"
+                    $func_name | log2file "${check_file}/checkresult.txt"
                     log_message "INFO" "模块 $module 执行完成"
                 else
                     log_message "ERROR" "模块 $module 对应的函数未找到，跳过执行"
