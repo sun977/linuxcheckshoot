@@ -2946,7 +2946,7 @@ baselineCheck(){
 
 		local perm=$(stat -c "%A" "$file_path")
 		if [ "$perm" == "$expected_perm" ]; then
-			echo -e "${YELLOW}[INFO] $desc 权限正常 ($perm)${NC}"
+			echo -e "${GREEN}[SUCC] $desc 权限正常 ($perm)${NC}"
 		else
 			echo -e "${RED}[WARN] $desc 权限异常 ($perm),建议改为 $expected_perm${NC}"
 		fi

@@ -62,8 +62,6 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 红色 [ERRO] 错误输出
 # 白色 原生命令输出
 
-# 执行新函数的时候使用 log_options 函数,除了 main 函数
-# 日常输出使用 log_message 函数
 
 # 大纲输出函数
 print_summary() {
@@ -705,7 +703,7 @@ networkInfo(){
         (echo -e "${RED}[WARN] 发现存在ARP攻击:${NC}" && echo "$arpattack") 
         log_message "ERROR" "检测到可能的ARP攻击: $arpattack"
     else
-        echo -e "${YELLOW}[INFO] 未发现ARP攻击${NC}"  
+        echo -e "${GREEN}[SUCC] 未发现ARP攻击${NC}"  
         log_message "INFO" "ARP攻击检测完成,未发现异常"
     fi
 
@@ -833,7 +831,7 @@ networkInfo(){
             fi
         done
     else
-        echo -e "${YELLOW}[INFO] 未发现在UDP端口面向局域网或互联网开放.${NC}"  
+        echo -e "${GREEN}[SUCC] 未发现在UDP端口面向局域网或互联网开放.${NC}"  
         log_message "INFO" "未发现对外开放的UDP端口"
     fi
 
@@ -921,7 +919,7 @@ networkInfo(){
         (echo -e "${RED}[WARN] 网卡处于混杂模式:${NC}" && echo "$Promisc") 
         log_message "ERROR" "发现网卡处于混杂模式: $Promisc"
     else
-        echo -e "${YELLOW}[INFO] 未发现网卡处于混杂模式${NC}"  
+        echo -e "${GREEN}[SUCC] 未发现网卡处于混杂模式${NC}"  
         log_message "INFO" "网卡混杂模式检查完成,未发现异常"
     fi
 
@@ -932,7 +930,7 @@ networkInfo(){
         (echo -e "${RED}[WARN] 网卡处于监听模式:${NC}" && echo "$Monitor")
         log_message "ERROR" "发现网卡处于监听模式: $Monitor"
     else
-        echo -e "${YELLOW}[INFO] 未发现网卡处于监听模式${NC}"  
+        echo -e "${GREEN}[SUCC] 未发现网卡处于监听模式${NC}"  
         log_message "INFO" "网卡监听模式检查完成,未发现异常"
     fi
 
@@ -1057,7 +1055,7 @@ processInfo(){
         local high_mem_count=$(echo "$high_mem_processes" | wc -l)
         log_message "WARN" "发现${high_mem_count}个内存占用超过20%的进程"
     else
-        echo -e "${YELLOW}[INFO] 未发现内存占用超过20%的进程${NC}"
+        echo -e "${GREEN}[SUCC] 未发现内存占用超过20%的进程${NC}"
         log_message "INFO" "未发现内存占用超过20%的进程"
     fi
     
@@ -1078,7 +1076,7 @@ processInfo(){
         local high_cpu_count=$(echo "$high_cpu_processes" | wc -l)
         log_message "WARN" "发现${high_cpu_count}个CPU占用超过20%的进程"
     else
-        echo -e "${YELLOW}[INFO] 未发现CPU占用超过20%的进程${NC}"
+        echo -e "${GREEN}[SUCC] 未发现CPU占用超过20%的进程${NC}"
         log_message "INFO" "未发现CPU占用超过20%的进程"
     fi
     # 敏感进程匹配[匹配规则]
@@ -1118,7 +1116,7 @@ processInfo(){
         done
         
         if [ $total_dangerous_processes -eq 0 ]; then
-            echo -e "${YELLOW}[INFO] 未发现敏感进程${NC}"
+            echo -e "${GREEN}[SUCC] 未发现敏感进程${NC}"
             log_message "INFO" "敏感进程检测完成，未发现异常"
         else
             log_message "ERROR" "敏感进程检测完成，共发现${total_dangerous_processes}个敏感进程"
@@ -1186,7 +1184,7 @@ processInfo(){
         echo -e "${RED}[WARN] 建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
         log_message "ERROR" "发现${#anomalous_processes[@]}个异常进程，可能存在进程隐藏或rootkit感染"
     else
-        echo -e "${YELLOW}[INFO] 未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
+        echo -e "${GREEN}[SUCC] 未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
         log_message "INFO" "异常进程检测完成，未发现异常"
     fi
     printf "\n"
@@ -1223,7 +1221,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#orphan_processes[@]}个可疑孤儿进程"
     else
-        echo -e "${YELLOW}[INFO] 进程树完整性检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 进程树完整性检查通过${NC}"
         log_message "INFO" "进程树完整性检查通过"
     fi
     printf "\n"
@@ -1292,7 +1290,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#unknown_connections[@]}个可疑网络连接"
     else
-        echo -e "${YELLOW}[INFO] 网络连接与进程对应关系检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 网络连接与进程对应关系检查通过${NC}"
         log_message "INFO" "网络连接与进程对应关系检查通过"
     fi
     printf "\n"
@@ -1327,7 +1325,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#suspicious_maps[@]}个进程存在可疑内存映射"
     else
-        echo -e "${YELLOW}[INFO] 进程内存映射检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 进程内存映射检查通过${NC}"
         log_message "INFO" "进程内存映射检查通过"
     fi
     printf "\n"
@@ -1357,7 +1355,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#suspicious_fds[@]}个进程存在可疑文件描述符"
     else
-        echo -e "${YELLOW}[INFO] 进程文件描述符检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 进程文件描述符检查通过${NC}"
         log_message "INFO" "进程文件描述符检查通过"
     fi
     printf "\n"
@@ -1399,7 +1397,7 @@ processInfo(){
                 echo "$suspicious_symbols"
                 log_message "WARN" "发现可疑内核符号"
             else
-                echo -e "${YELLOW}[INFO] 未发现可疑内核符号${NC}"
+                echo -e "${GREEN}[SUCC] 未发现可疑内核符号${NC}"
                 log_message "INFO" "未发现可疑内核符号"
             fi
         else
@@ -1435,7 +1433,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#time_anomalies[@]}个进程启动时间异常"
     else
-        echo -e "${YELLOW}[INFO] 进程启动时间检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 进程启动时间检查通过${NC}"
         log_message "INFO" "进程启动时间检查通过"
     fi
     printf "\n"
@@ -1467,7 +1465,7 @@ processInfo(){
         done
         log_message "WARN" "发现${#env_anomalies[@]}个进程存在可疑环境变量"
     else
-        echo -e "${YELLOW}[INFO] 进程环境变量检查通过${NC}"
+        echo -e "${GREEN}[SUCC] 进程环境变量检查通过${NC}"
         log_message "INFO" "进程环境变量检查通过"
     fi
     printf "\n"
@@ -1562,7 +1560,7 @@ crontabCheck(){
             (echo "${RED}[WARN] 发现下面的定时任务可疑,请注意!${NC}" && echo "$hackCron")  
             log_message "WARN" "发现可疑计划任务: $hackCron"
         else
-            echo "${YELLOW}[INFO] 未发现可疑系统定时任务${NC}" 
+            echo "${GREEN}[SUCC] 未发现可疑系统定时任务${NC}" 
             log_message "INFO" "未发现可疑系统定时任务"
         fi
     else
@@ -1695,7 +1693,7 @@ historyCheck(){
 				local script_count=$(echo "$scripts" | wc -l)
 				log_message "WARN" "发现${script_count}条脚本下载记录"
 			else
-				echo -e "${YELLOW}[INFO] 未发现下载过脚本${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现下载过脚本${NC}" 
 				log_message "INFO" "未发现脚本下载行为"
 			fi
 		else
@@ -1716,7 +1714,7 @@ historyCheck(){
 				local transfer_count=$(echo "$fileTransfer" | wc -l)
 				log_message "WARN" "发现${transfer_count}条文件传输记录"
 			else
-				echo -e "${YELLOW}[INFO] 未发现通过主机下载/传输过文件${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现通过主机下载/传输过文件${NC}" 
 				log_message "INFO" "未发现文件传输行为"
 			fi
 		else
@@ -1735,7 +1733,7 @@ historyCheck(){
 				local account_count=$(echo "$addDelhistory" | wc -l)
 				log_message "WARN" "发现${account_count}条账号操作记录"
 			else
-				echo -e "${YELLOW}[INFO] 未发现增加/删除账号${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现增加/删除账号${NC}" 
 				log_message "INFO" "未发现账号操作行为"
 			fi
 		else
@@ -1754,7 +1752,7 @@ historyCheck(){
 				local hack_count=$(echo "$hackCommand" | wc -l)
 				log_message "WARN" "发现${hack_count}条疑似黑客工具使用记录"
 			else
-				echo -e "${YELLOW}[INFO] 未发现黑客命令${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现黑客命令${NC}" 
 				log_message "INFO" "未发现黑客工具使用"
 			fi
 		else
@@ -1773,7 +1771,7 @@ historyCheck(){
 				local other_count=$(echo "$otherCommand" | wc -l)
 				log_message "WARN" "发现${other_count}条其他可疑操作记录"
 			else
-				echo -e "${YELLOW}[INFO] 未发现其他可疑命令${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现其他可疑命令${NC}" 
 				log_message "INFO" "未发现其他可疑操作"
 			fi
 		else
@@ -1937,7 +1935,7 @@ userInfoCheck(){
 				local super_user_count=$(echo "$superUser" | wc -l)
 				log_message "WARN" "发现${super_user_count}个非root超级用户"
 			else
-				echo -e "${YELLOW}[INFO] 未发现其他超级用户${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现其他超级用户${NC}" 
 				log_message "INFO" "未发现其他超级用户"
 			fi
 		else
@@ -1961,7 +1959,7 @@ userInfoCheck(){
 					handle_error 1 "获取克隆用户详情失败" "userInfoCheck"
 				fi
 			else
-				echo -e "${YELLOW}[INFO] 未发现克隆用户${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现克隆用户${NC}" 
 				log_message "INFO" "未发现克隆用户"
 			fi
 		else
@@ -1983,7 +1981,7 @@ userInfoCheck(){
 						local nosys_user_count=$(echo "$noSystemUser" | wc -l)
 						log_message "WARN" "发现${nosys_user_count}个非系统自带用户"
 					else
-						echo -e "${YELLOW}[INFO] 未发现非系统自带用户${NC}" 
+						echo -e "${GREEN}[SUCC] 未发现非系统自带用户${NC}" 
 						log_message "INFO" "未发现非系统自带用户"
 					fi
 				else
@@ -2014,7 +2012,7 @@ userInfoCheck(){
 					local empty_passwd_count=$(echo "$emptyPasswdUser" | wc -l)
 					log_message "WARN" "发现${empty_passwd_count}个空口令用户"
 				else
-					echo -e "${YELLOW}[INFO] 未发现空口令用户${NC}" 
+					echo -e "${GREEN}[SUCC] 未发现空口令用户${NC}" 
 					log_message "INFO" "未发现空口令用户"
 				fi
 			else
@@ -2065,7 +2063,7 @@ userInfoCheck(){
 						done
 					done
 					if [ -z "$flag" ]; then
-						echo -e "${YELLOW}[INFO] 未发现空口令且可登录SSH的用户${NC}" 
+						echo -e "${GREEN}[SUCC] 未发现空口令且可登录SSH的用户${NC}" 
 						log_message "INFO" "未发现空口令且可SSH登录的用户"
 					fi
 				else
@@ -2091,7 +2089,7 @@ userInfoCheck(){
 				local noencrypt_passwd_count=$(echo "$noEncryptPasswdUser" | wc -l)
 				log_message "WARN" "发现${noencrypt_passwd_count}个未加密口令用户"
 			else
-				echo -e "${YELLOW}[INFO] 未发现未加密口令用户${NC}" 
+				echo -e "${GREEN}[SUCC] 未发现未加密口令用户${NC}" 
 				log_message "INFO" "未发现未加密口令用户"
 			fi
 		else
@@ -2128,7 +2126,7 @@ userInfoCheck(){
 			local priv_group_count=$(echo "$privGroupUsers" | wc -l)
 			log_message "WARN" "发现${priv_group_count}个特权用户组"
 		else
-			echo -e "${YELLOW}[INFO] 未发现特权用户组${NC}" 
+			echo -e "${GREEN}[SUCC] 未发现特权用户组${NC}" 
 			log_message "INFO" "未发现特权用户组"
 		fi
 	else
@@ -2144,7 +2142,7 @@ userInfoCheck(){
 			local dup_gid_count=$(echo "$groupUid" | wc -l)
 			log_message "WARN" "发现${dup_gid_count}个重复GID"
 		else
-			echo -e "${YELLOW}[INFO] 未发现相同GID的用户组${NC}" 
+			echo -e "${GREEN}[SUCC] 未发现相同GID的用户组${NC}" 
 			log_message "INFO" "未发现相同GID的用户组"
 		fi
 	else
@@ -2161,7 +2159,7 @@ userInfoCheck(){
 			local dup_group_count=$(echo "$groupName" | wc -l)
 			log_message "WARN" "发现${dup_group_count}个重复用户组名"
 		else
-			echo -e "${YELLOW}[INFO] 未发现相同用户组名${NC}" 
+			echo -e "${GREEN}[SUCC] 未发现相同用户组名${NC}" 
 			log_message "INFO" "未发现相同用户组名"
 		fi
 	else
@@ -2261,7 +2259,7 @@ systemEnabledServiceCheck(){
 									log_message "WARN" "发现危险systemd服务: $service，包含敏感命令"
 									dangerous_services=$((dangerous_services + 1))
 								else
-									echo -e "${YELLOW}[INFO] 未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
+									echo -e "${GREEN}[SUCC] 未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
 									log_message "INFO" "systemd服务 $service 未发现敏感命令"
 								fi
 							else
@@ -2312,7 +2310,7 @@ systemEnabledServiceCheck(){
 						local danger_init_count=$(echo "$dangerServiceInit" | wc -l)
 						log_message "WARN" "发现${danger_init_count}个敏感init自启动项"
 					else
-						echo -e "${YELLOW}[INFO] 未发现敏感init自启动项:${NC}"
+						echo -e "${GREEN}[SUCC] 未发现敏感init自启动项:${NC}"
 						log_message "INFO" "未发现敏感init自启动项"
 					fi
 				else
@@ -2398,7 +2396,7 @@ systemRunningServiceCheck(){
 							log_message "WARN" "发现systemd运行中服务项:${service}包含敏感命令或脚本:\n$dangerService"
 							danger_running_count=$((danger_running_count + 1))
 						else
-							echo -e "${YELLOW}[INFO] 未发现systemd运行中服务项:${service}包含敏感命令或脚本${NC}"
+							echo -e "${GREEN}[SUCC] 未发现systemd运行中服务项:${service}包含敏感命令或脚本${NC}"
 							log_message "INFO" "未发现systemd运行中服务项:${service}包含敏感命令或脚本" 
 						fi
 					else
@@ -2535,7 +2533,7 @@ userServiceCheck(){
 			echo -e "${RED}[WARN] 发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:${NC}" && echo "$dangerRclocal"
 			log_message "WARN" "发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:\n$dangerRclocal"
 		else
-			echo -e "${YELLOW}[INFO] 未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}"
+			echo -e "${GREEN}[SUCC] 未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}"
 			log_message "INFO" "未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本" 
 		fi
 	else
@@ -2552,7 +2550,7 @@ userServiceCheck(){
 			(echo -e "${RED}[WARN] 发现/etc/init.d/用户危险自启动服务:${NC}" && echo "$dangerinitd")
 			log_message "WARN" "发现/etc/init.d/用户危险自启动服务:\n$dangerinitd" 
 		else
-			echo -e "${YELLOW}[INFO] 未发现/etc/init.d/用户危险自启动服务${NC}"
+			echo -e "${GREEN}[SUCC] 未发现/etc/init.d/用户危险自启动服务${NC}"
 			log_message "INFO" "未发现/etc/init.d/用户危险自启动服务" 
 		fi
 	else
@@ -2718,7 +2716,7 @@ sshFileCheck(){
 		echo -e "${RED}[WARN] 发现公钥文件如下,请注意!${NC}" && echo "$pubkey"
 		log_message "WARN" "发现公钥文件:\n$pubkey"
 	else
-		echo -e "${YELLOW}[INFO] 未发现公钥文件${NC}"
+		echo -e "${GREEN}[SUCC] 未发现公钥文件${NC}"
 		log_message "INFO" "未发现公钥文件"
 	fi
 	printf "\n"
@@ -2733,7 +2731,7 @@ sshFileCheck(){
 		echo -e "${RED}[WARN] 发现私钥文件,请注意!${NC}" && echo "$privatekey"
 		log_message "INFO" "发现私钥文件:\n$privatekey"
 	else
-		echo -e "${YELLOW}[INFO] 未发现私钥文件${NC}"
+		echo -e "${GREEN}[SUCC] 未发现私钥文件${NC}"
 		log_message "INFO" "未发现私钥文件"
 	fi
 	printf "\n" 
@@ -2749,7 +2747,7 @@ sshFileCheck(){
 		echo -e "${RED}[WARN] 发现被授权登录的用户公钥信息如下${NC}" && echo "$authkey"
 		log_message "WARN" "发现被授权登录的用户公钥信息:\n$authkey"
 	else
-		echo -e "${YELLOW}[INFO] 未发现被授权登录的用户公钥信息${NC}" 
+		echo -e "${GREEN}[SUCC] 未发现被授权登录的用户公钥信息${NC}" 
 		log_message "INFO" "未发现被授权登录的用户公钥信息"
 	fi
 	printf "\n" 
@@ -2764,7 +2762,7 @@ sshFileCheck(){
 		echo -e "${RED}[WARN] 发现可横向远程主机信息如下:${NC}" && echo "$knownhosts"
 		log_message "INFO" "发现可横向远程主机信息:\n$knownhosts"
 	else
-		echo -e "${YELLOW}[INFO] 未发现可横向远程主机信息${NC}" 
+		echo -e "${GREEN}[SUCC] 未发现可横向远程主机信息${NC}" 
 		log_message "INFO" "未发现可横向远程主机信息"
 	fi
 	printf "\n" 
@@ -2800,7 +2798,7 @@ sshFileCheck(){
 			echo -e "${RED}[WARN] 以下用户空口令:${NC}" && echo "$nopasswd"
 			log_message "WARN" "以下用户空口令:\n$nopasswd"
 		else
-			echo -e "${YELLOW}[INFO] 但未发现空口令用户${NC}" 
+			echo -e "${GREEN}[SUCC] 但未发现空口令用户${NC}" 
 			log_message "INFO" "但未发现空口令用户"
 		fi
 	else
@@ -2947,7 +2945,7 @@ checkRecentModifiedFiles() {
 			echo -e "${RED}[WARN] 发现最近${time_hours}小时内变动的敏感文件:${NC}"
 			echo "$find_result"
 		else
-			echo -e "${YELLOW}[INFO] 未发现最近${time_hours}小时内变动的敏感文件${NC}"
+			echo -e "${GREEN}[SUCC] 未发现最近${time_hours}小时内变动的敏感文件${NC}"
 		fi
 		
 	elif [ "$check_type" = "all" ]; then
@@ -2962,7 +2960,7 @@ checkRecentModifiedFiles() {
 			echo -e "${RED}[WARN] 发现最近${time_hours}小时内变动的所有文件:${NC}"
 			echo "$find_result_all"
 		else
-			echo -e "${YELLOW}[INFO] 未发现最近${time_hours}小时内变动的文件${NC}"
+			echo -e "${GREEN}[SUCC] 未发现最近${time_hours}小时内变动的文件${NC}"
 		fi
 	else
 		echo -e "${RED}[WARN] 错误: 不支持的检查类型 '$check_type',支持的类型: sensitive, all${NC}"
@@ -3100,7 +3098,7 @@ systemLogCheck(){
 	if [ -n "$zmodem" ];then
 		(echo -e "${RED}[WARN] 传输文件情况:${NC}" && echo "$zmodem") 
 	else
-		echo -e "${YELLOW}[INFO] 日志中未发现传输文件${NC}" 
+		echo -e "${GREEN}[SUCC] 日志中未发现传输文件${NC}" 
 	fi
 	printf "\n" 
 
@@ -3178,7 +3176,7 @@ systemLogCheck(){
 		} | sort | uniq -c | sort -nr)
 		# (echo -e "${RED}[WARN] SSH爆破用户名的字典信息如下:${NC}" && grep "Failed" /var/log/secure* | perl -e 'while($_=<>){ /for(.*?) from/; print "$1\n";}'| uniq -c | sort -nr) 
 	else
-		echo -e "${YELLOW}[INFO] 日志中未发现登录失败的情况${NC}" 
+		echo -e "${GREEN}[SUCC] 日志中未发现登录失败的情况${NC}" 
 	fi
 	printf "\n" 
 
@@ -3200,7 +3198,7 @@ systemLogCheck(){
 		(echo -e "${RED}[WARN] 日志中发现新增用户:${NC}" && echo "$newusers") 
 		(echo -e "${YELLOW}[INFO] 新增用户账号及次数如下:${NC}" && more /var/log/secure* | grep "new user" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) 
 	else
-		echo -e "${YELLOW}[INFO] 日志中未发现新增加用户${NC}" 
+		echo -e "${GREEN}[SUCC] 日志中未发现新增加用户${NC}" 
 	fi
 	printf "\n" 
 
@@ -3211,7 +3209,7 @@ systemLogCheck(){
 		(echo -e "${RED}[WARN] 日志中发现新增用户组:${NC}" && echo "$newgoup") 
 		(echo -e "${YELLOW}[INFO] 新增用户组及次数如下:${NC}" && more /var/log/secure* | grep "new group" | awk '{print $8}' | awk -F '[=,]' '{print $2}' | sort | uniq -c) 
 	else
-		echo -e "${YELLOW}[INFO] 日志中未发现新增加用户组${NC}" 
+		echo -e "${GREEN}[SUCC] 日志中未发现新增加用户组${NC}" 
 	fi
 	printf "\n" 
 
@@ -3223,7 +3221,7 @@ systemLogCheck(){
 	if [ -n "$cron_download" ];then
 		(echo -e "${RED}[WARN] 定时下载情况:${NC}" && echo "$cron_download") 
 	else
-		echo -e "${YELLOW}[INFO] 未发现定时下载情况${NC}" 
+		echo -e "${GREEN}[SUCC] 未发现定时下载情况${NC}" 
 	fi
 	printf "\n" 
 
@@ -3231,7 +3229,7 @@ systemLogCheck(){
 	cron_shell=$(more /var/log/cron* | grep -E "\.py$|\.sh$|\.pl$|\.exe$") 
 	if [ -n "$cron_shell" ];then
 		(echo -e "${RED}[WARN] 发现定时执行脚本:${NC}" && echo "$cron_download") 
-		echo -e "${YELLOW}[INFO] 未发现定时下载脚本${NC}" 
+		echo -e "${GREEN}[SUCC] 未发现定时下载脚本${NC}" 
 	fi
 	printf "\n" 
 
@@ -3241,7 +3239,7 @@ systemLogCheck(){
 	if [ -n "$yum_installscripts" ];then
 		(echo -e "${RED}[WARN] 曾使用yum下载安装过以下脚本文件:${NC}"  && echo "$yum_installscripts")  
 	else
-		echo -e "${YELLOW}[INFO] 未发现使用yum下载安装过脚本文件${NC}"  
+		echo -e "${GREEN}[SUCC] 未发现使用yum下载安装过脚本文件${NC}"  
 	fi
 	printf "\n"  
 
@@ -3263,7 +3261,7 @@ systemLogCheck(){
 		if [ -n "$hacker_tools" ];then
 			(echo -e "${RED}[WARN] 发现使用yum下载过以下可疑软件:${NC}"&& echo "$hacker_tools")  
 		else
-			echo -e "${YELLOW}[INFO] 未发现使用yum下载过可疑软件${NC}"  
+			echo -e "${GREEN}[SUCC] 未发现使用yum下载过可疑软件${NC}"  
 		fi
 	done
 	printf "\n"  
@@ -3445,7 +3443,7 @@ tunnelSSH(){
 			fi
 		done
 	else
-		echo -e "${YELLOW}[INFO] 未发现同一PID的多个sshd连接${NC}"
+		echo -e "${GREEN}[SUCC] 未发现同一PID的多个sshd连接${NC}"
 		log_message "INFO" "未发现同一PID的多个sshd连接"
 	fi
 	printf "\n"
@@ -3475,7 +3473,7 @@ tunnelSSH(){
 			fi
 		done
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH本地转发特征${NC}"
+		echo -e "${GREEN}[SUCC] 未发现SSH本地转发特征${NC}"
 		log_message "INFO" "未发现SSH本地转发特征"
 	fi
 	printf "\n"
@@ -3496,7 +3494,7 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH远程转发进程"
 		echo "$remote_forward_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH远程转发特征${NC}"
+		echo -e "${GREEN}[SUCC] 未发现SSH远程转发特征${NC}"
 		log_message "INFO" "未发现SSH远程转发特征"
 	fi
 	
@@ -3529,7 +3527,7 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH动态转发(SOCKS代理)进程"
 		echo "$dynamic_forward_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH动态转发特征${NC}"
+		echo -e "${GREEN}[SUCC] 未发现SSH动态转发特征${NC}"
 		log_message "INFO" "未发现SSH动态转发特征"
 	fi
 	printf "\n"
@@ -3549,7 +3547,7 @@ tunnelSSH(){
 		log_message "INFO" "发现SSH多级跳板进程"
 		echo "$jump_processes"
 	else
-		echo -e "${YELLOW}[INFO] 未发现SSH多级跳板进程${NC}"
+		echo -e "${GREEN}[SUCC] 未发现SSH多级跳板进程${NC}"
 		log_message "INFO" "未发现SSH多级跳板进程"
 	fi
 	
@@ -3765,7 +3763,7 @@ hackerToolsCheck(){
 			(echo -e "${RED}[WARN] 发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
 			log_message "INFO" "发现全盘存在可疑黑客工具:$hacker_tool"
 		else
-			echo -e "${YELLOW}[INFO] 未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
+			echo -e "${GREEN}[SUCC] 未发现全盘存在可疑黑可工具:$hacker_tool${NC}"  
 			log_message "INFO" "未发现全盘存在可疑黑客工具:$hacker_tool"
 		fi
 		printf "\n"  
@@ -3812,7 +3810,7 @@ kernelCheck(){
 		(echo -e "${RED}!]发现可疑内核模块:${NC}" && echo "$danger_lsmod")  
 		log_message "INFO" "发现可疑内核模块"
 	else
-		echo -e "${YELLOW}[INFO] 未发现可疑内核模块${NC}"  
+		echo -e "${GREEN}[SUCC] 未发现可疑内核模块${NC}"  
 		log_message "INFO" "未发现可疑内核模块"
 	fi
 	printf "\n"  
@@ -3843,7 +3841,7 @@ otherCheck(){
 		(echo -e "${RED}[WARN] 发现以下脚本文件,请注意!${NC}" && echo "$scripts")  
 		log_message "INFO" "发现可疑脚本文件"
 	else
-		echo -e "${YELLOW}[INFO] 未发现脚本文件${NC}"  
+		echo -e "${GREEN}[SUCC] 未发现可疑脚本文件${NC}"  
 		log_message "INFO" "未发现可疑脚本文件"
 	fi
 	printf "\n"  
@@ -3938,7 +3936,7 @@ otherCheck(){
 			(echo -e "${RED}[WARN] 发现安装以下可疑软件:$hacker_tools${NC}" && echo "$danger_soft") 
 			log_message "INFO" "发现安装可疑软件: $hacker_tools"
 		else
-			echo -e "${YELLOW}[INFO] 未发现安装可疑软件:$hacker_tools${NC}" 
+			echo -e "${GREEN}[SUCC] 未发现安装可疑软件:$hacker_tools${NC}" 
 			log_message "INFO" "未发现安装可疑软件: $hacker_tools"
 		fi
 	done
@@ -4127,7 +4125,7 @@ baselineCheck(){
 	if [ -n "$passwdexpired" ];then
 		(echo -e "${RED}[WARN] 以下用户的密码已过期:${NC}" && echo "$passwdexpired")  
 	else
-		echo -e "${YELLOW}[INFO] 未发现密码已过期用户${NC}" 
+		echo -e "${GREEN}[SUCC] 未发现密码已过期用户${NC}" 
 	fi
 	printf "\n" 
 
@@ -4164,7 +4162,7 @@ baselineCheck(){
 	else
 		# 检查是否配置了加密密码（推荐使用 password_pbkdf2）
 		if grep -qE '^\s*password_pbkdf2' "$GRUB_CFG"; then
-			echo -e "${YELLOW}[INFO] 已设置安全的grub2密码(PBKDF2加密),符合要求${NC}"
+			echo -e "${GREEN}[SUCC] 已设置安全的grub2密码(PBKDF2加密),符合要求${NC}"
 		else
 			echo -e "${RED}[WARN] 未设置grub2密码,不符合安全要求!建议立即配置grub2密码保护${NC}"
 		fi
@@ -4185,7 +4183,7 @@ baselineCheck(){
 	if [ -n "$hostsallow" ];then
 		(echo -e "${RED}[WARN] 允许以下IP远程访问:${NC}" && echo "$hostsallow")  
 	else
-		echo -e "${YELLOW}[INFO] hosts.allow文件未发现允许远程访问地址${NC}"  
+		echo -e "${GREEN}[SUCC] hosts.allow文件未发现允许远程访问地址${NC}"  
 	fi
 	printf "\n"   
 
@@ -4194,7 +4192,7 @@ baselineCheck(){
 	if [ -n "$hostsdeny" ];then
 		(echo -e "${RED}[WARN] 拒绝以下IP远程访问:${NC}" && echo "$hostsdeny")  
 	else
-		echo -e "${YELLOW}[INFO] hosts.deny文件未发现拒绝远程访问地址${NC}"  
+		echo -e "${GREEN}[SUCC] hosts.deny文件未发现拒绝远程访问地址${NC}"  
 	fi
 	printf "\n"   
 
@@ -4236,7 +4234,7 @@ baselineCheck(){
 
 		local perm=$(stat -c "%A" "$file_path")
 		if [ "$perm" == "$expected_perm" ]; then
-			echo -e "${YELLOW}[INFO] $desc 权限正常 ($perm)${NC}"
+			echo -e "${GREEN}[SUCC] $desc 权限正常 ($perm)${NC}"
 		else
 			echo -e "${RED}[WARN] $desc 权限异常 ($perm),建议改为 $expected_perm${NC}"
 		fi
@@ -4442,7 +4440,7 @@ baselineCheck(){
 			if [ -n "$nginxportconf" ];then
 				(echo -e "${YELLOW}[INFO] 可能存在端口转发的情况,请人工分析:${NC}" && echo "$nginxportconf")  
 			else
-				echo -e "${YELLOW}[INFO] 未发现端口转发配置${NC}"  
+				echo -e "${GREEN}[SUCC] 未发现端口转发配置${NC}"  
 			fi
 		else
 			echo -e "${RED}[WARN] 未发现Nginx配置文件${NC}"  
@@ -4876,7 +4874,7 @@ k8sBaselineCheck() {
         echo -e "${YELLOW}[INFO] kubelet 是否禁用不安全端口:${NC}"
         log_message "INFO" "检查kubelet不安全端口配置"
         if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf 2>/dev/null; then
-            echo -e "${YELLOW}[INFO] 不安全端口已禁用${NC}"
+            echo -e "${GREEN}[SUCC] 不安全端口已禁用${NC}"
             log_message "INFO" "kubelet不安全端口已禁用"
         else
             echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
