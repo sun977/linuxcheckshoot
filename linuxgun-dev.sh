@@ -406,7 +406,7 @@ log_message() {
 }
 
 # 操作日志记录函数
-# 使用方式: log_operation "功能模块名" "操作描述" "开始|完成(BEGIN|END)"  operations.log
+# 使用方式: log_operation "功能模块名" "操作描述" "开始|完成(START|END)"  operations.log
 log_operation() {
     local operation="$1"	# 操作名称
     local details="$2"		# 操作详情
@@ -456,7 +456,7 @@ log_performance() {
 init_env(){
 	local start_time=$(date +%s)	# 获取当前时间戳,用于计算函数耗时
 	# 统一函数模块调用的时候添加运行日志输出函数
-	log_operation "MOUDLE:INIT_ENV" "开始初始化LinuxGun运行环境" "BEGIN"
+	log_operation "MOUDLE:INIT_ENV" "开始初始化LinuxGun运行环境" "START"
 	
 	# 基础变量定义
 	date=$(date +%Y%m%d)
@@ -546,7 +546,7 @@ ensure_root() {
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "BEGIN"
+    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "S"
     
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
@@ -667,7 +667,7 @@ baseInfo(){
 # 网络信息【完成】
 networkInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:NETWORKINFO" "开始网络信息收集和分析" "BEGIN"
+    log_operation "MOUDLE:NETWORKINFO" "开始网络信息收集和分析" "START"
     
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
@@ -1024,7 +1024,7 @@ networkInfo(){
 # 进程信息分析【完成】
 processInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:PROCESSINFO" "开始进程信息分析和安全检测" "BEGIN"
+    log_operation "MOUDLE:PROCESSINFO" "开始进程信息分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}3. Process Info Analysis${GREEN}==========${NC}"
     
@@ -1479,7 +1479,7 @@ processInfo(){
 # 计划任务排查【归档 -- systemCheck】
 crontabCheck(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:CRONTABCHECK" "开始计划任务分析和安全检测" "BEGIN"
+    log_operation "MOUDLE:CRONTABCHECK" "开始计划任务分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}Crontab Analysis${GREEN}==========${NC}"
     
@@ -1617,7 +1617,7 @@ crontabCheck(){
 # 历史命令排查【归档 -- systemCheck】
 historyCheck(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:HISTORYCHECK" "开始历史命令分析和安全检测" "BEGIN"
+    log_operation "MOUDLE:HISTORYCHECK" "开始历史命令分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}History Analysis${GREEN}==========${NC}"
     
@@ -1868,7 +1868,7 @@ userInfoCheck(){
 	log_message "DEBUG" "userInfoCheck函数标记为已执行，executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck"
 	
 	local start_time=$(date +%s)
-	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "BEGIN"
+	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "START"
 	
 	echo -e "${GREEN}==========${YELLOW}User Information Analysis${GREEN}==========${NC}"
 	
@@ -2189,7 +2189,7 @@ systemCheck(){
 # 系统自启动服务分析【归档 -- systemServiceCheck】
 systemEnabledServiceCheck(){
 	local start_time=$(date +%s)
-	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "开始系统自启动服务安全检查和分析" "BEGIN"
+	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "开始系统自启动服务安全检查和分析" "START"
 	
 	# 系统自启动项服务分析
 	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
@@ -2626,7 +2626,7 @@ systemServiceCheck(){
 dirFileCheck(){
 	# 敏感目录排查(包含隐藏文件)
 	start_time=$(date +%s)
-	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块开始执行" "BEGIN"
+	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块开始执行" "START"
 	
 	# /tmp/下
 	echo -e "${YELLOW}[INFO] 正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -5440,7 +5440,7 @@ main() {
 	ensure_root
 	
 	# 记录主函数启动日志
-	# log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "BEGIN"
+	# log_operation "LinuxGun MAIN" "LinuxGun v${script_version} CHECKING" "START"
 	log_message "INFO" "LinuxGun v${script_version} CHECKING"
 	log_message "INFO" "OPTIONS: $*"
 	log_message "INFO" "USER: $(whoami), UID: $(id -u)"
