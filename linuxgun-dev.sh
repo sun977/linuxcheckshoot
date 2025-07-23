@@ -2317,7 +2317,7 @@ systemEnabledServiceCheck(){
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
 	start_time=$(date +%s)
-	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块" "START"
+	log_operation "MODULE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块" "START"
 	log_message "INFO" "正在检查正在运行中服务"
 	# systemRunningService=$(systemctl | grep -E "\.service.*running")
 
@@ -2399,14 +2399,14 @@ systemRunningServiceCheck(){
 	
 	end_time=$(date +%s)
 	log_performance "systemRunningServiceCheck" "$start_time" "$end_time"
-	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块执行完成" "END"
+	log_operation "MODULE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块执行完成" "END"
 }
 
 # 系统服务收集【归档 -- systemServiceCheck】
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
 	start_time=$(date +%s)
-	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
+	log_operation "MODULE - SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
 	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
 	echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
@@ -2467,14 +2467,14 @@ systemServiceCollect(){
 	
 	end_time=$(date +%s)
 	log_performance "systemServiceCollect" "$start_time" "$end_time"
-	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块执行完成" "END"
+	log_operation "MODULE - SYSTEMSERVICECOLLECT" "系统服务收集模块执行完成" "END"
 }
 
 # 用户服务分析【归档 -- systemServiceCheck】
 userServiceCheck(){
 	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
 	start_time=$(date +%s)
-	log_operation "MODULE:USERSERVICECHECK" "用户服务检查模块" "START"
+	log_operation "MODULE - USERSERVICECHECK" "用户服务检查模块" "START"
 	## 输出 /etc/rc.d/rc.local
 	# 【判断是否存在】
 	echo -e "${YELLOW}[INFO] 正在检查/etc/rc.d/rc.local是否存在:${NC}"
@@ -2580,7 +2580,7 @@ userServiceCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "userServiceCheck" "$start_time" "$end_time"
-	log_operation "MODULE:USERSERVICECHECK" "用户自启动服务检查模块执行完成" "END"
+	log_operation "MODULE - USERSERVICECHECK" "用户自启动服务检查模块执行完成" "END"
 }
 
 # 系统服务排查 【归档 -- fileCheck】
@@ -2601,7 +2601,7 @@ systemServiceCheck(){
 dirFileCheck(){
 	# 敏感目录排查(包含隐藏文件)
 	start_time=$(date +%s)
-	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块" "START"
+	log_operation "MODULE - DIRFILECHECK" "敏感目录文件检查模块" "START"
 	
 	# /tmp/下
 	echo -e "${YELLOW}[INFO] 正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -2640,7 +2640,7 @@ dirFileCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "dirFileCheck" "$start_time" "$end_time"
-	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块执行完成" "END"
+	log_operation "MODULE - DIRFILECHECK" "敏感目录文件检查模块执行完成" "END"
 	
 	# 其他
 	
@@ -2665,7 +2665,7 @@ sshFileCheck(){
 	
 	# SSH登录配置排查
 	start_time=$(date +%s)
-	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块" "START"
+	log_operation "MODULE - SSHFILECHECK" "SSH文件配置检查模块" "START"
 	
 	# 输出/root/.ssh/下文件
 	echo -e "${YELLOW}[INFO] 正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
@@ -2827,7 +2827,7 @@ sshFileCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "sshFileCheck" "$start_time" "$end_time"
-	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块执行完成" "END"
+	log_operation "MODULE - SSHFILECHECK" "SSH文件配置检查模块执行完成" "END"
 
 	# 上述光检测了root账户下的相关文件的信息,需要增加机器上其他账号的相关文件检测,比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
 	# 其他
@@ -2948,7 +2948,7 @@ checkRecentModifiedFiles() {
 specialFileCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:SPECIALFILECHECK" "特殊文件检查模块" "START"
+	log_operation "MODULE - SPECIALFILECHECK" "特殊文件检查模块" "START"
 	
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
 	echo -e "${YELLOW}[INFO] 正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
@@ -3375,7 +3375,7 @@ webshellCheck(){
 tunnelSSH(){ 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块" "START"
+	log_operation "MODULE - TUNNELSSH" "SSH隧道检查模块" "START"
 	
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	log_message "INFO" "正在检查SSH隧道"
@@ -3655,7 +3655,7 @@ tunnelSSH(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "tunnelSSH" "$start_time" "$end_time"
-	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块执行完成" "END"
+	log_operation "MODULE - TUNNELSSH" "SSH隧道检查模块执行完成" "END"
 
 }
 
@@ -3712,7 +3712,7 @@ memInfoCheck(){
 hackerToolsCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块" "START"
+	log_operation "MODULE - HACKERTOOLSCHECK" "黑客工具检查模块" "START"
 	
 	# 黑客工具排查
 	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
@@ -3720,8 +3720,8 @@ hackerToolsCheck(){
 	# hacker_tools_list="nc sqlmap nmap xray beef nikto john ettercap backdoor *proxy msfconsole msf *scan nuclei *brute* gtfo Titan zgrab frp* lcx *reGeorg nps spp suo5 sshuttle v2ray"
 	# 从 hacker_tools_list 列表中取出一个工具名然后全盘搜索
 	# hacker_tools_list=$(cat ./checkrules/hackertoolslist.txt)
-	echo -e "${YELLOW}[KNOW] 定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"
-	log_message "INFO" "定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警"
+	echo -e "${BLUE}[KNOW] 定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警(工具文件可自行维护)${NC}"
+	# log_message "INFO" "定义黑客工具列表文件hackertoolslist.txt,全盘搜索该列表中的工具名,如果存在则告警"
 	hacker_tools_list=$(cat ${current_dir}/checkrules/hackertoolslist.txt 2>/dev/null)
 	if [ $? -ne 0 ]; then
 		handle_error 1 "读取黑客工具列表文件失败" "hackerToolsCheck"
@@ -3729,9 +3729,6 @@ hackerToolsCheck(){
 	for hacker_tool in $hacker_tools_list
 	do
 		findhackertool=$(find / -name $hacker_tool 2>/dev/null)
-		if [ $? -ne 0 ]; then
-			handle_error 1 "执行find命令搜索黑客工具失败: $hacker_tool" "hackerToolsCheck"
-		fi
 		if [ -n "$findhackertool" ];then
 			(echo -e "${RED}[WARN] 发现全盘存在可疑黑客工具:$hacker_tool${NC}" && echo "$findhackertool")  
 			log_message "INFO" "发现全盘存在可疑黑客工具:$hacker_tool"
@@ -3747,7 +3744,7 @@ hackerToolsCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "hackerToolsCheck" "$start_time" "$end_time"
-	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块执行完成" "END"
+	log_operation "MODULE - HACKERTOOLSCHECK" "黑客工具检查模块执行完成" "END"
 
 }
 
@@ -3755,7 +3752,7 @@ hackerToolsCheck(){
 kernelCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:KERNELCHECK" "内核检查模块" "START"
+	log_operation "MODULE - KERNELCHECK" "内核检查模块" "START"
 	
 	# 内核信息排查
 	echo -e "${YELLOW}正在检查内核信息[lsmod]:${NC}"  
@@ -3791,7 +3788,7 @@ kernelCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "kernelCheck" "$start_time" "$end_time"
-	log_operation "MODULE:KERNELCHECK" "内核检查模块执行完成" "END"
+	log_operation "MODULE - KERNELCHECK" "内核检查模块执行完成" "END"
 
 }
 
@@ -3799,7 +3796,7 @@ kernelCheck(){
 otherCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:OTHERCHECK" "其他检查模块" "START"
+	log_operation "MODULE - OTHERCHECK" "其他检查模块" "START"
 	
 	# 可疑脚本文件排查
 	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
@@ -3917,7 +3914,7 @@ otherCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "otherCheck" $start_time $end_time
-	log_operation "MODULE:OTHERCHECK" "其他检查模块执行完成" "END"
+	log_operation "MODULE - OTHERCHECK" "其他检查模块执行完成" "END"
 
 }
 
@@ -4438,7 +4435,7 @@ baselineCheck(){
 k8sClusterInfo() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块" "START"
+	log_operation "MODULE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4613,14 +4610,14 @@ k8sClusterInfo() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sClusterInfo" $start_time $end_time
-    log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块执行完成" "END"
+    log_operation "MODULE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块执行完成" "END"
 }
 
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块" "START"
+	log_operation "MODULE - K8SSECRETCHECK" "Kubernetes Secret检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4713,14 +4710,14 @@ k8sSecretCheck() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sSecretCheck" $start_time $end_time
-    log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块执行完成" "END"
+    log_operation "MODULE - K8SSECRETCHECK" "Kubernetes Secret检查模块执行完成" "END"
 }
 
 # 收集 Kubernetes 敏感信息（仅查找指定目录下规定后缀的文件）
 k8sSensitiveInfo() { 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块" "START"
+	log_operation "MODULE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4821,14 +4818,14 @@ k8sSensitiveInfo() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sSensitiveInfo" $start_time $end_time
-    log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块执行完成" "END"
+    log_operation "MODULE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块执行完成" "END"
 }
 
 # Kubernetes 基线检查函数
 k8sBaselineCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块" "START"
+	log_operation "MODULE - K8SBASELINECHECK" "Kubernetes基线检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -5029,7 +5026,7 @@ k8sBaselineCheck() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sBaselineCheck" $start_time $end_time
-    log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块执行完成" "END"
+    log_operation "MODULE - K8SBASELINECHECK" "Kubernetes基线检查模块执行完成" "END"
 }
 
 # k8s排查
@@ -5059,7 +5056,7 @@ k8sCheck() {
 performanceCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块" "START"
+	log_operation "MODULE - PERFORMANCECHECK" "系统性能评估模块" "START"
 	
 	# 系统性能评估
 	## 磁盘使用情况
@@ -5132,7 +5129,7 @@ performanceCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "performanceCheck" $start_time $end_time
-	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块执行完成" "END"
+	log_operation "MODULE - PERFORMANCECHECK" "系统性能评估模块执行完成" "END"
 }
 
 
