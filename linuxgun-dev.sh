@@ -27,31 +27,6 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #   - 如遇到版本相关问题,请参考 buglist.md 文件
 # ======================================
 
-# ========== 新增功能说明 ==========
-# 1. 统一错误处理系统:
-#    - handle_error() 函数提供统一的错误处理和日志记录
-#    - 自动记录错误信息到日志文件和终端
-#    - 支持错误级别和上下文信息
-#
-# 2. 分级日志系统:
-#    - DEBUG: 调试信息 (仅在DEBUG模式下显示)
-#    - INFO:  一般信息 (正常操作记录)
-#    - WARN:  警告信息 (需要注意的情况)
-#    - ERROR: 错误信息 (严重问题)
-#
-# 3. 详细操作日志:
-#    - log_operation() 记录操作的开始和完成
-#    - log_performance() 记录性能统计信息
-#    - 所有日志包含时间戳和上下文信息
-#    - 日志同时输出到终端和文件 (${check_file}/operation.log)
-#
-# 4. 使用示例:
-#    - handle_error [错误码] "详细错误描述" "建议解决方案"
-#    - log_message "INFO" "操作成功完成"
-#    - log_operation "模块名" "操作描述" "开始|完成"
-#    - log_performance "函数名" $start_time $end_time
-# ================================
-
 # 模块化：linuxgun.sh --[option] --[module-option] -f 的方式调用各个模块
 # 根据参数执行不同的功能 
 # 蓝色 [KNOW] 知识点
@@ -667,7 +642,7 @@ baseInfo(){
 # 网络信息【完成】
 networkInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:NETWORKINFO" "开始网络信息收集和分析" "START"
+    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析模块" "START"
     
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
@@ -726,15 +701,15 @@ networkInfo(){
             log_message "INFO" "网络连接状态统计完成"
         fi
     else
-        echo -e "${YELLOW}[INFO] No network connection${NC}"  
+        echo -e "${GREEN}[SUCC] No network connection${NC}"  
         log_message "INFO" "未发现已建立的网络连接"
     fi
 
     # 端口信息
     ## 检测 TCP 端口
     echo -e "${YELLOW}[2.3.2]Check Port Info[netstat -anlp]:${NC}"  
-    echo -e "${YELLOW}[KNOW] TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
-    echo -e "${YELLOW}[KNOW] 只有绑定在0.0.0.0上局域网才可以访问${NC}"  
+    echo -e "${BLUE}[KNOW] TCP或UDP端口绑定在0.0.0.0、127.0.0.1、192.168.1.1这种IP上只表示这些端口开放${NC}"  
+    echo -e "${BLUE}[KNOW] 只有绑定在0.0.0.0上局域网才可以访问${NC}"  
     echo -e "${YELLOW}[2.3.2.1]Check TCP Port Info[netstat -anltp]:${NC}"  
     
     log_message "INFO" "开始检查TCP端口信息"
@@ -747,8 +722,8 @@ networkInfo(){
         (echo -e "${YELLOW}[INFO] Open TCP ports and corresponding services:${NC}" && echo "$tcpopen")  
         log_message "INFO" "发现$(echo "$tcpopen" | wc -l)个开放的TCP端口"
     else
-        echo -e "${RED}[WARN] No open TCP ports${NC}"  
-        log_message "WARN" "未发现开放的TCP端口"
+        echo -e "${GREEN}[SUCC] No open TCP ports${NC}"  
+        log_message "INFO" "未发现开放的TCP端口"
     fi
 
     tcpAccessPort=$(netstat -anltp 2>/dev/null | grep LISTEN | awk  '{print $4,$7}' | egrep "(0.0.0.0|:::)" | sed 's/:/ /g' | awk '{print $(NF-1),$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
@@ -762,7 +737,7 @@ networkInfo(){
 
     ## 检测 TCP 高危端口
     echo -e "${YELLOW}[2.3.2.2]Check High-risk TCP Port[netstat -antlp]:${NC}"  
-    echo -e "${YELLOW}[KNOW] Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    echo -e "${BLUE}[KNOW] Open ports in dangerstcpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     
     log_message "INFO" "开始TCP高危端口检测"
     declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
@@ -795,12 +770,12 @@ networkInfo(){
     done
 
     if [ $tcpCount -eq 0 ]; then
-        echo -e "${YELLOW}[INFO] No TCP dangerous ports found${NC}"  
+        echo -e "${GREEN}[SUCC] No TCP dangerous ports found${NC}"  
         log_message "INFO" "TCP高危端口检测完成,未发现高危端口"
     else
         echo -e "${RED}[WARN] Total TCP dangerous ports found: $tcpCount ${NC}"    
         echo -e "${RED}[WARN] Please manually associate and confirm the TCP dangerous ports${NC}"    
-        log_message "ERROR" "发现${tcpCount}个TCP高危端口,需要人工确认"
+        log_message "WARN" "发现 ${tcpCount} 个TCP高危端口,需要人工确认"
     fi
 
     ## 检测 UDP 端口
@@ -816,8 +791,8 @@ networkInfo(){
         (echo -e "${YELLOW}[INFO] Open UDP ports and corresponding services:${NC}" && echo "$udpopen")  
         log_message "INFO" "发现$(echo "$udpopen" | wc -l)个开放的UDP端口"
     else
-        echo -e "${RED}[WARN] No open UDP ports${NC}"  
-        log_message "WARN" "未发现开放的UDP端口"
+        echo -e "${GREEN}[SUCC] No open UDP ports${NC}"  
+        log_message "INFO" "未发现开放的UDP端口"
     fi
 
     udpAccessPort=$(netstat -anlup 2>/dev/null | awk '{print $4}' | egrep "(0.0.0.0|:::)" | awk -F: '{print $NF}' | sort -n | uniq)
@@ -837,7 +812,7 @@ networkInfo(){
 
     ## 检测 UDP 高危端口
     echo -e "${YELLOW}[2.3.2.4]Check High-risk UDP Port[netstat -anlup]:${NC}"  
-    echo -e "${YELLOW}[KNOW] Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
+    echo -e "${BLUE}[KNOW] Open ports in dangersudpports.txt file are matched, and if matched, they are high-risk ports${NC}"  
     
     log_message "INFO" "开始UDP高危端口检测"
     declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
@@ -875,7 +850,7 @@ networkInfo(){
     else
         echo -e "${RED}[WARN] Total UDP dangerous ports found: $udpCount ${NC}"    
         echo -e "${RED}[WARN] Please manually associate and confirm the UDP dangerous ports${NC}"    
-        log_message "ERROR" "发现${udpCount}个UDP高危端口,需要人工确认"
+        log_message "WARN" "发现${udpCount}个UDP高危端口,需要人工确认"
     fi
 
     # DNS 信息
@@ -891,7 +866,7 @@ networkInfo(){
             log_message "INFO" "发现$(echo "$resolv" | wc -l)个DNS服务器配置"
         else
             echo -e "${YELLOW}[INFO] 未发现DNS服务器${NC}"  
-            log_message "WARN" "未发现DNS服务器配置"
+            log_message "INFO" "未发现DNS服务器配置"
         fi
     fi
 
@@ -901,7 +876,7 @@ networkInfo(){
     log_message "INFO" "开始检查网卡模式信息"
     ifconfigmode=$(ip addr 2>/dev/null | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
     if [ $? -ne 0 ]; then
-        handle_error  1 "网卡模式检查失败-ip addr命令执行失败" "networkInfo"
+        handle_error  1 "网卡模式检查失败 ip addr命令执行失败" "networkInfo"
     fi
     
     if [ -n "$ifconfigmode" ];then
@@ -917,7 +892,7 @@ networkInfo(){
     Promisc=$(ip addr 2>/dev/null | grep -i promisc | awk -F: '{print $2}')
     if [ -n "$Promisc" ];then
         (echo -e "${RED}[WARN] 网卡处于混杂模式:${NC}" && echo "$Promisc") 
-        log_message "ERROR" "发现网卡处于混杂模式: $Promisc"
+        log_message "WARN" "发现网卡处于混杂模式: $Promisc"
     else
         echo -e "${GREEN}[SUCC] 未发现网卡处于混杂模式${NC}"  
         log_message "INFO" "网卡混杂模式检查完成,未发现异常"
@@ -928,10 +903,10 @@ networkInfo(){
     Monitor=$(ip addr 2>/dev/null | grep -i "mode monitor" | awk -F: '{print $2}')
     if [ -n "$Monitor" ];then
         (echo -e "${RED}[WARN] 网卡处于监听模式:${NC}" && echo "$Monitor")
-        log_message "ERROR" "发现网卡处于监听模式: $Monitor"
+        log_message "WARN" "发现网卡处于监听模式"
     else
         echo -e "${GREEN}[SUCC] 未发现网卡处于监听模式${NC}"  
-        log_message "INFO" "网卡监听模式检查完成,未发现异常"
+        log_message "INFO" "未发现网卡处于监听模式"
     fi
 
     # 网络路由信息
@@ -948,7 +923,7 @@ networkInfo(){
         (echo -e "${YELLOW}[INFO] 路由表如下:${NC}" && echo "$route")  
         log_message "INFO" "成功获取路由表,共$(echo "$route" | wc -l)条路由记录"
     else
-        echo -e "${YELLOW}[INFO] 未发现路由器表${NC}"  
+        echo -e "${RED}[WARN] 未发现路由器表${NC}"  
         log_message "WARN" "未发现路由表信息"
     fi
 
@@ -965,7 +940,7 @@ networkInfo(){
             echo -e "${RED}[WARN] 该服务器开启路由转发,请注意!${NC}"    
             log_message "WARN" "检测到IP转发已开启,存在安全风险"
         else
-            echo -e "${YELLOW}[INFO] 该服务器未开启路由转发${NC}"  
+            echo -e "${GREEN}[SUCC] 该服务器未开启路由转发${NC}"  
             log_message "INFO" "IP转发未开启,配置正常"
         fi
     fi
@@ -1016,7 +991,7 @@ networkInfo(){
     
     # 记录网络信息收集完成
     local end_time=$(date +%s)
-    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析完成" "END"
+    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析模块执行完成" "END"
     log_performance "networkInfo" $start_time $end_time
     printf "\n"  
 }
@@ -1085,7 +1060,7 @@ processInfo(){
     
     if [ ! -f "${current_dir}/checkrules/dangerspslist.txt" ]; then
         echo -e "${RED}[WARN] 敏感进程规则文件不存在: ${current_dir}/checkrules/dangerspslist.txt${NC}"
-        log_message "ERROR" "敏感进程规则文件不存在: ${current_dir}/checkrules/dangerspslist.txt"
+        log_message "WARN" "敏感进程规则文件不存在: ${current_dir}/checkrules/dangerspslist.txt"
     else
         danger_ps_list=$(cat ${current_dir}/checkrules/dangerspslist.txt) || handle_error 1 "读取敏感进程规则文件失败" "processInfo"
         ps_output=$(ps -auxww) || handle_error 1 "获取进程列表失败" "processInfo"
@@ -1103,7 +1078,7 @@ processInfo(){
                 END {
                     if (found > 0) {
                         printf($0)
-                        printf("\n'${YELLOW}'[WARN] 发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
+                        printf("\n'${RED}'[WARN] 发现敏感进程: %s, 进程数量: %d'${NC}'\n", proc, found);
                     }
                 }'
             )
@@ -1111,15 +1086,15 @@ processInfo(){
                 echo -e "${RED}$filtered_output${NC}"
                 local process_count=$(echo "$filtered_output" | grep -c "$psname" || echo "0")
                 total_dangerous_processes=$((total_dangerous_processes + process_count))
-                log_message "WARN" "发现敏感进程: $psname, 数量: $process_count"
+                log_message "WARN" "发现敏感进程数量: $process_count"
             fi
         done
         
         if [ $total_dangerous_processes -eq 0 ]; then
             echo -e "${GREEN}[SUCC] 未发现敏感进程${NC}"
-            log_message "INFO" "敏感进程检测完成,未发现异常"
+            log_message "INFO" "未发现敏感进程"
         else
-            log_message "ERROR" "敏感进程检测完成,共发现${total_dangerous_processes}个敏感进程"
+            log_message "WARN" "共发现 ${total_dangerous_processes} 个敏感进程"
         fi
     fi
     printf "\n" 
@@ -1181,11 +1156,11 @@ processInfo(){
         for anomalous in "${anomalous_processes[@]}"; do
             echo -e "${RED}[WARN] $anomalous${NC}"
         done
-        echo -e "${RED}[WARN] 建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
-        log_message "ERROR" "发现${#anomalous_processes[@]}个异常进程,可能存在进程隐藏或rootkit感染"
+        echo -e "${RED}[WARN] 建议进一步调查这些进程,可能存在进程隐藏${NC}"
+        log_message "WARN" "发现${#anomalous_processes[@]}个异常进程"
     else
         echo -e "${GREEN}[SUCC] 未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
-        log_message "INFO" "异常进程检测完成,未发现异常"
+        log_message "INFO" "未发现异常进程,所有/proc中的进程都能在ps命令中找到"
     fi
     printf "\n"
 
@@ -1228,7 +1203,7 @@ processInfo(){
 	
     # 2. 检查网络连接与进程对应关系
     echo -e "${YELLOW}[3.8.2] 检查网络连接与进程对应关系:${NC}"
-    log_message "INFO" "开始网络连接与进程对应关系检查"
+    log_message "INFO" "开始检查网络连接与进程对应关系"
     unknown_connections=()
     
     # 检测操作系统类型并使用相应的命令
@@ -1277,7 +1252,7 @@ processInfo(){
                     fi
                 done <<< "$ss_output"
             else
-                echo -e "${YELLOW}[INFO] Linux系统未找到netstat或ss命令,跳过网络连接检查${NC}"
+                echo -e "${RED}[WARN] Linux系统未找到netstat或ss命令,跳过网络连接检查${NC}"
                 log_message "WARN" "Linux系统未找到netstat或ss命令,跳过网络连接检查"
             fi
         fi
@@ -1405,7 +1380,7 @@ processInfo(){
             log_message "WARN" "/proc/kallsyms不可读,跳过系统调用表检查"
         fi
     else
-        echo -e "${YELLOW}[INFO] 需要root权限进行系统调用表检查${NC}"
+        echo -e "${RED}[WARN] 需要root权限进行系统调用表检查${NC}"
         log_message "WARN" "需要root权限进行系统调用表检查"
     fi
     printf "\n"
@@ -1479,7 +1454,7 @@ processInfo(){
 # 计划任务排查【归档 -- systemCheck】
 crontabCheck(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:CRONTABCHECK" "开始计划任务分析和安全检测" "START"
+    log_operation "MOUDLE:CRONTABCHECK" "计划任务分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}Crontab Analysis${GREEN}==========${NC}"
     
@@ -1497,7 +1472,7 @@ crontabCheck(){
             handle_error 1 "读取/etc/crontab文件失败" "crontabCheck"
         fi
     else
-        echo -e "${YELLOW}[INFO] /etc/crontab文件不存在${NC}"
+        echo -e "${RED}[WARN] /etc/crontab文件不存在${NC}"
         log_message "WARN" "/etc/crontab文件不存在"
     fi
     
@@ -1541,7 +1516,7 @@ crontabCheck(){
             log_message "INFO" "共发现${user_cron_count}个用户的计划任务"
         fi
     else
-        echo -e "${YELLOW}[INFO] /var/spool/cron目录不存在${NC}"
+        echo -e "${RED}[WARN] /var/spool/cron目录不存在${NC}"
         log_message "WARN" "/var/spool/cron目录不存在"
     fi
 
@@ -1602,7 +1577,7 @@ crontabCheck(){
     
     if [ $analyzed_files -eq 0 ]; then
         echo -e "${YELLOW}[INFO] 未发现可分析的计划任务文件${NC}"
-        log_message "WARN" "未发现可分析的计划任务文件"
+        log_message "INFO" "未发现可分析的计划任务文件"
     else
         log_message "INFO" "共分析了${analyzed_files}个计划任务文件的状态信息"
     fi
@@ -1994,7 +1969,7 @@ userInfoCheck(){
 			handle_error 1 "读取/etc/login.defs失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/login.defs文件不存在,跳过非系统用户检查"
+		log_message "INFO" "/etc/login.defs文件不存在,跳过非系统用户检查"
 	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
@@ -2022,7 +1997,7 @@ userInfoCheck(){
 			handle_error 1 "读取/etc/shadow失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/shadow文件不存在,跳过空口令用户检查"
+		log_message "WARN" "/etc/shadow文件不存在,这是异常情况!"
 	fi
 	# - 检查空口令且可登录SSH的用户
 	# 原理:
@@ -2096,7 +2071,7 @@ userInfoCheck(){
 			handle_error 1 "检查未加密口令用户失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/passwd文件不存在,跳过未加密口令用户检查"
+		log_message "WARN" "/etc/passwd文件不存在,这是异常情况!"
 	fi
 	# 检查用户组信息/etc/group
 	echo -e "${YELLOW}[INFO] 检查用户组信息[/etc/group] ${NC}"
@@ -2209,7 +2184,7 @@ systemEnabledServiceCheck(){
 	fi
 	if [ -n "$systemInit" ];then
 		echo -e "${YELLOW}[INFO] 系统初始化程序为:$systemInit ${NC}"
-		log_message "INFO" "识别到系统初始化程序: $systemInit"
+		log_message "INFO" "识别到系统初始化程序"
 		
 		if [ "$systemInit" == "systemd" ];then
 			echo -e "${YELLOW}[INFO] 正在检查systemd自启动项[systemctl list-unit-files]:${NC}"
@@ -2323,12 +2298,12 @@ systemEnabledServiceCheck(){
 			fi
 		else
 			echo -e "${RED}[WARN] 系统使用初始化程序本程序不适配,请手动检查${NC}"
-			echo -e "${YELLOW}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
+			echo -e "${BLUE}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
 			log_message "WARN" "系统使用不支持的初始化程序: $systemInit,需要手动检查"
 		fi
 	else
 		echo -e "${RED}[WARN] 未识别到系统初始化程序,请手动检查${NC}"
-		log_message "ERROR" "未能识别系统初始化程序,请手动检查"
+		log_message "WARN" "未能识别系统初始化程序,请手动检查"
 	fi
 	
 	# 记录性能统计和操作完成
@@ -2368,7 +2343,7 @@ systemRunningServiceCheck(){
 				echo -e "${YELLOW}[INFO] systemd正在运行中服务项:${NC}" && echo "$systemRunningService"
 				running_service_count=$(echo "$systemRunningService" | wc -l)
 				log_message "INFO" "发现 $running_service_count 个systemd正在运行中服务项"
-				log_message "INFO" "systemd正在运行中服务项详情:\n$systemRunningService"
+				# log_message "INFO" "systemd正在运行中服务项详情:"
 				# 分析系统启动项 【这里只是运行中服务项,不包括其他服务项,所以在这里检查不完整,单独检查吧】
 				# 分析systemd运行中的服务
 				echo -e "${YELLOW}[INFO] 正在分析危险systemd运行中服务项[systemctl list-unit-files]:${NC}"
@@ -2393,7 +2368,7 @@ systemRunningServiceCheck(){
 						fi
 						if [ -n "$dangerService" ];then
 							echo -e "${RED}[WARN] 发现systemd运行中服务项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
-							log_message "WARN" "发现systemd运行中服务项:${service}包含敏感命令或脚本:\n$dangerService"
+							log_message "WARN" "发现systemd运行中服务项:${service}包含敏感命令或脚本:$dangerService"
 							danger_running_count=$((danger_running_count + 1))
 						else
 							echo -e "${GREEN}[SUCC] 未发现systemd运行中服务项:${service}包含敏感命令或脚本${NC}"
@@ -2434,7 +2409,7 @@ systemServiceCollect(){
 	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
 	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
-	echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
+	echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
 	log_message "INFO" "根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]"
 	echo -e "${YELLOW}[INFO] 正在辨认系统使用的初始化程序${NC}"
 	log_message "INFO" "正在辨认系统使用的初始化程序"
@@ -2473,7 +2448,7 @@ systemServiceCollect(){
 				init_service_count=$(echo "$init" | wc -l)
 				echo -e "${YELLOW}[INFO] init系统服务项:${NC}" && echo "$init"
 				log_message "INFO" "发现 $init_service_count 个init系统服务项"
-				log_message "INFO" "init系统服务项详情:\n$init"
+				# log_message "INFO" "init系统服务项详情:\n$init"
 				# 如果系统使用的是systemd启动,这里会输出提示使用systemctl list-unit-files的命令
 			else
 				echo "[WARN] 未发现init系统服务项"
@@ -2516,7 +2491,7 @@ userServiceCheck(){
 		if [ -n "$rcLocal" ];then
 			echo -e "${YELLOW}[INFO] /etc/rc.d/rc.local用户自启动项服务如下:${NC}" && echo "$rcLocal"
 			log_message "INFO" "/etc/rc.d/rc.local用户自启动项服务内容"
-			log_message "INFO" "/etc/rc.d/rc.local内容详情:\n$rcLocal"
+			# log_message "INFO" "/etc/rc.d/rc.local内容详情:\n$rcLocal"
 		else
 			echo -e "${RED}[WARN] 未发现/etc/rc.d/rc.local用户自启动服务${NC}"
 			log_message "WARN" "未发现/etc/rc.d/rc.local用户自启动服务"
@@ -2531,7 +2506,7 @@ userServiceCheck(){
 		fi
 		if [ -n "$dangerRclocal" ];then
 			echo -e "${RED}[WARN] 发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:${NC}" && echo "$dangerRclocal"
-			log_message "WARN" "发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本:\n$dangerRclocal"
+			log_message "WARN" "发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本"
 		else
 			echo -e "${GREEN}[SUCC] 未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本${NC}"
 			log_message "INFO" "未发现/etc/rc.d/rc.local用户自启动服务包含敏感命令或脚本" 
@@ -2548,7 +2523,7 @@ userServiceCheck(){
 		dangerinitd=$(egrep "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" /etc/init.d/* 2>/dev/null)
 		if [ -n "$dangerinitd" ];then
 			(echo -e "${RED}[WARN] 发现/etc/init.d/用户危险自启动服务:${NC}" && echo "$dangerinitd")
-			log_message "WARN" "发现/etc/init.d/用户危险自启动服务:\n$dangerinitd" 
+			log_message "WARN" "发现/etc/init.d/用户危险自启动服务" 
 		else
 			echo -e "${GREEN}[SUCC] 未发现/etc/init.d/用户危险自启动服务${NC}"
 			log_message "INFO" "未发现/etc/init.d/用户危险自启动服务" 
@@ -2577,9 +2552,9 @@ userServiceCheck(){
 				local results=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$home_dir/$file" 2>/dev/null)
 				if [ -n "$results" ]; then
 					echo -e "${YELLOW}[INFO] 用户: $user 的 $file 文件存在敏感命令或脚本:${NC}" && echo "$results"
-					log_message "WARN" "用户: $user 的 $file 文件存在敏感命令或脚本:\n$results"
+					log_message "WARN" "用户: $user 的 $file 文件存在敏感命令或脚本"
 				else
-					echo -e "${YELLOW}[INFO] 用户: $user 的 $file 文件不存在敏感命令或脚本${NC}"
+					echo -e "${GREEN}[SUCC] 用户: $user 的 $file 文件不存在敏感命令或脚本${NC}"
 					log_message "INFO" "用户: $user 的 $file 文件不存在敏感命令或脚本"
 				fi
 			else
@@ -2639,27 +2614,27 @@ dirFileCheck(){
 	fi
 	if [ -n "$tmp_tmp" ];then
 		echo -e "${YELLOW}[INFO] /tmp/下文件如下:${NC}" && echo "$tmp_tmp"
-		log_message "INFO" "/tmp/下文件列表:\n$tmp_tmp"
+		log_message "INFO" "发现/tmp/下存在文件"
 	else
 		echo -e "${RED}[WARN] 未发现/tmp/下文件${NC}"
-		log_message "WARN" "未发现/tmp/下文件"
+		log_message "WARN" "未发现/tmp/下存在文件"
 	fi
 
 	# /root下隐藏文件分析
 	echo -e "${YELLOW}[INFO] 正在检查/root/下隐藏文件[ls -alt /root]:${NC}"
 	log_message "INFO" "正在检查/root/下隐藏文件"
-	echo -e "${YELLOW}[KNOW] 隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
-	log_message "INFO" "隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"
+	echo -e "${BLUE}[KNOW] 隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件${NC}"  
+	# log_message "INFO" "隐藏文件以.开头,可用于存放木马文件,可用于存放病毒文件,可用于存放破解文件"
 	root_tmp=$(ls -alt /root 2>/dev/null)
 	if [ $? -ne 0 ]; then
 		handle_error 1 "检查/root目录失败" "dirFileCheck"
 	fi
 	if [ -n "$root_tmp" ];then
-		echo -e "${YELLOW}[INFO] /root下隐藏文件如下:${NC}" && echo "$root_tmp"
-		log_message "INFO" "/root下隐藏文件列表:\n$root_tmp"
+		echo -e "${RED}[WARN] /root下隐藏文件如下:${NC}" && echo "$root_tmp"
+		log_message "WARN" "发现/root下隐藏文件列表"
 	else
-		echo -e "${RED}[WARN] 未发现/root下隐藏文件${NC}"
-		log_message "WARN" "未发现/root下隐藏文件"
+		echo -e "${GREEN}[SUCC] 未发现/root下隐藏文件${NC}"
+		log_message "INFO" "未发现/root下隐藏文件"
 	fi
 
 	# 记录性能统计和操作完成
@@ -3435,7 +3410,7 @@ tunnelSSH(){
 				if [ -n "$ps_info" ]; then
 					echo -e "${YELLOW}    COLUMN: pid - ppid - user - cmd ${NC}"
 					echo -e "${YELLOW}    PSINFO: $ps_info${NC}"
-					log_message "INFO" "进程详细信息: $ps_info"
+					# log_message "INFO" "进程详细信息: $ps_info"
 				fi
 				echo ""
 			fi
@@ -5036,7 +5011,7 @@ k8sBaselineCheck() {
         log_message "INFO" "未发现特权容器"
     else
         echo -e "${RED}[WARN] 警告: 检测到特权容器,建议禁用或限制特权容器运行${NC}"
-        log_message "INFO" "警告: 检测到特权容器,建议禁用或限制特权容器运行"
+        log_message "WARN" "警告: 检测到特权容器,建议禁用或限制特权容器运行"
     fi
     
     # 记录结束时间和性能统计
@@ -5700,7 +5675,7 @@ main() {
                         log_message "INFO" "模块 $module 执行完成"
                     else
                         echo "错误: 模块 $module 对应的函数未找到"
-                        log_message "ERROR" "模块 $module 对应的函数未找到,跳过执行"
+                        log_message "WARN" "模块 $module 对应的函数未找到,跳过执行"
                     fi
                 else
                     echo "跳过模块 $module"
@@ -5721,7 +5696,7 @@ main() {
                     $func_name | log2file "${check_file}/checkresult.txt"
                     log_message "INFO" "模块 $module 执行完成"
                 else
-                    log_message "ERROR" "模块 $module 对应的函数未找到,跳过执行"
+                    log_message "WARN" "模块 $module 对应的函数未找到,跳过执行"
                 fi
             done
             # 日志打包函数
