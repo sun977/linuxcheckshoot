@@ -1284,6 +1284,13 @@ processInfo(){
             ## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
             ## 恶意软件删除自身文件但保持在内存中运行
             ## 无文件攻击的检测 和 rootkit隐藏技术发现
+
+			# 判断进程是否仍然存在
+            if ! ps -p "$pid" >/dev/null; then
+                handle_error 0 "进程 ${pid} 已不存在" "processInfo"
+				continue   # 跳过当前循环
+            fi
+
             suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 内存映射失败" "processInfo"
             # 根据可疑映射输出进程名称
             if [ -n "$suspicious_map" ]; then   
@@ -1420,11 +1427,18 @@ processInfo(){
     # 3. 明显恶意标识 ：直接搜索ROOTKIT、HIDE等明显的恶意软件标识
     echo -e "${YELLOW}[3.8.7] 检查进程环境变量异常:${NC}"
     log_message "INFO" "开始进程环境变量异常检查"
-    env_anomalies=()
+	env_anomalies=()
     for proc_dir in /proc/[0-9]*; do
         if [ -r "$proc_dir/environ" ]; then
             pid=$(basename "$proc_dir")
-            # 检查可疑的环境变量
+
+			# 判断进程是否仍然存在
+            if ! ps -p "$pid" >/dev/null; then
+                handle_error 0 "进程 ${pid} 已不存在" "processInfo"
+				continue   # 跳过当前循环
+            fi
+
+            # 检查可疑的环境变量 读取 environ 文件
             suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 环境变量失败" "processInfo"
             if [ -n "$suspicious_env" ]; then
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
@@ -1432,7 +1446,7 @@ processInfo(){
             fi
         fi
     done
-	
+
     if [ ${#env_anomalies[@]} -gt 0 ]; then
         echo -e "${RED}[WARN] 发现 ${#env_anomalies[@]} 个进程存在可疑环境变量:${NC}"
         for env in "${env_anomalies[@]}"; do
@@ -2367,9 +2381,6 @@ systemRunningServiceCheck(){
 					if [ -n "$servicePath" ] && [ -f "$servicePath" ];then  # 判断文件是否存在
 						log_message "INFO" "找到service服务文件位置:$servicePath"
 						dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null)
-						if [ $? -ne 0 ]; then
-							handle_error 1 "分析服务文件失败: $servicePath" "systemRunningServiceCheck"
-						fi
 						if [ -n "$dangerService" ];then
 							echo -e "${RED}[WARN] 发现systemd运行中服务项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
 							log_message "WARN" "发现systemd运行中服务项:${service}包含敏感命令或脚本:$dangerService"
