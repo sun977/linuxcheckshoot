@@ -1291,8 +1291,20 @@ processInfo(){
 				continue   # 跳过当前循环
             fi
 
-            suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 内存映射失败" "processInfo"
-            # 根据可疑映射输出进程名称
+            # suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 内存映射失败" "processInfo"
+			# 读取内存映射文件内容（防止多次读取）
+			map_content=$(cat "$proc_dir/maps" 2>/dev/null)
+
+			# 判断是否读取失败（如文件不存在、权限不足）
+			if [ $? -ne 0 ]; then
+				handle_error 0 "读取进程 ${pid} 内存映射失败" "processInfo"
+				continue  # 跳过当前进程
+			fi
+
+			# 执行 grep 匹配可疑映射（即使没有匹配内容也不报错）
+			suspicious_map=$(echo "$map_content" | grep -E "(rwxp.*$$heap$$|rwxp.*$$stack$$|rwxp.*deleted)")
+
+			# 判断是否有匹配内
             if [ -n "$suspicious_map" ]; then   
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
                 suspicious_maps+=("PID:$pid Name:$proc_name 可疑内存映射")
@@ -1439,8 +1451,22 @@ processInfo(){
             fi
 
             # 检查可疑的环境变量 读取 environ 文件
-            suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 环境变量失败" "processInfo"
-            if [ -n "$suspicious_env" ]; then
+            # suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 环境变量失败" "processInfo"
+
+			# 先读取环境变量内容并转换为换行分隔
+			env_content=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null)
+
+			# 判断 tr 是否失败（比如文件不存在、权限问题）
+			if [ $? -ne 0 ]; then
+				handle_error 0 "读取进程 ${pid} 环境变量失败" "processInfo"
+				continue   # 跳过当前循环
+			fi
+
+			# 然后执行 grep，不管有没有匹配内容，都不触发错误
+			suspicious_env=$(echo "$env_content" | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)")
+
+			# 判断是否有匹配内容
+			if [ -n "$suspicious_env" ]; then
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
                 env_anomalies+=("PID:$pid Name:$proc_name 可疑环境变量: $(echo \"$suspicious_env\" | head -1)")
             fi
