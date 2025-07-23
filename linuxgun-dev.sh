@@ -431,7 +431,7 @@ log_performance() {
 init_env(){
 	local start_time=$(date +%s)	# 获取当前时间戳,用于计算函数耗时
 	# 统一函数模块调用的时候添加运行日志输出函数
-	log_operation "MOUDLE:INIT_ENV" "开始初始化LinuxGun运行环境" "START"
+	log_operation "MOUDLE - INIT_ENV" "开始初始化LinuxGun运行环境" "START"
 	
 	# 基础变量定义
 	date=$(date +%Y%m%d)
@@ -501,7 +501,7 @@ init_env(){
 	cd $check_file || handle_error 2 "无法进入检查目录: $check_file" "INIT_ENV"
 	
 	local end_time=$(date +%s)
-	log_operation "MOUDLE:INIT_ENV" "初始化LinuxGun运行环境" "END"
+	log_operation "MOUDLE - INIT_ENV" "初始化LinuxGun运行环境" "END"
 	log_performance "INIT_ENV" "$start_time" "$end_time"
 
 }
@@ -521,7 +521,7 @@ ensure_root() {
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "START"
+    log_operation "MOUDLE - BASEINFO" "开始采集系统基础环境信息" "START"
     
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
@@ -636,13 +636,13 @@ baseInfo(){
     # 记录性能和操作日志
     local end_time=$(date +%s)
     log_performance "baseInfo" "$start_time" "$end_time"
-	log_operation "MOUDLE:BASEINFO" "系统基础环境信息采集完成" "END"
+	log_operation "MOUDLE - BASEINFO" "系统基础环境信息采集完成" "END"
 }
 
 # 网络信息【完成】
 networkInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析模块" "START"
+    log_operation "MOUDLE - NETWORKINFO" "网络信息收集和分析模块" "START"
     
     echo -e "${GREEN}==========${YELLOW}2.Network Info${GREEN}==========${NC}"
     echo -e "${YELLOW}[2.0]Get Network Connection Info${NC}"  
@@ -991,7 +991,7 @@ networkInfo(){
     
     # 记录网络信息收集完成
     local end_time=$(date +%s)
-    log_operation "MOUDLE:NETWORKINFO" "网络信息收集和分析模块执行完成" "END"
+    log_operation "MOUDLE - NETWORKINFO" "网络信息收集和分析模块执行完成" "END"
     log_performance "networkInfo" $start_time $end_time
     printf "\n"  
 }
@@ -999,7 +999,7 @@ networkInfo(){
 # 进程信息分析【完成】
 processInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:PROCESSINFO" "开始进程信息分析和安全检测" "START"
+    log_operation "MOUDLE - PROCESSINFO" "开始进程信息分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}3. Process Info Analysis${GREEN}==========${NC}"
     
@@ -1448,13 +1448,13 @@ processInfo(){
     # 记录性能和操作日志
     local end_time=$(date +%s)
     log_performance "processInfo" "$start_time" "$end_time"
-    log_operation "MOUDLE:PROCESSINFO" "进程信息分析和安全检测完成" "END"
+    log_operation "MOUDLE - PROCESSINFO" "进程信息分析和安全检测完成" "END"
 }
 
 # 计划任务排查【归档 -- systemCheck】
 crontabCheck(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:CRONTABCHECK" "计划任务分析和安全检测" "START"
+    log_operation "MOUDLE - CRONTABCHECK" "计划任务分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}Crontab Analysis${GREEN}==========${NC}"
     
@@ -1584,7 +1584,7 @@ crontabCheck(){
     
     # 记录计划任务检查完成
     local end_time=$(date +%s)
-    log_operation "MOUDLE:CRONTABCHECK" "计划任务分析和安全检测完成" "END"
+    log_operation "MOUDLE - CRONTABCHECK" "计划任务分析和安全检测完成" "END"
     log_performance "crontabCheck" $start_time $end_time
     printf "\n"
 }
@@ -1592,7 +1592,7 @@ crontabCheck(){
 # 历史命令排查【归档 -- systemCheck】
 historyCheck(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:HISTORYCHECK" "开始历史命令分析和安全检测" "START"
+    log_operation "MOUDLE - HISTORYCHECK" "开始历史命令分析和安全检测" "START"
     
     echo -e "${GREEN}==========${YELLOW}History Analysis${GREEN}==========${NC}"
     
@@ -1822,7 +1822,7 @@ historyCheck(){
 	# 记录函数执行完成和性能统计
 	local end_time=$(date +%s)
 	log_performance "historyCheck" "$start_time" "$end_time"
-	log_operation "MOUDLE:HISTORYCHECK" "历史命令分析和安全检测完成" "END"
+	log_operation "MOUDLE - HISTORYCHECK" "历史命令分析和安全检测完成" "END"
 }
 
 # 用户信息排查【归档 -- systemCheck】
@@ -1843,7 +1843,7 @@ userInfoCheck(){
 	# log_message "DEBUG" "userInfoCheck函数标记为已执行,executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck"
 	
 	local start_time=$(date +%s)
-	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "START"
+	log_operation "MOUDLE - USERINFOCHECK" "用户信息安全检查和分析" "START"
 	
 	echo -e "${GREEN}==========${YELLOW}User Information Analysis${GREEN}==========${NC}"
 	
@@ -2144,7 +2144,7 @@ userInfoCheck(){
 	# 记录性能统计
 	local end_time=$(date +%s)
 	log_performance "userInfoCheck" "$start_time" "$end_time"
-	log_operation "MOUDLE:USERINFOCHECK" "用户信息检查模块执行完成" "END"
+	log_operation "MOUDLE - USERINFOCHECK" "用户信息检查模块执行完成" "END"
 	
 	printf "\n" 
 }
@@ -2164,7 +2164,7 @@ systemCheck(){
 # 系统自启动服务分析【归档 -- systemServiceCheck】
 systemEnabledServiceCheck(){
 	local start_time=$(date +%s)
-	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "开始系统自启动服务安全检查和分析" "START"
+	log_operation "MOUDLE - SYSTEMENABLEDSERVICECHECK" "开始系统自启动服务安全检查和分析" "START"
 	
 	# 系统自启动项服务分析
 	## 检查老版本机器的特殊文件/etc/rc.local /etc/init.d/* [/etc/init.d/* 和 chkconfig --list 命令一样]
@@ -2227,18 +2227,22 @@ systemEnabledServiceCheck(){
 						if [ -n "$servicePath" ] && [ -f "$servicePath" ]; then
 							echo -e "${YELLOW}[INFO] 找到service服务文件位置:$servicePath${NC}"
 							log_message "INFO" "找到服务文件: $servicePath"
-							
-							if dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null); then
-								if [ -n "$dangerService" ];then
+							# 检查服务文件是否可读
+							if [ ! -r "$servicePath" ]; then
+								handle_error 1 "无法读取服务文件 ${servicePath}" "systemEnabledServiceCheck"
+							else
+								# 在服务文件中搜索敏感命令或脚本模式
+								dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null)
+								# 检查是否找到敏感内容（grep返回1表示无匹配，这是正常情况）
+								if [ -n "$dangerService" ]; then
 									echo -e "${RED}[WARN] 发现systemd启动项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
 									log_message "WARN" "发现危险systemd服务: $service,包含敏感命令"
 									dangerous_services=$((dangerous_services + 1))
 								else
+									# 未找到敏感内容是正常情况，不是错误
 									echo -e "${GREEN}[SUCC] 未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
 									log_message "INFO" "systemd服务 $service 未发现敏感命令"
 								fi
-							else
-								handle_error 1 "分析服务文件 ${servicePath} 失败" "systemEnabledServiceCheck"
 							fi
 						else
 							echo -e "${RED}[WARN] 未找到service服务文件位置:$service${NC}"
@@ -2309,7 +2313,7 @@ systemEnabledServiceCheck(){
 	# 记录性能统计和操作完成
 	local end_time=$(date +%s)
 	log_performance "systemEnabledServiceCheck" "$start_time" "$end_time"
-	log_operation "MOUDLE:SYSTEMENABLEDSERVICECHECK" "系统自启动服务检查模块执行完成" "END"
+	log_operation "MOUDLE - SYSTEMENABLEDSERVICECHECK" "系统自启动服务检查模块执行完成" "END"
 	printf "\n"
 }
 
@@ -2317,7 +2321,7 @@ systemEnabledServiceCheck(){
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
 	start_time=$(date +%s)
-	log_operation "MODULE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块" "START"
+	log_operation "MOUDLE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块" "START"
 	log_message "INFO" "正在检查正在运行中服务"
 	# systemRunningService=$(systemctl | grep -E "\.service.*running")
 
@@ -2399,14 +2403,14 @@ systemRunningServiceCheck(){
 	
 	end_time=$(date +%s)
 	log_performance "systemRunningServiceCheck" "$start_time" "$end_time"
-	log_operation "MODULE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块执行完成" "END"
+	log_operation "MOUDLE - SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块执行完成" "END"
 }
 
 # 系统服务收集【归档 -- systemServiceCheck】
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
 	start_time=$(date +%s)
-	log_operation "MODULE - SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
+	log_operation "MOUDLE - SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
 	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
 	echo -e "${BLUE}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
@@ -2467,14 +2471,14 @@ systemServiceCollect(){
 	
 	end_time=$(date +%s)
 	log_performance "systemServiceCollect" "$start_time" "$end_time"
-	log_operation "MODULE - SYSTEMSERVICECOLLECT" "系统服务收集模块执行完成" "END"
+	log_operation "MOUDLE - SYSTEMSERVICECOLLECT" "系统服务收集模块执行完成" "END"
 }
 
 # 用户服务分析【归档 -- systemServiceCheck】
 userServiceCheck(){
 	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
 	start_time=$(date +%s)
-	log_operation "MODULE - USERSERVICECHECK" "用户服务检查模块" "START"
+	log_operation "MOUDLE - USERSERVICECHECK" "用户服务检查模块" "START"
 	## 输出 /etc/rc.d/rc.local
 	# 【判断是否存在】
 	echo -e "${YELLOW}[INFO] 正在检查/etc/rc.d/rc.local是否存在:${NC}"
@@ -2580,7 +2584,7 @@ userServiceCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "userServiceCheck" "$start_time" "$end_time"
-	log_operation "MODULE - USERSERVICECHECK" "用户自启动服务检查模块执行完成" "END"
+	log_operation "MOUDLE - USERSERVICECHECK" "用户自启动服务检查模块执行完成" "END"
 }
 
 # 系统服务排查 【归档 -- fileCheck】
@@ -2601,7 +2605,7 @@ systemServiceCheck(){
 dirFileCheck(){
 	# 敏感目录排查(包含隐藏文件)
 	start_time=$(date +%s)
-	log_operation "MODULE - DIRFILECHECK" "敏感目录文件检查模块" "START"
+	log_operation "MOUDLE - DIRFILECHECK" "敏感目录文件检查模块" "START"
 	
 	# /tmp/下
 	echo -e "${YELLOW}[INFO] 正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -2640,7 +2644,7 @@ dirFileCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "dirFileCheck" "$start_time" "$end_time"
-	log_operation "MODULE - DIRFILECHECK" "敏感目录文件检查模块执行完成" "END"
+	log_operation "MOUDLE - DIRFILECHECK" "敏感目录文件检查模块执行完成" "END"
 	
 	# 其他
 	
@@ -2665,7 +2669,7 @@ sshFileCheck(){
 	
 	# SSH登录配置排查
 	start_time=$(date +%s)
-	log_operation "MODULE - SSHFILECHECK" "SSH文件配置检查模块" "START"
+	log_operation "MOUDLE - SSHFILECHECK" "SSH文件配置检查模块" "START"
 	
 	# 输出/root/.ssh/下文件
 	echo -e "${YELLOW}[INFO] 正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
@@ -2827,7 +2831,7 @@ sshFileCheck(){
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
 	log_performance "sshFileCheck" "$start_time" "$end_time"
-	log_operation "MODULE - SSHFILECHECK" "SSH文件配置检查模块执行完成" "END"
+	log_operation "MOUDLE - SSHFILECHECK" "SSH文件配置检查模块执行完成" "END"
 
 	# 上述光检测了root账户下的相关文件的信息,需要增加机器上其他账号的相关文件检测,比如/home/test/.ssh/authorized_keys 等文件 --- 20250708
 	# 其他
@@ -2948,7 +2952,7 @@ checkRecentModifiedFiles() {
 specialFileCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - SPECIALFILECHECK" "特殊文件检查模块" "START"
+	log_operation "MOUDLE - SPECIALFILECHECK" "特殊文件检查模块" "START"
 	
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
 	echo -e "${YELLOW}[INFO] 正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
@@ -3375,7 +3379,7 @@ webshellCheck(){
 tunnelSSH(){ 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - TUNNELSSH" "SSH隧道检查模块" "START"
+	log_operation "MOUDLE - TUNNELSSH" "SSH隧道检查模块" "START"
 	
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	log_message "INFO" "正在检查SSH隧道"
@@ -3655,7 +3659,7 @@ tunnelSSH(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "tunnelSSH" "$start_time" "$end_time"
-	log_operation "MODULE - TUNNELSSH" "SSH隧道检查模块执行完成" "END"
+	log_operation "MOUDLE - TUNNELSSH" "SSH隧道检查模块执行完成" "END"
 
 }
 
@@ -3712,7 +3716,7 @@ memInfoCheck(){
 hackerToolsCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - HACKERTOOLSCHECK" "黑客工具检查模块" "START"
+	log_operation "MOUDLE - HACKERTOOLSCHECK" "黑客工具检查模块" "START"
 	
 	# 黑客工具排查
 	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
@@ -3744,7 +3748,7 @@ hackerToolsCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "hackerToolsCheck" "$start_time" "$end_time"
-	log_operation "MODULE - HACKERTOOLSCHECK" "黑客工具检查模块执行完成" "END"
+	log_operation "MOUDLE - HACKERTOOLSCHECK" "黑客工具检查模块执行完成" "END"
 
 }
 
@@ -3752,7 +3756,7 @@ hackerToolsCheck(){
 kernelCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - KERNELCHECK" "内核检查模块" "START"
+	log_operation "MOUDLE - KERNELCHECK" "内核检查模块" "START"
 	
 	# 内核信息排查
 	echo -e "${YELLOW}正在检查内核信息[lsmod]:${NC}"  
@@ -3788,7 +3792,7 @@ kernelCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "kernelCheck" "$start_time" "$end_time"
-	log_operation "MODULE - KERNELCHECK" "内核检查模块执行完成" "END"
+	log_operation "MOUDLE - KERNELCHECK" "内核检查模块执行完成" "END"
 
 }
 
@@ -3796,7 +3800,7 @@ kernelCheck(){
 otherCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - OTHERCHECK" "其他检查模块" "START"
+	log_operation "MOUDLE - OTHERCHECK" "其他检查模块" "START"
 	
 	# 可疑脚本文件排查
 	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
@@ -3914,7 +3918,7 @@ otherCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "otherCheck" $start_time $end_time
-	log_operation "MODULE - OTHERCHECK" "其他检查模块执行完成" "END"
+	log_operation "MOUDLE - OTHERCHECK" "其他检查模块执行完成" "END"
 
 }
 
@@ -4435,7 +4439,7 @@ baselineCheck(){
 k8sClusterInfo() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块" "START"
+	log_operation "MOUDLE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4610,14 +4614,14 @@ k8sClusterInfo() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sClusterInfo" $start_time $end_time
-    log_operation "MODULE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块执行完成" "END"
+    log_operation "MOUDLE - K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块执行完成" "END"
 }
 
 # 检查 Kubernetes Secrets 安全信息
 k8sSecretCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - K8SSECRETCHECK" "Kubernetes Secret检查模块" "START"
+	log_operation "MOUDLE - K8SSECRETCHECK" "Kubernetes Secret检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4710,14 +4714,14 @@ k8sSecretCheck() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sSecretCheck" $start_time $end_time
-    log_operation "MODULE - K8SSECRETCHECK" "Kubernetes Secret检查模块执行完成" "END"
+    log_operation "MOUDLE - K8SSECRETCHECK" "Kubernetes Secret检查模块执行完成" "END"
 }
 
 # 收集 Kubernetes 敏感信息（仅查找指定目录下规定后缀的文件）
 k8sSensitiveInfo() { 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块" "START"
+	log_operation "MOUDLE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4818,14 +4822,14 @@ k8sSensitiveInfo() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sSensitiveInfo" $start_time $end_time
-    log_operation "MODULE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块执行完成" "END"
+    log_operation "MOUDLE - K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块执行完成" "END"
 }
 
 # Kubernetes 基线检查函数
 k8sBaselineCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - K8SBASELINECHECK" "Kubernetes基线检查模块" "START"
+	log_operation "MOUDLE - K8SBASELINECHECK" "Kubernetes基线检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -5026,7 +5030,7 @@ k8sBaselineCheck() {
     # 记录结束时间和性能统计
     end_time=$(date +%s)
     log_performance "k8sBaselineCheck" $start_time $end_time
-    log_operation "MODULE - K8SBASELINECHECK" "Kubernetes基线检查模块执行完成" "END"
+    log_operation "MOUDLE - K8SBASELINECHECK" "Kubernetes基线检查模块执行完成" "END"
 }
 
 # k8s排查
@@ -5056,7 +5060,7 @@ k8sCheck() {
 performanceCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE - PERFORMANCECHECK" "系统性能评估模块" "START"
+	log_operation "MOUDLE - PERFORMANCECHECK" "系统性能评估模块" "START"
 	
 	# 系统性能评估
 	## 磁盘使用情况
@@ -5129,7 +5133,7 @@ performanceCheck(){
 	# 记录结束时间和性能统计
 	end_time=$(date +%s)
 	log_performance "performanceCheck" $start_time $end_time
-	log_operation "MODULE - PERFORMANCECHECK" "系统性能评估模块执行完成" "END"
+	log_operation "MOUDLE - PERFORMANCECHECK" "系统性能评估模块执行完成" "END"
 }
 
 
