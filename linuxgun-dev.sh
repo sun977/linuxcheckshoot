@@ -2431,7 +2431,7 @@ systemServiceCollect(){
 				service_count=$(echo "$systemd" | wc -l)
 				echo -e "${YELLOW}[INFO] systemd系统服务项如下:${NC}" && echo "$systemd"
 				log_message "INFO" "发现 $service_count 个systemd系统服务项"
-				log_message "INFO" "systemd系统服务项详情:\n$systemd"		
+				# log_message "INFO" "systemd系统服务项详情:\n$systemd"		
 			else
 				echo -e "${RED}[WARN] 未发现systemd系统服务项${NC}"
 				log_message "WARN" "未发现systemd系统服务项" 
@@ -3862,14 +3862,16 @@ otherCheck(){
 				log_message "INFO" "正在扫描目录: $dir"
 
 				# 查找当前目录下所有具有可执行权限的普通文件
-				find "$dir" -maxdepth 1 -type f -executable 2>/dev/null | while read -r f; do
+			exec_files=$(find "$dir" -maxdepth 1 -type f -executable 2>/dev/null)
+			if [ $? -ne 0 ]; then
+				handle_error 1 "查找目录 $dir 中的可执行文件失败" "otherCheck"
+			fi
+			if [ -n "$exec_files" ]; then
+				echo "$exec_files" | while read -r f; do
 					# 输出文件名和MD5值(输出屏幕同时保存到文件中)
 					md5sum "$f" 2>/dev/null | tee -a "$file"  
-					# md5sum "$f" >> "$file"
 				done
-				if [ ${PIPESTATUS[0]} -ne 0 ]; then
-					handle_error 1 "查找目录 $dir 中的可执行文件失败" "otherCheck"
-				fi
+			fi
 			else
 				echo -e "${RED}[WARN] 目录不存在${NC}: $dir"  
 				log_message "INFO" "目录不存在: $dir"
@@ -3881,7 +3883,7 @@ otherCheck(){
 	echo -e "${YELLOW}正在检查rpm安装软件及版本情况[rpm -qa]:${NC}"  
 	log_message "INFO" "正在检查rpm安装软件及版本情况"
 	software=$(rpm -qa 2>/dev/null | awk -F- '{print $1,$2}' | sort -nr -k2 | uniq)
-	if [ ${PIPESTATUS[0]} -ne 0 ]; then
+	if [ $? -ne 0 ]; then
 		handle_error 1 "执行rpm -qa命令失败" "otherCheck"
 	fi
 	if [ -n "$software" ];then
@@ -3902,9 +3904,6 @@ otherCheck(){
 	fi
 	for hacker_tools in $hacker_tools_list;do
 		danger_soft=$(rpm -qa 2>/dev/null | awk -F- '{print $1}' | sort | uniq | grep -E "$hacker_tools")
-		if [ ${PIPESTATUS[0]} -ne 0 ]; then
-			handle_error 1 "检查可疑软件时rpm命令失败" "otherCheck"
-		fi
 		if [ -n "$danger_soft" ];then
 			(echo -e "${RED}[WARN] 发现安装以下可疑软件:$hacker_tools${NC}" && echo "$danger_soft") 
 			log_message "INFO" "发现安装可疑软件: $hacker_tools"
@@ -4808,8 +4807,9 @@ k8sSensitiveInfo() {
                         echo -e ""
                     fi
                 done
-                if [ ${PIPESTATUS[0]} -ne 0 ]; then
-                    log_message "INFO" "扫描路径 $path 中的模式 $pattern 时出现错误"
+                # 检查find命令是否执行成功
+                if [ $? -ne 0 ]; then
+                    log_message "WARN" "扫描路径 $path 中的模式 $pattern 时出现错误"
                 fi
             done
         else
@@ -4846,15 +4846,18 @@ k8sBaselineCheck() {
     if [ -f /etc/kubernetes/kubelet.conf ]; then
         echo -e "${YELLOW}[INFO] kubelet 是否禁用不安全端口:${NC}"
         log_message "INFO" "检查kubelet不安全端口配置"
+        # 检查kubelet不安全端口配置
         if grep -q 'insecure-port=0' /etc/kubernetes/kubelet.conf 2>/dev/null; then
             echo -e "${GREEN}[SUCC] 不安全端口已禁用${NC}"
             log_message "INFO" "kubelet不安全端口已禁用"
         else
-            echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
-            log_message "INFO" "警告: kubelet的不安全端口未禁用"
-        fi
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            log_message "INFO" "检查kubelet配置文件时出现错误"
+            # 检查grep命令是否因为文件读取错误而失败
+            if [ ! -r "/etc/kubernetes/kubelet.conf" ]; then
+                log_message "WARN" "无法读取kubelet配置文件: /etc/kubernetes/kubelet.conf"
+            else
+                echo -e "${RED}[WARN] 警告: kubelet 的不安全端口未禁用${NC}"
+                log_message "INFO" "警告: kubelet的不安全端口未禁用"
+            fi
         fi
     else
         echo -e "${YELLOW}[INFO] kubelet.conf 文件不存在,跳过检查${NC}"
@@ -4866,15 +4869,18 @@ k8sBaselineCheck() {
     if [ -f /etc/kubernetes/apiserver ]; then
         echo -e "${YELLOW}[INFO] API Server 是否启用 RBAC:${NC}"
         log_message "INFO" "检查API Server RBAC配置"
+        # 检查API Server RBAC配置
         if grep -q 'authorization-mode=.*RBAC' /etc/kubernetes/apiserver 2>/dev/null; then
             echo -e "${GREEN}✓ 已启用 RBAC 授权模式${NC}"
             log_message "INFO" "已启用RBAC授权模式"
         else
-            echo -e "${RED}[WARN] 警告: API Server 未启用 RBAC 授权模式${NC}"
-            log_message "INFO" "警告: API Server未启用RBAC授权模式"
-        fi
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            log_message "INFO" "检查API Server配置文件时出现错误"
+            # 检查grep命令是否因为文件读取错误而失败
+            if [ ! -r "/etc/kubernetes/apiserver" ]; then
+                log_message "WARN" "无法读取API Server配置文件: /etc/kubernetes/apiserver"
+            else
+                echo -e "${RED}[WARN] 警告: API Server 未启用 RBAC 授权模式${NC}"
+                log_message "INFO" "警告: API Server未启用RBAC授权模式"
+            fi
         fi
     else
         echo -e "${YELLOW}[INFO] apiserver 配置文件不存在,跳过检查${NC}"
@@ -4955,28 +4961,34 @@ k8sBaselineCheck() {
     if [ -f "$etcd_config" ]; then
         echo -e "${YELLOW}[INFO] Etcd 是否启用 TLS 加密:${NC}"
         log_message "INFO" "检查Etcd TLS加密配置"
+        # 检查Etcd TLS加密配置
         if grep -q '--cert-file' "$etcd_config" 2>/dev/null && grep -q '--key-file' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了 TLS 加密通信${NC}"
             log_message "INFO" "Etcd启用了TLS加密通信"
         else
-            echo -e "${RED}[WARN] 警告: Etcd 未启用 TLS 加密通信${NC}"
-            log_message "INFO" "警告: Etcd未启用TLS加密通信"
-        fi
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            log_message "INFO" "检查Etcd TLS配置时出现错误"
+            # 检查grep命令是否因为文件读取错误而失败
+            if [ ! -r "$etcd_config" ]; then
+                log_message "WARN" "无法读取Etcd配置文件: $etcd_config"
+            else
+                echo -e "${RED}[WARN] 警告: Etcd 未启用 TLS 加密通信${NC}"
+                log_message "INFO" "警告: Etcd未启用TLS加密通信"
+            fi
         fi
 
         echo -e "${YELLOW}[INFO] Etcd 是否限制客户端访问:${NC}"
         log_message "INFO" "检查Etcd客户端证书认证配置"
+        # 检查Etcd客户端证书认证配置
         if grep -q '--client-cert-auth' "$etcd_config" 2>/dev/null; then
             echo -e "${GREEN}✓ Etcd 启用了客户端证书认证${NC}"
             log_message "INFO" "Etcd启用了客户端证书认证"
         else
-            echo -e "${RED}[WARN] 警告: Etcd 未启用客户端证书认证,可能存在未授权访问风险${NC}"
-            log_message "INFO" "警告: Etcd未启用客户端证书认证,可能存在未授权访问风险"
-        fi
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            log_message "INFO" "检查Etcd客户端认证配置时出现错误"
+            # 检查grep命令是否因为文件读取错误而失败
+            if [ ! -r "$etcd_config" ]; then
+                log_message "WARN" "无法读取Etcd配置文件进行客户端认证检查: $etcd_config"
+            else
+                echo -e "${RED}[WARN] 警告: Etcd 未启用客户端证书认证,可能存在未授权访问风险${NC}"
+                log_message "INFO" "警告: Etcd未启用客户端证书认证,可能存在未授权访问风险"
+            fi
         fi
     else
         echo -e "${YELLOW}[INFO] etcd.yaml 配置文件不存在,跳过检查${NC}"
@@ -5061,11 +5073,13 @@ performanceCheck(){
 
 	echo -e "${YELLOW}正在检查磁盘使用是否过大[df -h]:${NC}"  
 	log_message "INFO" "检查磁盘使用率是否超过70%"
-	echo -e "${YELLOW}[KNOW] 使用超过70%告警${NC}"  
-	df=$(df -h 2>/dev/null | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
-	if [ ${PIPESTATUS[0]} -ne 0 ]; then
-		handle_error 1 "分析磁盘使用率失败" "performanceCheck"
+	echo -e "${YELLOW}[INFO] 使用超过70%告警${NC}"  
+	# 获取磁盘使用率信息
+	df_output=$(df -h 2>/dev/null)
+	if [ $? -ne 0 ]; then
+		handle_error 1 "获取磁盘信息失败" "performanceCheck"
 	fi
+	df=$(echo "$df_output" | awk 'NR!=1{print $1,$5}' | awk -F% '{print $1}' | awk '{if ($2>70) print $1,$2}')
 	if [ -n "$df" ];then
 		(echo -e "${RED}[WARN] 硬盘空间使用过高,请注意!${NC}" && echo "$df" )  
 		log_message "INFO" "硬盘空间使用过高: $df"
