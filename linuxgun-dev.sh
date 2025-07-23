@@ -13,7 +13,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 #   - 默认 Bash 版本: 3.2.57 (系统自带)
 #   - 推荐版本: Bash 4.0+ (通过 Homebrew 安装)
 #   - 安装命令: brew install bash
-#   - 注意: macOS 默认 Bash 3.2 不支持关联数组，本脚本已做兼容处理
+#   - 注意: macOS 默认 Bash 3.2 不支持关联数组,本脚本已做兼容处理
 #
 # Linux 系统:
 #   - 最低要求: Bash 3.2+
@@ -24,7 +24,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 # 兼容性说明:
 #   - 本脚本已针对 Bash 3.2 进行兼容性优化
 #   - 使用函数式映射替代关联数组以确保兼容性
-#   - 如遇到版本相关问题，请参考 buglist.md 文件
+#   - 如遇到版本相关问题,请参考 buglist.md 文件
 # ======================================
 
 # ========== 新增功能说明 ==========
@@ -329,9 +329,9 @@ typeset LOG_ERROR=3
 LOG_LEVEL=${LOG_LEVEL:-$LOG_INFO}
 
 # 执行状态跟踪数组（防止重复执行）
-# 使用普通变量模拟关联数组，兼容更多shell版本
-executed_functions_userInfoCheck=0
-executed_functions_sshFileCheck=0
+# 使用普通变量模拟关联数组,兼容更多shell版本
+# executed_functions_userInfoCheck=0
+# executed_functions_sshFileCheck=0
 
 # 统一错误处理函数
 # 使用方式: handle_error 1 "清理旧k8s目录失败" "init_env"
@@ -546,7 +546,7 @@ ensure_root() {
 # 采集系统基础信息【归档 -- systemCheck】
 baseInfo(){
     local start_time=$(date +%s)
-    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "S"
+    log_operation "MOUDLE:BASEINFO" "开始采集系统基础环境信息" "START"
     
     echo -e "${GREEN}==========${YELLOW}1. Get System Info${GREEN}==========${NC}"
 
@@ -695,16 +695,16 @@ networkInfo(){
 
     # ARP攻击检查
     echo -e "${YELLOW}[2.2]Check ARP Attack[arp -a -n]:${NC}"  
-    echo -e "${YELLOW}[原理]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}"  
+    echo -e "${BLUE}[KNOW]:通过解析arp表并利用awk逻辑对MAC地址进行计数和识别,然后输出重复的MAC地址以及它们的出现次数${NC}"  
     
     log_message "INFO" "开始ARP攻击检测"
     arpattack=$(arp -a -n 2>/dev/null | awk '{++S[$4]} END {for(a in S) {if(S[a]>1) print S[a],a}}')
     if [ $? -eq 0 ] && [ -n "$arpattack" ];then
         (echo -e "${RED}[WARN] 发现存在ARP攻击:${NC}" && echo "$arpattack") 
-        log_message "ERROR" "检测到可能的ARP攻击: $arpattack"
+        log_message "WARN" "检测到可能的ARP攻击"
     else
         echo -e "${GREEN}[SUCC] 未发现ARP攻击${NC}"  
-        log_message "INFO" "ARP攻击检测完成,未发现异常"
+        log_message "INFO" "未发现ARP攻击"
     fi
 
     # 网络连接信息
@@ -714,7 +714,7 @@ networkInfo(){
     log_message "INFO" "开始检查网络连接状态"
     netstat=$(netstat -anlp 2>/dev/null | grep ESTABLISHED) # 过滤出已经建立的连接 ESTABLISHED
     if [ $? -ne 0 ]; then
-        handle_error "网络连接检查失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+        handle_error 1 "netstat命令执行失败" "networkInfo"
     fi
     
     netstatnum=$(netstat -n 2>/dev/null | awk '/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}')
@@ -740,7 +740,7 @@ networkInfo(){
     log_message "INFO" "开始检查TCP端口信息"
     tcpopen=$(netstat -anltp 2>/dev/null | grep LISTEN | awk  '{print $4,$7}' | sed 's/:/ /g' | awk '{print $2,$NF}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ $? -ne 0 ]; then
-        handle_error "TCP端口检查失败" "netstat -anltp命令执行失败" "请检查netstat命令是否可用"
+        handle_error 1  "TCP端口检查失败" "networkInfo"
     fi
     
     if [ -n "$tcpopen" ];then
@@ -768,7 +768,7 @@ networkInfo(){
     declare -A danger_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     if [ ! -f "${current_dir}/checkrules/dangerstcpports.txt" ]; then
-        handle_error "TCP高危端口规则文件缺失" "文件${current_dir}/checkrules/dangerstcpports.txt不存在" "请确保规则文件存在"
+        handle_error 1 "TCP高危端口规则文件缺失:${current_dir}/checkrules/dangerstcpports.txt不存在" "networkInfo"
         return 1
     fi
     
@@ -780,7 +780,7 @@ networkInfo(){
     # 获取所有监听中的TCP端口
     listening_TCP_ports=$(netstat -anlpt 2>/dev/null | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的TCP端口
     if [ $? -ne 0 ]; then
-        handle_error "获取TCP监听端口失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+        handle_error 1 "获取TCP监听端口失败" "networkInfo"
     fi
     
     tcpCount=0  # 初始化计数器
@@ -809,7 +809,7 @@ networkInfo(){
     log_message "INFO" "开始检查UDP端口信息"
     udpopen=$(netstat -anlup 2>/dev/null | awk  '{print $4,$NF}' | grep : | sed 's/:/ /g' | awk '{print $2,$3}' | sed 's/\// /g' | awk '{printf "%-20s%-10s\n",$1,$NF}' | sort -n | uniq)
     if [ $? -ne 0 ]; then
-        handle_error "UDP端口检查失败" "netstat -anlup命令执行失败" "请检查netstat命令是否可用"
+        handle_error 1 "UDP端口检查失败" "networkInfo"
     fi
     
     if [ -n "$udpopen" ];then
@@ -843,7 +843,7 @@ networkInfo(){
     declare -A danger_udp_ports  # 创建关联数组以存储危险端口和相关信息
     # 读取文件并填充关联数组
     if [ ! -f "${current_dir}/checkrules/dangersudpports.txt" ]; then
-        handle_error "UDP高危端口规则文件缺失" "文件${current_dir}/checkrules/dangersudpports.txt不存在" "请确保规则文件存在"
+        handle_error 1 "UDP高危端口规则文件缺失:${current_dir}/checkrules/dangersudpports.txt不存在" "networkInfo"
         return 1
     fi
     
@@ -855,7 +855,7 @@ networkInfo(){
     # 获取所有监听中的UDP端口
     listening_UDP_ports=$(netstat -anlup 2>/dev/null | awk 'NR>1 {print $4}' | cut -d: -f2 | sort -u) # 获取所有监听中的UDP端口
     if [ $? -ne 0 ]; then
-        handle_error "获取UDP监听端口失败" "netstat命令执行失败" "请检查netstat命令是否可用"
+        handle_error 1 "获取UDP监听端口失败" "networkInfo"
     fi
     
     udpCount=0  # 初始化计数器
@@ -883,7 +883,7 @@ networkInfo(){
     
     log_message "INFO" "开始检查DNS配置信息"
     if [ ! -f "/etc/resolv.conf" ]; then
-        handle_error "DNS配置文件缺失" "文件/etc/resolv.conf不存在" "请检查系统DNS配置"
+        handle_error 1 "DNS配置文件缺失:/etc/resolv.conf不存在" "networkInfo"
     else
         resolv=$(more /etc/resolv.conf 2>/dev/null | grep ^nameserver | awk '{print $NF}')
         if [ -n "$resolv" ];then
@@ -901,7 +901,7 @@ networkInfo(){
     log_message "INFO" "开始检查网卡模式信息"
     ifconfigmode=$(ip addr 2>/dev/null | grep '<' | awk  '{print "网卡:",$2,"模式:",$3}' | sed 's/<//g' | sed 's/>//g')
     if [ $? -ne 0 ]; then
-        handle_error "网卡模式检查失败" "ip addr命令执行失败" "请检查ip命令是否可用"
+        handle_error  1 "网卡模式检查失败-ip addr命令执行失败" "networkInfo"
     fi
     
     if [ -n "$ifconfigmode" ];then
@@ -941,7 +941,7 @@ networkInfo(){
     log_message "INFO" "开始检查路由表信息"
     route=$(route -n 2>/dev/null)
     if [ $? -ne 0 ]; then
-        handle_error "路由表检查失败" "route命令执行失败" "请检查route命令是否可用"
+        handle_error 1 "路由表检查失败-route命令执行失败" "networkInfo"
     fi
     
     if [ -n "$route" ];then
@@ -957,7 +957,7 @@ networkInfo(){
     
     log_message "INFO" "开始检查IP转发配置"
     if [ ! -f "/proc/sys/net/ipv4/ip_forward" ]; then
-        handle_error "IP转发配置文件缺失" "文件/proc/sys/net/ipv4/ip_forward不存在" "请检查系统内核配置"
+        handle_error 1 "IP转发配置文件缺失-文件/proc/sys/net/ipv4/ip_forward不存在" "networkInfo"
     else
         ip_forward=$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)  # 1:开启路由转发 0:未开启路由转发
         # 判断IP转发是否开启
@@ -1033,7 +1033,7 @@ processInfo(){
     if ps -auxww >/dev/null 2>&1; then
         ps -auxww
         local process_count=$(ps -auxww | wc -l)
-        log_message "INFO" "成功获取系统进程信息，共${process_count}个进程"
+        log_message "INFO" "成功获取系统进程信息,共${process_count}个进程"
     else
         handle_error 1 "获取系统进程信息失败" "processInfo"
     fi
@@ -1117,9 +1117,9 @@ processInfo(){
         
         if [ $total_dangerous_processes -eq 0 ]; then
             echo -e "${GREEN}[SUCC] 未发现敏感进程${NC}"
-            log_message "INFO" "敏感进程检测完成，未发现异常"
+            log_message "INFO" "敏感进程检测完成,未发现异常"
         else
-            log_message "ERROR" "敏感进程检测完成，共发现${total_dangerous_processes}个敏感进程"
+            log_message "ERROR" "敏感进程检测完成,共发现${total_dangerous_processes}个敏感进程"
         fi
     fi
     printf "\n" 
@@ -1182,10 +1182,10 @@ processInfo(){
             echo -e "${RED}[WARN] $anomalous${NC}"
         done
         echo -e "${RED}[WARN] 建议进一步调查这些进程,可能存在进程隐藏或rootkit感染${NC}"
-        log_message "ERROR" "发现${#anomalous_processes[@]}个异常进程，可能存在进程隐藏或rootkit感染"
+        log_message "ERROR" "发现${#anomalous_processes[@]}个异常进程,可能存在进程隐藏或rootkit感染"
     else
         echo -e "${GREEN}[SUCC] 未发现异常进程,所有/proc中的进程都能在ps命令中找到${NC}"
-        log_message "INFO" "异常进程检测完成，未发现异常"
+        log_message "INFO" "异常进程检测完成,未发现异常"
     fi
     printf "\n"
 
@@ -1309,7 +1309,7 @@ processInfo(){
             ## rwxp.*deleted: 指向已经删除的文件的可执行内存映射(异常|内存马或者恶意代码)
             ## 恶意软件删除自身文件但保持在内存中运行
             ## 无文件攻击的检测 和 rootkit隐藏技术发现
-            suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程${pid}内存映射失败" "processInfo"
+            suspicious_map=$(grep -E "(rwxp.*\[heap\]|rwxp.*\[stack\]|rwxp.*deleted)" "$proc_dir/maps" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 内存映射失败" "processInfo"
             # 根据可疑映射输出进程名称
             if [ -n "$suspicious_map" ]; then   
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
@@ -1338,7 +1338,7 @@ processInfo(){
         if [ -d "$proc_dir/fd" ] && [ -r "$proc_dir/fd" ]; then
             pid=$(basename "$proc_dir")
             # 检查是否有指向已删除文件的文件描述符
-            deleted_files=$(ls -l "$proc_dir/fd/" 2>/dev/null | grep "(deleted)" | wc -l) || handle_error 0 "读取进程${pid}文件描述符失败" "processInfo"
+            deleted_files=$(ls -l "$proc_dir/fd/" 2>/dev/null | grep "(deleted)" | wc -l) || handle_error 0 "读取进程 ${pid} 文件描述符失败" "processInfo"
             if [ "$deleted_files" -gt 0 ]; then
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
                 suspicious_fds+=("PID:$pid Name:$proc_name 有${deleted_files}个已删除文件的文件描述符")
@@ -1450,7 +1450,7 @@ processInfo(){
         if [ -r "$proc_dir/environ" ]; then
             pid=$(basename "$proc_dir")
             # 检查可疑的环境变量
-            suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程${pid}环境变量失败" "processInfo"
+            suspicious_env=$(tr '\0' '\n' < "$proc_dir/environ" 2>/dev/null | grep -E "(LD_PRELOAD|LD_LIBRARY_PATH.*\.so|ROOTKIT|HIDE)" 2>/dev/null) || handle_error 0 "读取进程 ${pid} 环境变量失败" "processInfo"
             if [ -n "$suspicious_env" ]; then
                 proc_name=$(cat "$proc_dir/comm" 2>/dev/null || echo "unknown")
                 env_anomalies+=("PID:$pid Name:$proc_name 可疑环境变量: $(echo \"$suspicious_env\" | head -1)")
@@ -1529,7 +1529,7 @@ crontabCheck(){
                     user_cron_count=$((user_cron_count + 1))
                     log_message "INFO" "成功读取用户${user_cron}的计划任务"
                 else
-                    handle_error 1 "读取用户${user_cron}的计划任务失败" "crontabCheck"
+                    handle_error 1 "读取用户 ${user_cron} 的计划任务失败" "crontabCheck"
                 fi
             fi
         done
@@ -1580,7 +1580,7 @@ crontabCheck(){
             if cat "$cronfile" | grep -v "^$" >/dev/null 2>&1; then
                 cat "$cronfile" | grep -v "^$"  # 去除空行
             else
-                handle_error 1 "读取计划任务文件${cronfile}失败" "crontabCheck"
+                handle_error 1 "读取计划任务文件 ${cronfile} 失败" "crontabCheck"
                 continue
             fi
             
@@ -1590,7 +1590,7 @@ crontabCheck(){
                 analyzed_files=$((analyzed_files + 1))
                 log_message "INFO" "成功分析计划任务文件${cronfile}的状态信息"
             else
-                handle_error 1 "获取计划任务文件${cronfile}状态信息失败" "crontabCheck"
+                handle_error 1 "获取计划任务文件 ${cronfile} 状态信息失败" "crontabCheck"
             fi
             
             # 从这里可以看到计划任务的状态[最近修改时间等]
@@ -1643,7 +1643,7 @@ historyCheck(){
         if [ -n "$historyTmp" ]; then
             (echo -e "${YELLOW}[INFO] 当前shell下history历史命令如下:${NC}" && echo "$historyTmp") 
             local history_count=$(echo "$historyTmp" | wc -l)
-            log_message "INFO" "成功获取当前shell历史命令，共${history_count}条"
+            log_message "INFO" "成功获取当前shell历史命令,共${history_count}条"
         else
             echo -e "${RED}[WARN] 未发现历史命令,请检查是否记录及已被清除${NC}" 
             log_message "WARN" "当前shell历史命令为空"
@@ -1663,7 +1663,7 @@ historyCheck(){
                 # 如果文件非空,输出历史命令
                 (echo -e "${YELLOW}[INFO] 操作系统历史命令如下:${NC}" && echo "$history") 
                 local file_history_count=$(echo "$history" | wc -l)
-                log_message "INFO" "成功读取/root/.bash_history文件，共${file_history_count}条历史命令"
+                log_message "INFO" "成功读取/root/.bash_history文件,共${file_history_count}条历史命令"
             else
                 # 如果文件为空,输出警告信息
                 echo -e "${RED}[WARN] 未发现历史命令,请检查是否记录及已被清除${NC}" 
@@ -1700,7 +1700,7 @@ historyCheck(){
 			handle_error 1 "检查脚本下载历史失败" "historyCheck"
 		fi
 	else
-		log_message "WARN" "/root/.bash_history文件不存在，跳过脚本下载检查"
+		log_message "WARN" "/root/.bash_history文件不存在,跳过脚本下载检查"
 	fi
 
 	## 检查是否通过主机下载/传输过文件
@@ -1791,7 +1791,7 @@ historyCheck(){
 			log_message "INFO" "发现${history_files_count}个历史命令文件"
 		else
 			echo -e "${RED}[WARN] 未发现系统中存在历史命令文件,请人工检查机器是否被清理攻击痕迹${NC}" 
-			log_message "WARN" "未发现任何历史命令文件，可能已被清理"
+			log_message "WARN" "未发现任何历史命令文件,可能已被清理"
 		fi
 	else
 		handle_error 1 "搜索历史命令文件失败" "historyCheck"
@@ -1852,20 +1852,20 @@ historyCheck(){
 
 # 用户信息排查【归档 -- systemCheck】
 userInfoCheck(){
-	# 调试信息：显示当前变量值
-	echo -e "${BLUE}[DEBUG] userInfoCheck函数开始执行，当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck${NC}"
-	log_message "DEBUG" "userInfoCheck函数开始执行，当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck"
+	# # 调试信息：显示当前变量值
+	# echo -e "${BLUE}[DEBUG] userInfoCheck函数开始执行,当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck${NC}"
+	# log_message "DEBUG" "userInfoCheck函数开始执行,当前executed_functions_userInfoCheck值: $executed_functions_userInfoCheck"
 	
-	# 检查函数是否已执行
-	if [ "$executed_functions_userInfoCheck" = "1" ]; then
-		echo -e "${YELLOW}[INFO] userInfoCheck函数已执行，跳过重复执行${NC}"
-		log_message "INFO" "userInfoCheck函数已执行，跳过重复执行"
-		return 0
-	fi
-	# 标记函数为已执行
-	executed_functions_userInfoCheck=1
-	echo -e "${BLUE}[DEBUG] userInfoCheck函数标记为已执行，executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck${NC}"
-	log_message "DEBUG" "userInfoCheck函数标记为已执行，executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck"
+	# # 检查函数是否已执行
+	# if [ "$executed_functions_userInfoCheck" = "1" ]; then
+	# 	echo -e "${YELLOW}[INFO] userInfoCheck函数已执行,跳过重复执行${NC}"
+	# 	log_message "INFO" "userInfoCheck函数已执行,跳过重复执行"
+	# 	return 0
+	# fi
+	# # 标记函数为已执行
+	# executed_functions_userInfoCheck=1
+	# echo -e "${BLUE}[DEBUG] userInfoCheck函数标记为已执行,executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck${NC}"
+	# log_message "DEBUG" "userInfoCheck函数标记为已执行,executed_functions_userInfoCheck设置为: $executed_functions_userInfoCheck"
 	
 	local start_time=$(date +%s)
 	log_operation "MOUDLE:USERINFOCHECK" "用户信息安全检查和分析" "START"
@@ -1897,7 +1897,7 @@ userInfoCheck(){
 		echo -e "${YELLOW}[INFO] show /etc/passwd:${NC}"
 		if cat /etc/passwd 2>/dev/null; then
 			local passwd_users_count=$(cat /etc/passwd | wc -l)
-			log_message "INFO" "成功读取/etc/passwd文件，共${passwd_users_count}个用户记录"
+			log_message "INFO" "成功读取/etc/passwd文件,共${passwd_users_count}个用户记录"
 		else
 			handle_error 1 "读取/etc/passwd文件失败" "userInfoCheck"
 		fi
@@ -1994,7 +1994,7 @@ userInfoCheck(){
 			handle_error 1 "读取/etc/login.defs失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/login.defs文件不存在，跳过非系统用户检查"
+		log_message "WARN" "/etc/login.defs文件不存在,跳过非系统用户检查"
 	fi
 	# 检查用户信息/etc/shadow
 	# - 检查空口令用户
@@ -2022,7 +2022,7 @@ userInfoCheck(){
 			handle_error 1 "读取/etc/shadow失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/shadow文件不存在，跳过空口令用户检查"
+		log_message "WARN" "/etc/shadow文件不存在,跳过空口令用户检查"
 	fi
 	# - 检查空口令且可登录SSH的用户
 	# 原理:
@@ -2076,7 +2076,7 @@ userInfoCheck(){
 			handle_error 1 "获取可登录用户失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "缺少必要文件，跳过空口令SSH登录检查"
+		log_message "WARN" "缺少必要文件,跳过空口令SSH登录检查"
 	fi
 	# - 检查口令未加密用户
 	echo -e "${YELLOW}[INFO] 检查未加密口令用户[awk -F: '{if(\$2!="x") {print \$1}}' /etc/passwd] ${NC}"
@@ -2096,7 +2096,7 @@ userInfoCheck(){
 			handle_error 1 "检查未加密口令用户失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/passwd文件不存在，跳过未加密口令用户检查"
+		log_message "WARN" "/etc/passwd文件不存在,跳过未加密口令用户检查"
 	fi
 	# 检查用户组信息/etc/group
 	echo -e "${YELLOW}[INFO] 检查用户组信息[/etc/group] ${NC}"
@@ -2111,7 +2111,7 @@ userInfoCheck(){
 			handle_error 1 "读取/etc/group失败" "userInfoCheck"
 		fi
 	else
-		log_message "WARN" "/etc/group文件不存在，跳过用户组检查"
+		log_message "WARN" "/etc/group文件不存在,跳过用户组检查"
 		return
 	fi
 	
@@ -2202,7 +2202,7 @@ systemEnabledServiceCheck(){
 	log_message "INFO" "开始识别系统初始化程序类型"
 	
 	if systemInit=$((cat /proc/1/comm 2>/dev/null)|| (cat /proc/1/cgroup 2>/dev/null | grep -w "name=systemd" | awk -F : '{print $2}' | awk -F = '{print $2}')) 2>/dev/null; then
-		: # 命令执行成功，继续处理
+		: # 命令执行成功,继续处理
 	else
 		handle_error 1 "获取系统初始化程序信息失败" "systemEnabledServiceCheck"
 		return 1
@@ -2256,26 +2256,26 @@ systemEnabledServiceCheck(){
 							if dangerService=$(grep -E "((chmod|useradd|groupadd|chattr)|((rm|wget|curl)*\.(sh|pl|py|exe)$))" "$servicePath" 2>/dev/null); then
 								if [ -n "$dangerService" ];then
 									echo -e "${RED}[WARN] 发现systemd启动项:${service}包含敏感命令或脚本:${NC}" && echo "$dangerService"
-									log_message "WARN" "发现危险systemd服务: $service，包含敏感命令"
+									log_message "WARN" "发现危险systemd服务: $service,包含敏感命令"
 									dangerous_services=$((dangerous_services + 1))
 								else
 									echo -e "${GREEN}[SUCC] 未发现systemd启动项:${service}包含敏感命令或脚本${NC}"
 									log_message "INFO" "systemd服务 $service 未发现敏感命令"
 								fi
 							else
-								handle_error 1 "分析服务文件${servicePath}失败" "systemEnabledServiceCheck"
+								handle_error 1 "分析服务文件 ${servicePath} 失败" "systemEnabledServiceCheck"
 							fi
 						else
 							echo -e "${RED}[WARN] 未找到service服务文件位置:$service${NC}"
 							log_message "WARN" "未找到systemd服务文件: $service"
 						fi
 				else
-					handle_error 1 "获取服务${service}文件路径失败" "systemEnabledServiceCheck"
+					handle_error 1 "获取服务 ${service} 文件路径失败" "systemEnabledServiceCheck"
 				fi
 					analyzed_services=$((analyzed_services + 1))
 				done
 				
-				log_message "INFO" "systemd服务分析完成，共分析${analyzed_services}个服务，发现${dangerous_services}个危险服务"			
+				log_message "INFO" "systemd服务分析完成,共分析${analyzed_services}个服务,发现${dangerous_services}个危险服务"			
 
 			else
 				echo -e "${RED}[WARN] 未发现systemd自启动项${NC}"
@@ -2324,11 +2324,11 @@ systemEnabledServiceCheck(){
 		else
 			echo -e "${RED}[WARN] 系统使用初始化程序本程序不适配,请手动检查${NC}"
 			echo -e "${YELLOW}[KNOW] 如果系统使用初始化程序不[sysvinit|systemd]${NC}"
-			log_message "WARN" "系统使用不支持的初始化程序: $systemInit，需要手动检查"
+			log_message "WARN" "系统使用不支持的初始化程序: $systemInit,需要手动检查"
 		fi
 	else
 		echo -e "${RED}[WARN] 未识别到系统初始化程序,请手动检查${NC}"
-		log_message "ERROR" "未能识别系统初始化程序，请手动检查"
+		log_message "ERROR" "未能识别系统初始化程序,请手动检查"
 	fi
 	
 	# 记录性能统计和操作完成
@@ -2342,7 +2342,7 @@ systemEnabledServiceCheck(){
 systemRunningServiceCheck(){
 	# 系统正在运行服务分析
 	start_time=$(date +%s)
-	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块开始执行" "START"
+	log_operation "MODULE:SYSTEMRUNNINGSERVICECHECK" "系统正在运行服务检查模块" "START"
 	log_message "INFO" "正在检查正在运行中服务"
 	# systemRunningService=$(systemctl | grep -E "\.service.*running")
 
@@ -2405,7 +2405,7 @@ systemRunningServiceCheck(){
 					fi
 					analyzed_count=$((analyzed_count + 1))
 				done
-				log_message "INFO" "systemd运行中服务分析完成，共分析 $analyzed_count 个服务，发现 $danger_running_count 个危险服务"			
+				log_message "INFO" "systemd运行中服务分析完成,共分析 $analyzed_count 个服务,发现 $danger_running_count 个危险服务"			
 
 			else
 				echo -e "${RED}[WARN] 未发现systemd运行中服务项${NC}" 
@@ -2431,7 +2431,7 @@ systemRunningServiceCheck(){
 systemServiceCollect(){
 	# 收集所有的系统服务信息,不做分析
 	start_time=$(date +%s)
-	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块开始执行" "START"
+	log_operation "MODULE:SYSTEMSERVICECOLLECT" "系统服务收集模块" "START"
 	echo -e "${YELLOW}[INFO] 正在收集系统服务信息(不含威胁分析):${NC}"
 	log_message "INFO" "正在收集系统服务信息(不含威胁分析)"
 	echo -e "${YELLOW}[KNOW] 根据服务名称找到服务文件位置[systemctl show xx.service -p FragmentPath]${NC}"
@@ -2499,7 +2499,7 @@ systemServiceCollect(){
 userServiceCheck(){
 	# 用户自启动项服务分析 /etc/rc.d/rc.local /etc/init.d/*
 	start_time=$(date +%s)
-	log_operation "MODULE:USERSERVICECHECK" "用户服务检查模块开始执行" "START"
+	log_operation "MODULE:USERSERVICECHECK" "用户服务检查模块" "START"
 	## 输出 /etc/rc.d/rc.local
 	# 【判断是否存在】
 	echo -e "${YELLOW}[INFO] 正在检查/etc/rc.d/rc.local是否存在:${NC}"
@@ -2626,7 +2626,7 @@ systemServiceCheck(){
 dirFileCheck(){
 	# 敏感目录排查(包含隐藏文件)
 	start_time=$(date +%s)
-	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块开始执行" "START"
+	log_operation "MODULE:DIRFILECHECK" "敏感目录文件检查模块" "START"
 	
 	# /tmp/下
 	echo -e "${YELLOW}[INFO] 正在检查/tmp/下文件[ls -alt /tmp]:${NC}"
@@ -2673,24 +2673,24 @@ dirFileCheck(){
 
 # SSH登录配置排查 【归档 -- specialFileCheck】
 sshFileCheck(){
-	# 调试信息：显示当前变量值
-	echo -e "${BLUE}[DEBUG] sshFileCheck函数开始执行，当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck${NC}"
-	log_message "DEBUG" "sshFileCheck函数开始执行，当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck"
+	# # 调试信息：显示当前变量值
+	# echo -e "${BLUE}[DEBUG] sshFileCheck函数开始执行,当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck${NC}"
+	# log_message "DEBUG" "sshFileCheck函数开始执行,当前executed_functions_sshFileCheck值: $executed_functions_sshFileCheck"
 	
-	# 检查函数是否已执行
-	if [ "$executed_functions_sshFileCheck" = "1" ]; then
-		echo -e "${YELLOW}[INFO] sshFileCheck函数已执行，跳过重复执行${NC}"
-		log_message "INFO" "sshFileCheck函数已执行，跳过重复执行"
-		return 0
-	fi
-	# 标记函数为已执行
-	executed_functions_sshFileCheck=1
-	echo -e "${BLUE}[DEBUG] sshFileCheck函数标记为已执行，executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck${NC}"
-	log_message "DEBUG" "sshFileCheck函数标记为已执行，executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck"
+	# # 检查函数是否已执行
+	# if [ "$executed_functions_sshFileCheck" = "1" ]; then
+	# 	echo -e "${YELLOW}[INFO] sshFileCheck函数已执行,跳过重复执行${NC}"
+	# 	log_message "INFO" "sshFileCheck函数已执行,跳过重复执行"
+	# 	return 0
+	# fi
+	# # 标记函数为已执行
+	# executed_functions_sshFileCheck=1
+	# echo -e "${BLUE}[DEBUG] sshFileCheck函数标记为已执行,executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck${NC}"
+	# log_message "DEBUG" "sshFileCheck函数标记为已执行,executed_functions_sshFileCheck设置为: $executed_functions_sshFileCheck"
 	
 	# SSH登录配置排查
 	start_time=$(date +%s)
-	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块开始执行" "START"
+	log_operation "MODULE:SSHFILECHECK" "SSH文件配置检查模块" "START"
 	
 	# 输出/root/.ssh/下文件
 	echo -e "${YELLOW}[INFO] 正在检查/root/.ssh/下文件[ls -alt /root/.ssh]:${NC}"
@@ -2701,51 +2701,49 @@ sshFileCheck(){
 	fi
 	if [ -n "$ls_ssh" ];then
 		echo -e "${YELLOW}[INFO] /root/.ssh/下文件如下:${NC}" && echo "$ls_ssh"
-		log_message "INFO" "/root/.ssh/下文件列表:\n$ls_ssh"
+		log_message "INFO" "发现/root/.ssh/存在文件"
 	else
-		echo -e "${RED}[WARN] 未发现/root/.ssh/存在文件${NC}"
-		log_message "WARN" "未发现/root/.ssh/存在文件"
+		echo -e "${GREEN}[SUCC] 未发现/root/.ssh/存在文件${NC}"
+		log_message "INFO" "未发现/root/.ssh/存在文件"
 	fi
-	printf "\n"
 
 	# 公钥文件分析
 	echo -e "${YELLOW}正在检查公钥文件[/root/.ssh/*.pub]:${NC}"
 	log_message "INFO" "正在检查公钥文件"
 	pubkey=$(cat /root/.ssh/*.pub 2>/dev/null)
 	if [ -n "$pubkey" ];then
-		echo -e "${RED}[WARN] 发现公钥文件如下,请注意!${NC}" && echo "$pubkey"
-		log_message "WARN" "发现公钥文件:\n$pubkey"
+		echo -e "${YELLOW}[INFO] 发现公钥文件如下,请注意!${NC}" && echo "$pubkey"
+		log_message "INFO" "发现公钥文件"
 	else
 		echo -e "${GREEN}[SUCC] 未发现公钥文件${NC}"
 		log_message "INFO" "未发现公钥文件"
 	fi
-	printf "\n"
 
 	# 私钥文件分析
 	echo -e "${YELLOW}正在检查私钥文件[/root/.ssh/id_rsa]:${NC}" 
 	log_message "INFO" "正在检查私钥文件"
-	echo -e "${YELLOW}[KNOW] 私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]${NC}"
-	log_message "INFO" "私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]"
+	echo -e "${BLUE}[KNOW] 私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]${NC}"
+	# log_message "INFO" "私钥文件是用于SSH密钥认证的文件,私钥文件不一定叫id_rs,登录方式[ssh -i id_rsa user@ip]"
 	privatekey=$(cat /root/.ssh/id_rsa 2>/dev/null)
 	if [ -n "$privatekey" ];then
 		echo -e "${RED}[WARN] 发现私钥文件,请注意!${NC}" && echo "$privatekey"
-		log_message "INFO" "发现私钥文件:\n$privatekey"
+		log_message "INFO" "发现私钥文件存在"
 	else
-		echo -e "${GREEN}[SUCC] 未发现私钥文件${NC}"
-		log_message "INFO" "未发现私钥文件"
+		echo -e "${GREEN}[SUCC] 未发现私钥文件存在${NC}"
+		log_message "INFO" "未发现私钥文件存在"
 	fi
 	printf "\n" 
 
 	# authorized_keys文件分析
 	echo -e "${YELLOW}正在检查被授权登录公钥信息[/root/.ssh/authorized_keys]:${NC}" 
 	log_message "INFO" "正在检查被授权登录公钥信息"
-	echo -e "${YELLOW}[KNOW] authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机" 
-	echo -e "${YELLOW}[KNOW] 免密登录配置中需要将用户公钥内容追加到authorized_keys文件中[cat id_rsa.pub >> authorized_keys]"
-	log_message "INFO" "authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机"
+	echo -e "${BLUE}[KNOW] authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机" 
+	echo -e "${BLUE}[KNOW] 免密登录配置中需要将用户公钥内容追加到authorized_keys文件中[cat id_rsa.pub >> authorized_keys]"
+	# log_message "INFO" "authorized_keys文件是用于存储用户在远程登录时所被允许的公钥,可定位谁可以免密登陆该主机"
 	authkey=$(cat /root/.ssh/authorized_keys 2>/dev/null)
 	if [ -n "$authkey" ];then
 		echo -e "${RED}[WARN] 发现被授权登录的用户公钥信息如下${NC}" && echo "$authkey"
-		log_message "WARN" "发现被授权登录的用户公钥信息:\n$authkey"
+		log_message "WARN" "发现被授权登录的用户公钥信息"
 	else
 		echo -e "${GREEN}[SUCC] 未发现被授权登录的用户公钥信息${NC}" 
 		log_message "INFO" "未发现被授权登录的用户公钥信息"
@@ -2755,12 +2753,12 @@ sshFileCheck(){
 	# known_hosts文件分析
 	echo -e "${YELLOW}正在检查当前设备可登录主机信息[/root/.ssh/known_hosts]:${NC}" 
 	log_message "INFO" "正在检查当前设备可登录主机信息"
-	echo -e "${YELLOW}[KNOW] known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机${NC}" 
-	log_message "INFO" "known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机"
+	echo -e "${BLUE}[KNOW] known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机${NC}" 
+	# log_message "INFO" "known_hosts文件是用于存储SSH服务器公钥的文件,可用于排查当前主机可横向范围,快速定位可能感染的主机"
 	knownhosts=$(cat /root/.ssh/known_hosts 2>/dev/null | awk '{print $1}')
 	if [ -n "$knownhosts" ];then
 		echo -e "${RED}[WARN] 发现可横向远程主机信息如下:${NC}" && echo "$knownhosts"
-		log_message "INFO" "发现可横向远程主机信息:\n$knownhosts"
+		log_message "WARN" "发现可横向远程主机信息"
 	else
 		echo -e "${GREEN}[SUCC] 未发现可横向远程主机信息${NC}" 
 		log_message "INFO" "未发现可横向远程主机信息"
@@ -2772,14 +2770,14 @@ sshFileCheck(){
 	echo -e "${YELLOW}正在检查SSHD配置文件[/etc/ssh/sshd_config]:${NC}" 
 	log_message "INFO" "正在检查SSHD配置文件"
 	echo -e "${YELLOW}正在输出SSHD文件所有开启配置(不带#号的配置)[/etc/ssh/sshd_config]:"
-	log_message "INFO" "正在输出SSHD文件所有开启配置(不带#号的配置)"
+	# log_message "INFO" "正在输出SSHD文件所有开启配置(不带#号的配置)"
 	sshdconfig=$(cat /etc/ssh/sshd_config 2>/dev/null | egrep -v "#|^$")
 	if [ $? -ne 0 ]; then
 		handle_error 1 "读取/etc/ssh/sshd_config文件失败" "sshFileCheck"
 	fi
 	if [ -n "$sshdconfig" ];then
 		echo -e "${YELLOW}[INFO] sshd_config所有开启的配置如下:${NC}" && echo "$sshdconfig" 
-		log_message "INFO" "sshd_config所有开启的配置:\n$sshdconfig"
+		log_message "INFO" "sshd_config所有开启的配置"
 	else
 		echo -e "${RED}[WARN] 未发现sshd_config开启任何配置!请留意这是异常现象!${NC}" 
 		log_message "WARN" "未发现sshd_config开启任何配置!请留意这是异常现象!"
@@ -2796,14 +2794,14 @@ sshFileCheck(){
 		log_message "WARN" "发现允许空口令登录,请注意!"
 		if [ -n "$nopasswd" ];then
 			echo -e "${RED}[WARN] 以下用户空口令:${NC}" && echo "$nopasswd"
-			log_message "WARN" "以下用户空口令:\n$nopasswd"
+			log_message "WARN" "发现空口令用户"
 		else
-			echo -e "${GREEN}[SUCC] 但未发现空口令用户${NC}" 
-			log_message "INFO" "但未发现空口令用户"
+			echo -e "${GREEN}[SUCC] 未发现空口令用户${NC}" 
+			log_message "INFO" "未发现空口令用户"
 		fi
 	else
-		echo -e "${YELLOW}[INFO] 不允许空口令用户登录${NC}" 
-		log_message "INFO" "不允许空口令用户登录"
+		echo -e "${GREEN}[SUCC] 已关闭空口令用户登录${NC}" 
+		log_message "INFO" "已关闭空口令用户登录"
 	fi
 	printf "\n" 
 
@@ -2817,28 +2815,28 @@ sshFileCheck(){
 		echo -e "${RED}[WARN] 请修改/etc/ssh/sshd_config配置文件,添加PermitRootLogin no${NC}"
 		log_message "WARN" "请修改/etc/ssh/sshd_config配置文件,添加PermitRootLogin no"
 	else
-		echo -e "${YELLOW}[INFO] 不允许root远程登录${NC}" 
-		log_message "INFO" "不允许root远程登录"
+		echo -e "${GREEN}[SUCC] 已关闭root远程登录${NC}" 
+		log_message "INFO" "已关闭root远程登录"
 	fi
 	printf "\n" 
 
 	## sshd_config 配置文件分析 -- ssh协议版本分析
 	echo -e "${YELLOW}正在检查sshd_config配置--检查SSH协议版本[/etc/ssh/sshd_config]:${NC}" 
 	log_message "INFO" "正在检查sshd_config配置--检查SSH协议版本"
-	echo -e "${YELLOW}[KNOW] 需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
-	echo -e "${YELLOW}[KNOW] 从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
-	log_message "INFO" "需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
+	echo -e "${BLUE}[KNOW] 需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
+	echo -e "${BLUE}[KNOW] 从OpenSSH7.0开始,已经默认使用SSH协议2版本,只有上古机器这项会不合格${NC}"
+	# log_message "INFO" "需要详细的SSH版本信息另行检查,防止SSH协议版本过低,存在漏洞"
 	protocolver=$(cat /etc/ssh/sshd_config 2>/dev/null | grep -v ^$ | grep Protocol | awk '{print $2}')
 	if [ -n "$protocolver" ];then
 		echo -e "${YELLOW}[INFO] openssh协议版本如下:${NC}" && echo "$protocolver"
-		log_message "INFO" "openssh协议版本:$protocolver"
+		log_message "INFO" "输出openssh协议版本信息"
 		if [ "$protocolver" -eq "2" ];then
 			echo -e "${YELLOW}[INFO] openssh使用ssh2协议,版本过低!${NC}" 
 			log_message "WARN" "openssh使用ssh2协议,版本过低!"
 		fi
 	else
-		echo -e "${RED}[WARN] 未发现openssh协议版本(未发现并非代表异常)${NC}"
-		log_message "WARN" "未发现openssh协议版本(未发现并非代表异常)"
+		echo -e "${YELLOW}[INFO] 未发现openssh协议版本(未发现并非代表异常)${NC}"
+		log_message "INFO" "未发现openssh协议版本(未发现并非代表异常)"
 	fi
 
 	# ssh版本分析 -- 罗列几个有漏洞的ssh版本
@@ -2849,7 +2847,7 @@ sshFileCheck(){
 		handle_error 1 "获取SSH版本信息失败" "sshFileCheck"
 	fi
 	echo -e "${YELLOW}[INFO] ssh版本信息如下:${NC}" && echo "$sshver"
-	log_message "INFO" "ssh版本信息:$sshver"
+	log_message "INFO" "ssh版本信息"
 
 	# 记录性能统计和操作完成
 	end_time=$(date +%s)
@@ -2975,7 +2973,7 @@ checkRecentModifiedFiles() {
 specialFileCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:SPECIALFILECHECK" "特殊文件检查模块开始执行" "START"
+	log_operation "MODULE:SPECIALFILECHECK" "特殊文件检查模块" "START"
 	
 	# SSH相关文件排查 -- 调用检查函数 sshFileCheck
 	echo -e "${YELLOW}[INFO] 正在检查SSH相关文件[Fuc:sshFileCheck]:${NC}"
@@ -3402,7 +3400,7 @@ webshellCheck(){
 tunnelSSH(){ 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块开始执行" "START"
+	log_operation "MODULE:TUNNELSSH" "SSH隧道检查模块" "START"
 	
 	echo -e "${YELLOW}正在检查SSH隧道${NC}"
 	log_message "INFO" "正在检查SSH隧道"
@@ -3739,7 +3737,7 @@ memInfoCheck(){
 hackerToolsCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块开始执行" "START"
+	log_operation "MODULE:HACKERTOOLSCHECK" "黑客工具检查模块" "START"
 	
 	# 黑客工具排查
 	echo -e "${YELLOW}正在检查全盘是否存在黑客工具[./checkrules/hackertoolslist.txt]:${NC}"  
@@ -3782,7 +3780,7 @@ hackerToolsCheck(){
 kernelCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:KERNELCHECK" "内核检查模块开始执行" "START"
+	log_operation "MODULE:KERNELCHECK" "内核检查模块" "START"
 	
 	# 内核信息排查
 	echo -e "${YELLOW}正在检查内核信息[lsmod]:${NC}"  
@@ -3826,7 +3824,7 @@ kernelCheck(){
 otherCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:OTHERCHECK" "其他检查模块开始执行" "START"
+	log_operation "MODULE:OTHERCHECK" "其他检查模块" "START"
 	
 	# 可疑脚本文件排查
 	echo -e "${YELLOW}正在检查可疑脚本文件[py|sh|per|pl|exe]:${NC}"  
@@ -3869,13 +3867,13 @@ otherCheck(){
 	)
 
 	if [ -e "$file" ]; then 
-		log_message "INFO" "发现已存在的MD5文件，进行校验对比"
+		log_message "INFO" "发现已存在的MD5文件,进行校验对比"
 		md5sum -c "$file" 2>&1  
 		if [ $? -ne 0 ]; then
 			handle_error 1 "MD5校验对比失败" "otherCheck"
 		fi
 	else
-		log_message "INFO" "未发现MD5文件，开始生成新的MD5文件"
+		log_message "INFO" "未发现MD5文件,开始生成新的MD5文件"
 		# 清空或创建文件
 		> "$file"
 		if [ $? -ne 0 ]; then
@@ -4466,7 +4464,7 @@ baselineCheck(){
 k8sClusterInfo() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块开始执行" "START"
+	log_operation "MODULE:K8SCLUSTERINFO" "Kubernetes集群基础信息检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4648,7 +4646,7 @@ k8sClusterInfo() {
 k8sSecretCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块开始执行" "START"
+	log_operation "MODULE:K8SSECRETCHECK" "Kubernetes Secret检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4748,7 +4746,7 @@ k8sSecretCheck() {
 k8sSensitiveInfo() { 
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块开始执行" "START"
+	log_operation "MODULE:K8SSENSITIVEINFO" "Kubernetes敏感信息收集模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -4855,7 +4853,7 @@ k8sSensitiveInfo() {
 k8sBaselineCheck() {
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块开始执行" "START"
+	log_operation "MODULE:K8SBASELINECHECK" "Kubernetes基线检查模块" "START"
 	
 	# 判断是否为 Kubernetes 环境（目录或命令存在）
     if ! { [ -d /etc/kubernetes ] || command -v kubectl &>/dev/null; }; then
@@ -5074,7 +5072,7 @@ k8sCheck() {
 performanceCheck(){
 	# 记录开始时间和模块开始日志
 	start_time=$(date +%s)
-	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块开始执行" "START"
+	log_operation "MODULE:PERFORMANCECHECK" "系统性能评估模块" "START"
 	
 	# 系统性能评估
 	## 磁盘使用情况
@@ -5687,7 +5685,7 @@ main() {
                 # 转换为小写并去除空格
                 choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
                 if [[ ! "$choice" =~ ^(y|yes|n|no)$ ]]; then
-                    echo "无效输入，跳过模块 $module"
+                    echo "无效输入,跳过模块 $module"
                     log_message "WARN" "Invalid input for $module, skipping."
                     continue
                 fi
@@ -5702,7 +5700,7 @@ main() {
                         log_message "INFO" "模块 $module 执行完成"
                     else
                         echo "错误: 模块 $module 对应的函数未找到"
-                        log_message "ERROR" "模块 $module 对应的函数未找到，跳过执行"
+                        log_message "ERROR" "模块 $module 对应的函数未找到,跳过执行"
                     fi
                 else
                     echo "跳过模块 $module"
@@ -5713,7 +5711,7 @@ main() {
             sleep 2
             checkOutlogPack | log2file "${check_file}/checkresult.txt"
         else  # 非交互模式 - 自动执行所有指定的模块
-            log_message "INFO" "进入非交互模式，自动执行所有模块"
+            log_message "INFO" "进入非交互模式,自动执行所有模块"
             for module in "${modules[@]}"; do
                 # 检查模块函数是否存在
                 func_name=$(get_module_function "$module")
@@ -5723,7 +5721,7 @@ main() {
                     $func_name | log2file "${check_file}/checkresult.txt"
                     log_message "INFO" "模块 $module 执行完成"
                 else
-                    log_message "ERROR" "模块 $module 对应的函数未找到，跳过执行"
+                    log_message "ERROR" "模块 $module 对应的函数未找到,跳过执行"
                 fi
             done
             # 日志打包函数
