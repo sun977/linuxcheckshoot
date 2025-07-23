@@ -421,8 +421,8 @@ log_operation() {
         log_entry="$log_entry - RESULT: $result"
     fi
     
-    log_message "INFO" "$log_entry"
-	# INFO 自带蓝色 输出
+    # log_message "INFO" "$log_entry"   # 不再输出到 message.log
+	# INFO 输出
     
     # 写入操作日志文件
     if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
@@ -440,7 +440,7 @@ log_performance() {
     
     if [ -n "$start_time" ] && [ -n "$end_time" ]; then
         local duration=$((end_time - start_time))
-        log_message "INFO" "[$timestamp] [PERF] $function_name 执行时间: ${duration}秒"
+        # log_message "INFO" "[$timestamp] [PERF] $function_name 执行时间: ${duration}秒"   # 不再输出到 message.log
         
         # 写入性能日志文件
         if [ -n "$log_file" ] && [ -d "$(dirname "$log_file")" ]; then
@@ -526,8 +526,8 @@ init_env(){
 	cd $check_file || handle_error 2 "无法进入检查目录: $check_file" "INIT_ENV"
 	
 	local end_time=$(date +%s)
-	log_performance "INIT_ENV" "$start_time" "$end_time"
 	log_operation "MOUDLE:INIT_ENV" "初始化LinuxGun运行环境" "END"
+	log_performance "INIT_ENV" "$start_time" "$end_time"
 
 }
 
