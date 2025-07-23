@@ -5613,7 +5613,7 @@ main() {
 
     # 如果指定了 --all,则运行所有模块【--all 不能和其他参数一起使用,且不包括--send】
     if [ "$run_all" = true ]; then
-        modules=("${all_modules[@]}")  # 参数 --all 所有的模块加载进 modules 数组中
+        modules=("${all_modules[@]}")  # 参数 --all 所有的一级模块加载进 modules 数组中（一级模块包含了二级模块）
     fi
 
     if [ ${#modules[@]} -gt 0 ]; then
@@ -5621,11 +5621,11 @@ main() {
         get_module_function() {
             local module="$1"
             case "$module" in
+                # 一级模块
                 "system") echo "systemCheck" ;;
                 "network") echo "networkInfo" ;;
                 "psinfo") echo "processInfo" ;;
                 "file") echo "fileCheck" ;;
-                # "file-keyfiles") echo "specialFileCheck" ;;
                 "backdoor") echo "backdoorCheck" ;;
                 "tunnel") echo "tunnelCheck" ;;
                 "webshell") echo "webshellCheck" ;;
@@ -5637,6 +5637,35 @@ main() {
                 "k8s") echo "k8sCheck" ;;
                 "performance") echo "performanceCheck" ;;
                 "baseline") echo "baselineCheck" ;;
+                
+                # 二级模块 - 系统相关
+                "system-baseinfo") echo "baseInfo" ;;
+                "system-user") echo "userInfoCheck" ;;
+                "system-crontab") echo "crontabCheck" ;;
+                "system-history") echo "historyCheck" ;;
+                
+                # 二级模块 - 文件相关
+                "file-systemservice") echo "systemServiceCheck" ;;
+                "file-dir") echo "dirFileCheck" ;;
+                "file-keyfiles") echo "specialFileCheck" ;;
+                "file-systemlog") echo "systemLogCheck" ;;
+                
+                # 二级模块 - 隧道相关
+                "tunnel-ssh") echo "tunnelSSH" ;;
+                
+                # 二级模块 - K8s相关
+                "k8s-cluster") echo "k8sClusterInfo" ;;
+                "k8s-secret") echo "k8sSecretCheck" ;;
+                "k8s-fscan") echo "k8sSensitiveInfo" ;;
+                "k8s-baseline") echo "k8sBaselineCheck" ;;
+                
+                # 二级模块 - 基线相关
+                "baseline-firewall") echo "firewallCheck" ;;
+                "baseline-selinux") echo "selinuxCheck" ;;
+                
+                # 二级模块 - 攻击相关
+                "attack-filescan") echo "attackAngleCheck" ;;
+                
                 *) echo "" ;;  # 未知模块返回空字符串
             esac
         }
