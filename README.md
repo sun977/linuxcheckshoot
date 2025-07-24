@@ -27,20 +27,6 @@ unzip Linuxgun.zip
 
 3、**linuxcheck.sh** 是旧版本一把梭工具，功能齐全但是未封装成函数，不支持交互式。
 
-### 版本选择建议
-
-**推荐使用 linuxGunPro.sh**，适用于：
-- 需要详细日志记录和错误追踪的场景
-- 希望使用交互模式进行精细化检查
-- 需要性能监控和操作审计的企业环境
-
-**使用 linuxGun.sh**，适用于：
-- 快速应急响应场景
-- 资源受限的环境
-- 熟悉旧版本操作习惯的用户
-
-**使用 linuxcheck.sh**，适用于：
-- 一键全量检查场景
 
 4、**linuxcheck_EN.sh** 是旧版本的英文版本（之前给阿曼学生定制的版本），全英文输出，中国人在终端编码异常懒得调整的时候可以考虑使用这个版本。
 
@@ -56,7 +42,7 @@ unzip Linuxgun.zip
 - dangerlist.txt 是老版本linuxcheck.sh运行过程中发现的危险项输出文件（新版本 linuxGun.sh 不再输出此文件）。
 - 其他文件若干。
 
-7、**tools** 目录存放了一些实用的小脚本工具，包含以下工具：[工具集详情请参考:https://github.com/sun977/Linuxgun/tree/main/tools/README.md]
+7、**tools** 目录存放了一些实用的小脚本工具，包含以下工具：(工具集说明: https://github.com/sun977/Linuxgun/tree/main/tools/README.md)
 - **monitorInter.sh** - 网络接口流量监控工具，可以实时显示指定网络接口的入流量和出流量信息。
 - **monitorPs2Ip.sh** - 网络连接检查工具，可以实时检查与指定 IP 地址通信的进程信息(支持TCP/UDP)。
 - **blockIP/** - IP封禁管理工具目录
@@ -65,6 +51,22 @@ unzip Linuxgun.zip
 - **uploadServer/** - 文件上传服务器工具目录
   - **uploadServer.py** - HTTP文件上传服务器，用于接收linuxGun.sh --send 模块发送的检查结果文件，支持token认证和安全传输。
   - **requirements.txt** - Python依赖包列表文件。
+
+
+### 版本选择建议
+
+**推荐使用 linuxGunPro.sh**，适用于：
+- 需要详细日志记录和错误追踪的场景
+- 希望使用交互模式进行精细化检查
+- 需要性能监控和操作审计的企业环境
+
+**使用 linuxGun.sh**，适用于：
+- 快速应急响应场景
+- 资源受限的环境
+- 熟悉旧版本操作习惯的用户
+
+**使用 linuxcheck.sh**，适用于：
+- 一键全量检查场景
 
 ### 运行检查
 
